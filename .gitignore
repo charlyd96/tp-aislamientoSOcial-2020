@@ -1,3 +1,4 @@
+  
 # Prerequisites
 *.d
 
@@ -53,11 +54,10 @@ dkms.conf
 
 # Project files
 */Debug/*
-*.cproject
-*.project
-*/.settings*
+.cproject
+.project
+.settings
 /.metadata/
-*/subdir.mk
 
 # Log files
 *.log
