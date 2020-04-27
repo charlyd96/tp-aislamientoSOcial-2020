@@ -1,0 +1,68 @@
+/*
+ * protocolo.h
+ *
+ *  Created on: 24 abr. 2020
+ *      Author: aislamientoSOcial
+ */
+
+#ifndef PROTOCOLO_H_
+#define PROTOCOLO_H_
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <string.h>
+
+typedef enum {
+	NEW_POKEMON = 1,
+	APPEARED_POKEMON = 2,
+	CATCH_POKEMON = 3,
+	CAUGHT_POKEMON = 4,
+	GET_POKEMON = 5,
+	LOCALIZED_POKEMON = 6
+} op_code;
+
+typedef struct {
+	int size;
+	void* stream;
+} t_buffer;
+
+typedef struct {
+	op_code codigo_operacion;
+	t_buffer* buffer;
+} t_paquete;
+
+typedef struct {
+	uint32_t largo_nombre;
+	char* nombre_pokemon;
+	uint32_t pos_x;
+	uint32_t pos_y;
+	uint32_t cantidad;
+} t_new_pokemon;
+
+typedef struct {
+	uint32_t largo_nombre;
+	char* nombre_pokemon;
+	uint32_t pos_x;
+	uint32_t pos_y;
+} t_appeared_pokemon, t_catch_pokemon;
+
+typedef struct {
+	uint32_t atrapo_pokemon;
+} t_caught_pokemon;
+
+typedef struct {
+	uint32_t largo_nombre;
+	char* nombre_pokemon;
+} t_get_pokemon;
+
+typedef struct {
+	uint32_t largo_nombre;
+	char* nombre_pokemon;
+	uint32_t cant_pos;
+	uint32_t pos_x;
+	uint32_t pos_y;
+} t_localized_pokemon;
+
+#endif /* PROTOCOLO_H_ */
