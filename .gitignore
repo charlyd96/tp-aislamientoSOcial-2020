@@ -53,7 +53,7 @@ dkms.conf
 
 # Project files
 */Debug/*
-*/.cproject
+*.cproject
 *.project
 */.settings*
 /.metadata/
