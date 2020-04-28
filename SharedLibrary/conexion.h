@@ -37,4 +37,14 @@ void enviarNewPokemon(int socket_cliente, t_new_pokemon mensaje);
 //Dado un Socket, recibe un mensaje del tipo NEW_POKEMON.
 char* recibirNewPokemon(int socket_cliente);
 
+//Dado un Socket, envía un mensaje del tipo APPEARED_POKEMON.
+void enviarAppearedPokemon(int socket_cliente, t_appeared_pokemon mensaje);
+
+//Dado un Socket, recibe un mensaje del tipo APPEARED_POKEMON.
+char* recibirAppearedPokemon(int socket_cliente);
+
+/* HAY QUE REVISARLO
+void recibirCliente(int* socket);
+void procesarSolicitud(int cod_op, int cliente); */
+
 #endif /* CONEXION_H_ */

@@ -1,7 +1,7 @@
 /*
  * gameCard.c
  *
- *  Created on: 27 abr. 2020
+ *  Created on: 28 abr. 2020
  *      Author: aislamientoSOcial
  */
 

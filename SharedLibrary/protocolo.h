@@ -14,6 +14,8 @@
 #include <netdb.h>
 #include <string.h>
 
+pthread_t thread;
+
 typedef enum {
 	NEW_POKEMON = 1,
 	APPEARED_POKEMON = 2,

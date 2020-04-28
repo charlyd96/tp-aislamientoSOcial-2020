@@ -26,7 +26,6 @@ int main(void){
 	}
 
 	int cliente = aceptarCliente(socketServidorBroker);
-	printf("El Cliente aceptado es %d\n", cliente);
 
 	char* recibido = recibirNewPokemon(cliente);
 	printf("Mensaje recibido %s", recibido);

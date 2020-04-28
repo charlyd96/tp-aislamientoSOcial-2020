@@ -73,7 +73,6 @@ int crearSocketServidor(char* ip, char* puerto){
 	}
 
 	listen(socket_servidor, SOMAXCONN);
-	log_info(logger, "Servidor levantado en el puerto %d", puerto);
 
 	freeaddrinfo(servinfo);
 
@@ -95,6 +94,7 @@ int aceptarCliente(int socket_servidor){
 }
 
 void enviarNewPokemon(int socket_cliente, t_new_pokemon mensaje){
+	t_log* logger = log_create("gameBoy.log", "GAMEBOY", 0, LOG_LEVEL_INFO);
 	t_buffer* buffer = malloc(sizeof(t_buffer));
 
 	uint32_t largo_nombre  = strlen(mensaje.nombre_pokemon) + 1;
@@ -136,7 +136,7 @@ void enviarNewPokemon(int socket_cliente, t_new_pokemon mensaje){
 	if(enviado == -1){
 		printf("No se envió el mensaje serializado");
 	}else{
-		printf("Lo que se envía es: %d\n", enviado);
+		log_info(logger, "Se conectó y se envía el mensaje");
 	}
 
 	free(mensajeSerializado);
@@ -175,3 +175,102 @@ char* recibirNewPokemon(int socket_cliente){
 
 	return nombre_pokemon;
 }
+
+void enviarAppearedPokemon(int socket_cliente, t_appeared_pokemon mensaje){
+	t_buffer* buffer = malloc(sizeof(t_buffer));
+
+	uint32_t largo_nombre  = strlen(mensaje.nombre_pokemon) + 1;
+	printf("Largo del nombre %d\n", largo_nombre);
+
+	buffer->size = sizeof(uint32_t) + largo_nombre + 2 * sizeof(uint32_t);
+	void* stream = malloc(buffer->size);
+
+	int offset = 0;
+
+	memcpy(stream + offset, &(largo_nombre), sizeof(uint32_t));
+	offset += sizeof(uint32_t);
+
+	memcpy(stream + offset, mensaje.nombre_pokemon, largo_nombre);
+	offset += largo_nombre;
+
+	memcpy(stream + offset, &(mensaje.pos_x), sizeof(uint32_t));
+	offset += sizeof(uint32_t);
+
+	memcpy(stream + offset, &(mensaje.pos_y), sizeof(uint32_t));
+	offset += sizeof(uint32_t);
+
+	buffer->stream = stream;
+
+	t_paquete* paquete = malloc(sizeof(t_paquete));
+
+	paquete->codigo_operacion = APPEARED_POKEMON;
+	paquete->buffer = buffer;
+
+	int tamanio_a_enviar;
+
+	void* mensajeSerializado = serializarPaquete(paquete, &tamanio_a_enviar);
+
+	int enviado = send(socket_cliente, mensajeSerializado, tamanio_a_enviar, 0);
+
+	if(enviado == -1){
+		printf("No se envió el mensaje serializado");
+	}else{
+		printf("Lo que se envía es: %d\n", enviado);
+	}
+
+	free(mensajeSerializado);
+	eliminarPaquete(paquete);
+}
+
+char* recibirAppearedPokemon(int socket_cliente){
+	t_log* logger = log_create("broker.log", "BROKER", 0, LOG_LEVEL_INFO);
+	uint32_t size_buffer, largo_nombre, pos_x, pos_y;
+
+	op_code tipo_mensaje;
+
+	recv(socket_cliente, &(tipo_mensaje), sizeof(uint32_t), MSG_WAITALL);
+	recv(socket_cliente, &size_buffer, sizeof(uint32_t), MSG_WAITALL);
+	recv(socket_cliente, &largo_nombre, sizeof(uint32_t), MSG_WAITALL);
+	char* nombre_pokemon = malloc(largo_nombre);
+	recv(socket_cliente, nombre_pokemon, largo_nombre, MSG_WAITALL);
+	recv(socket_cliente, &pos_x, sizeof(uint32_t), MSG_WAITALL);
+	recv(socket_cliente, &pos_y, sizeof(uint32_t), MSG_WAITALL);
+
+	t_appeared_pokemon appeared_pokemon;
+	appeared_pokemon.nombre_pokemon = nombre_pokemon;
+	appeared_pokemon.pos_x = pos_x;
+	appeared_pokemon.pos_y = pos_y;
+
+	log_info("Se recibe un %d, con un buffer de %d, un largo de %d, el nombre %s, la pos en x %d y la pos en y %d", tipo_mensaje, size_buffer, largo_nombre, nombre_pokemon, pos_x, pos_y);
+	printf("El pokemon es %s\n", appeared_pokemon.nombre_pokemon);
+
+	return nombre_pokemon;
+}
+
+/* HAY QUE REVISARLO
+void recibirCliente(int* socket)
+{
+	int cod_op;
+	if(recv(*socket, &cod_op, sizeof(uint32_t), MSG_WAITALL) == -1)
+		cod_op = -1;
+	procesarSolicitud(cod_op, *socket);
+}
+
+void procesarSolicitud(int cod_op, int cliente) {
+	int size;
+	printf("cod_op %d y cliente %d",cod_op,cliente);
+
+	switch (cod_op) {
+		case NEW_POKEMON:
+			printf("Recibí NEW_POKEMON");
+//			recibirNewPokemon(cliente);
+			break;
+		case APPEARED_POKEMON:
+			printf("Recibí APPEARED_POKEMON");
+//			recibirAppearedPokemon(cliente);
+		case 0:
+			pthread_exit(NULL);
+		case -1:
+			pthread_exit(NULL);
+		}
+} */
