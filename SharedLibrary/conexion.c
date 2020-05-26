@@ -95,32 +95,9 @@ int aceptarCliente(int socket_servidor){
 
 void enviarNewPokemon(int socket_cliente, t_new_pokemon mensaje){
 	t_log* logger = log_create("gameBoy.log", "GAMEBOY", 0, LOG_LEVEL_INFO);
-	t_buffer* buffer = malloc(sizeof(t_buffer));
 
-	uint32_t largo_nombre  = strlen(mensaje.nombre_pokemon) + 1;
-	printf("Largo del nombre %d\n", largo_nombre);
 
-	buffer->size = sizeof(uint32_t) + largo_nombre + 3 * sizeof(uint32_t);
-	void* stream = malloc(buffer->size);
-
-	int offset = 0;
-
-	memcpy(stream + offset, &(largo_nombre), sizeof(uint32_t));
-	offset += sizeof(uint32_t);
-
-	memcpy(stream + offset, mensaje.nombre_pokemon, largo_nombre);
-	offset += largo_nombre;
-
-	memcpy(stream + offset, &(mensaje.pos_x), sizeof(uint32_t));
-	offset += sizeof(uint32_t);
-
-	memcpy(stream + offset, &(mensaje.pos_y), sizeof(uint32_t));
-	offset += sizeof(uint32_t);
-
-	memcpy(stream + offset, &(mensaje.cantidad), sizeof(uint32_t));
-	offset += sizeof(uint32_t);
-
-	buffer->stream = stream;
+	t_buffer* buffer = serializarNewPokemon(mensaje);
 
 	t_paquete* paquete = malloc(sizeof(t_paquete));
 
@@ -180,7 +157,6 @@ void enviarAppearedPokemon(int socket_cliente, t_appeared_pokemon mensaje){
 	t_buffer* buffer = malloc(sizeof(t_buffer));
 
 	uint32_t largo_nombre  = strlen(mensaje.nombre_pokemon) + 1;
-	printf("Largo del nombre %d\n", largo_nombre);
 
 	buffer->size = sizeof(uint32_t) + largo_nombre + 2 * sizeof(uint32_t);
 	void* stream = malloc(buffer->size);
@@ -241,7 +217,7 @@ char* recibirAppearedPokemon(int socket_cliente){
 	appeared_pokemon.pos_x = pos_x;
 	appeared_pokemon.pos_y = pos_y;
 
-	log_info("Se recibe un %d, con un buffer de %d, un largo de %d, el nombre %s, la pos en x %d y la pos en y %d", tipo_mensaje, size_buffer, largo_nombre, nombre_pokemon, pos_x, pos_y);
+	log_info(logger,"Se recibe un %d, con un buffer de %d, un largo de %d, el nombre %s, la pos en x %d y la pos en y %d", tipo_mensaje, size_buffer, largo_nombre, nombre_pokemon, pos_x, pos_y);
 	printf("El pokemon es %s\n", appeared_pokemon.nombre_pokemon);
 
 	return nombre_pokemon;

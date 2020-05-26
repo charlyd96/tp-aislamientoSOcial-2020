@@ -18,6 +18,7 @@
 #include "protocolo.h"
 
 void* serializarPaquete(t_paquete* paquete, int *bytes);
+t_buffer* serializarNewPokemon(t_new_pokemon pokemon);
 void eliminarPaquete(t_paquete* paquete);
 
 #endif /* SERIALIZACION_H_ */
