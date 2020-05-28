@@ -22,13 +22,29 @@ typedef enum {
 	CATCH_POKEMON = 3,
 	CAUGHT_POKEMON = 4,
 	GET_POKEMON = 5,
-	LOCALIZED_POKEMON = 6
+	LOCALIZED_POKEMON = 6,
+	OP_UNKNOWN = 7
 } op_code;
+typedef enum {
+	P_BROKER,
+	P_TEAM,
+	P_GAMECARD,
+	P_UNKNOWN,
+	P_SUSCRIPTOR
+} process_code;
 
 typedef struct {
 	int size;
 	void* stream;
 } t_buffer;
+
+typedef struct
+{
+    op_code 	 msg_type;
+    process_code module;
+    t_buffer*        buffer;
+    uint32_t     timeout;
+} parser_result;
 
 typedef struct {
 	op_code codigo_operacion;
@@ -36,31 +52,31 @@ typedef struct {
 } t_paquete;
 
 typedef struct {
-	uint32_t largo_nombre;
 	char* nombre_pokemon;
 	uint32_t pos_x;
 	uint32_t pos_y;
 	uint32_t cantidad;
+	uint32_t id;
 } t_new_pokemon;
 
 typedef struct {
-	uint32_t largo_nombre;
 	char* nombre_pokemon;
 	uint32_t pos_x;
 	uint32_t pos_y;
+	uint32_t id;
 } t_appeared_pokemon, t_catch_pokemon;
 
 typedef struct {
+	uint32_t id;
 	uint32_t atrapo_pokemon;
 } t_caught_pokemon;
 
 typedef struct {
-	uint32_t largo_nombre;
 	char* nombre_pokemon;
+	uint32_t id;
 } t_get_pokemon;
 
 typedef struct {
-	uint32_t largo_nombre;
 	char* nombre_pokemon;
 	uint32_t cant_pos;
 	uint32_t pos_x;
