@@ -5,10 +5,6 @@
  *      Author: aislamientoSOcial
  */
 
-#include "protocolo.h"
-#include "conexion.h"
-#include "serializacion.h"
-#include <commons/config.h>
 #include "broker.h"
 
 int crearConfigBroker(){
