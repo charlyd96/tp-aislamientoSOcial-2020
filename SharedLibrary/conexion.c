@@ -80,17 +80,37 @@ int crearSocketServidor(char* ip, char* puerto){
 }
 
 int aceptarCliente(int socket_servidor){
-	t_log* logger = log_create("conexion.log", "CONEXION", 0, LOG_LEVEL_INFO);
-
 	struct sockaddr_in cliente;
 	int size_cliente = sizeof(struct sockaddr_in);
 
 	int socket_cliente = accept(socket_servidor, (void*) &cliente, &size_cliente);
 
-	log_info(logger, "Se acepta la conexión de un cliente");
-	log_destroy(logger);
+	if(socket_cliente != -1){
+		t_log* logger = log_create("conexion.log", "CONEXION", 0, LOG_LEVEL_INFO);
+		log_info(logger, "Se acepta la conexión de un cliente");
+		log_destroy(logger);
+	}
 
 	return socket_cliente;
+}
+
+int recibirOperacion(int socket_cliente){
+	int cod_op;
+	int recibido = recv(socket_cliente, &cod_op, sizeof(uint32_t), MSG_WAITALL);
+	if(recibido == 0){
+		return -1;
+	}
+	return cod_op;
+}
+
+void atenderCliente(int socket_cliente){
+	int cod_op = recibirOperacion(socket_cliente);
+	switch(cod_op){
+	case NEW_POKEMON:
+		recibirNewPokemon(socket_cliente);
+		printf("Recibi NEW_POKEMON");
+		break;
+	}
 }
 
 void enviarNewPokemon(int socket_cliente, t_new_pokemon mensaje){
@@ -146,9 +166,9 @@ void enviarNewPokemon(int socket_cliente, t_new_pokemon mensaje){
 char* recibirNewPokemon(int socket_cliente){
 	uint32_t size_buffer, largo_nombre, pos_x, pos_y, cantidad;
 
-	op_code tipo_mensaje;
+//	op_code tipo_mensaje;
 
-	recv(socket_cliente, &(tipo_mensaje), sizeof(uint32_t), MSG_WAITALL);
+//	recv(socket_cliente, &(tipo_mensaje), sizeof(uint32_t), MSG_WAITALL);
 	recv(socket_cliente, &size_buffer, sizeof(uint32_t), MSG_WAITALL);
 	recv(socket_cliente, &largo_nombre, sizeof(uint32_t), MSG_WAITALL);
 	char* nombre_pokemon = malloc(largo_nombre);
@@ -157,7 +177,7 @@ char* recibirNewPokemon(int socket_cliente){
 	recv(socket_cliente, &pos_y, sizeof(uint32_t), MSG_WAITALL);
 	recv(socket_cliente, &cantidad, sizeof(uint32_t), MSG_WAITALL);
 
-	printf("operacion %d\n", tipo_mensaje);
+//	printf("operacion %d\n", tipo_mensaje);
 	printf("buffer size %d\n", size_buffer);
 	printf("largo %d\n", largo_nombre);
 	printf("nombre %s\n", nombre_pokemon);
@@ -241,7 +261,7 @@ char* recibirAppearedPokemon(int socket_cliente){
 	appeared_pokemon.pos_x = pos_x;
 	appeared_pokemon.pos_y = pos_y;
 
-	log_info("Se recibe un %d, con un buffer de %d, un largo de %d, el nombre %s, la pos en x %d y la pos en y %d", tipo_mensaje, size_buffer, largo_nombre, nombre_pokemon, pos_x, pos_y);
+	log_info(logger, "Se recibe un %d, con un buffer de %d, un largo de %d, el nombre %s, la pos en x %d y la pos en y %d", tipo_mensaje, size_buffer, largo_nombre, nombre_pokemon, pos_x, pos_y);
 	printf("El pokemon es %s\n", appeared_pokemon.nombre_pokemon);
 
 	return nombre_pokemon;

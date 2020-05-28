@@ -31,6 +31,10 @@ int crearSocketServidor(char* ip, char* puerto);
 //Dado un servidor, acepta al Cliente que se este queriendo conectar a el.
 int aceptarCliente(int socket_servidor);
 
+int recibirOperacion(int socket_cliente);
+
+void atenderCliente(int socket_cliente);
+
 //Dado un Socket, envía un mensaje del tipo NEW_POKEMON.
 void enviarNewPokemon(int socket_cliente, t_new_pokemon mensaje);
 
