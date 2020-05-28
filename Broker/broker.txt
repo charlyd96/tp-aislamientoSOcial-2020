@@ -1,0 +1,6 @@
+[INFO] 01:37:00:910 LOG/(7855:7855): Se hizo el Log.
+
+[INFO] 01:37:19:729 LOG/(8019:8019): Se hizo el Log.
+
+[INFO] 01:38:09:26 LOG/(8239:8239): Se hizo el Log.
+
