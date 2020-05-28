@@ -13,6 +13,7 @@
 #include "conexion.h"
 #include "serializacion.h"
 #include <commons/config.h>
+
 bool checkCantidadArgumentos(process_code proc,op_code ope, int argc){
 	bool flag = false;
 	 switch(proc)
@@ -89,12 +90,16 @@ bool checkCantidadArgumentos(process_code proc,op_code ope, int argc){
  */
 t_parser_error_codes parsearNewPokemon(process_code proc,char** argv,parser_result* result){
 	t_new_pokemon new_pokemon;
-	//Argumentos ["gameboy","PROCESO","NEW_POKEMON","NOMBRE","POSX","POSY","CANTIDAD"]
+	//./gameboy BROKER NEW_POKEMON [POKEMON] [POSX] [POSY] [CANTIDAD]
+	//./gameboy GAMECARD NEW_POKEMON [POKEMON] [POSX] [POSY] [CANTIDAD] [ID_MENSAJE]
+
+	if(proc != P_BROKER && proc != P_GAMECARD) return ERROR_BAD_REQUEST;
 
 	//por default id 0
 	new_pokemon.id = 0;
 
 	new_pokemon.nombre_pokemon = argv[3];
+
 	new_pokemon.pos_x = atoi(argv[4]);
 	new_pokemon.pos_y = atoi(argv[5]);
 	new_pokemon.cantidad = atoi(argv[6]);
@@ -106,55 +111,114 @@ t_parser_error_codes parsearNewPokemon(process_code proc,char** argv,parser_resu
 	return PARSE_SUCCESS;
 
 }
-t_parser_error_codes parsearMsgBroker(int argc,char** argv,parser_result *result){
-	t_parser_error_codes err = PARSE_SUCCESS;
+t_parser_error_codes parsearAppearedPokemon(process_code proc,char** argv,parser_result* result){
+	//./gameboy BROKER APPEARED_POKEMON [POKEMON] [POSX] [POSY] [ID_MENSAJE_CORRELATIVO]
+	//./gameboy TEAM APPEARED_POKEMON [POKEMON] [POSX] [POSY]
+	if(proc != P_BROKER && proc != P_TEAM) return ERROR_BAD_REQUEST;
+
+	t_appeared_pokemon app_pokemon;
+
+	//por default id 0
+	app_pokemon.id = 0;
+
+	app_pokemon.nombre_pokemon = argv[3];
+	app_pokemon.pos_x = atoi(argv[4]);
+	app_pokemon.pos_y = atoi(argv[5]);
+	if(proc == P_BROKER) app_pokemon.id = atoi(argv[6]);
+
+	t_buffer* buffer = serializarAppearedPokemon(app_pokemon);
+
+	result->buffer = buffer;
+	return PARSE_SUCCESS;
+
+}
+t_parser_error_codes parsearCatchPokemon(process_code proc,char** argv,parser_result* result){
+	//./gameboy GAMECARD CATCH_POKEMON [POKEMON] [POSX] [POSY] [ID_MENSAJE]
+	//./gameboy BROKER CATCH_POKEMON [POKEMON] [POSX] [POSY]
+	if(proc != P_BROKER && proc != P_GAMECARD) return ERROR_BAD_REQUEST;
+
+	t_catch_pokemon catch_pokemon;
+
+	//por default id 0
+	catch_pokemon.id = 0;
+
+	catch_pokemon.nombre_pokemon = argv[3];
+	catch_pokemon.pos_x = atoi(argv[4]);
+	catch_pokemon.pos_y = atoi(argv[5]);
+	if(proc == P_GAMECARD) catch_pokemon.id = atoi(argv[6]);
+
+	t_buffer* buffer = serializarCatchPokemon(catch_pokemon);
+
+	result->buffer = buffer;
+	return PARSE_SUCCESS;
+
+}
+t_parser_error_codes parsearCaughtPokemon(process_code proc,char** argv,parser_result* result){
+	//./gameboy BROKER CAUGHT_POKEMON [ID_MENSAJE_CORRELATIVO] [OK/FAIL]
+
+	if(proc != P_BROKER) return ERROR_BAD_REQUEST;
+
+	t_caught_pokemon caught_pokemon;
+
+	caught_pokemon.id = atoi(argv[3]);
+	caught_pokemon.atrapo_pokemon = atoi(argv[4]);
+
+	t_buffer* buffer = serializarCaughtPokemon(caught_pokemon);
+
+	result->buffer = buffer;
+	return PARSE_SUCCESS;
+
+}
+t_parser_error_codes parsearGetPokemon(process_code proc,char** argv,parser_result* result){
+	//./gameboy BROKER GET_POKEMON [POKEMON]
+	//./gameboy GAMECARD GET_POKEMON [POKEMON] [ID_MENSAJE]
+
+	if(proc != P_BROKER && proc != P_GAMECARD) return ERROR_BAD_REQUEST;
+
+	t_get_pokemon get_pokemon;
+
+	get_pokemon.id = 0;
+
+	get_pokemon.nombre_pokemon = argv[3];
+	if(proc == P_GAMECARD){
+		get_pokemon.id = atoi(argv[4]);
+	}
+
+	t_buffer* buffer = serializarGetPokemon(get_pokemon);
+
+	result->buffer = buffer;
+	return PARSE_SUCCESS;
+
+}
+t_parser_error_codes parsearMsgGeneral(process_code proc,int argc,char** argv,parser_result *result){
 
 	switch (result->msg_type)
 	    {
 	    case NEW_POKEMON:
-	    	if(argc != COUNT_ARGS_BROKER_NEW_POKEMON){
-	    		printf("La cantidad de argumentos no es válida\n");
-	    		err = ERROR_BAD_ARGUMENTS_QUANTITY;
-	    	}else{
-				//Envío P_BROKER para manejar el caso especial de newPokemon para gameCard (lleva un id de más)
-				return parsearNewPokemon(P_BROKER, argv,result);
-	    	}
+			return parsearNewPokemon(proc, argv,result);
 		break;
 
-	    case APPEARED_POKEMON:
-	    	if(argc != COUNT_ARGS_BROKER_APPEARD_POKEMON){
-				printf("La cantidad de argumentos no es válida\n");
-				err = ERROR_BAD_ARGUMENTS_QUANTITY;
-			}
-	        break;
+	    	return parsearAppearedPokemon(proc,argv,result);
+		break;
 
 	    case CATCH_POKEMON:
-	    	if(argc != COUNT_ARGS_BROKER_CATCH_POKEMON){
-				printf("La cantidad de argumentos no es válida\n");
-				err = ERROR_BAD_ARGUMENTS_QUANTITY;
-			}
+	    	return parsearCatchPokemon(proc,argv,result);
 	        break;
 
 	    case CAUGHT_POKEMON:
-	    	if(argc != COUNT_ARGS_BROKER_CAUGHT_POKEMON){
-				printf("La cantidad de argumentos no es válida\n");
-				err = ERROR_BAD_ARGUMENTS_QUANTITY;
-			}
+	    	return parsearCaughtPokemon(proc,argv,result);
 	        break;
 
 	    case GET_POKEMON:
-	    	if(argc != COUNT_ARGS_BROKER_GET_POKEMON){
-				printf("La cantidad de argumentos no es válida\n");
-				err = ERROR_BAD_ARGUMENTS_QUANTITY;
-			}
+	    	return parsearGetPokemon(proc,argv,result);
 	        break;
 
 	    default:
 	    	printf("El argumento no es valido\n");
-	    	err = ERROR_BAD_REQUEST;
+	    	return ERROR_BAD_REQUEST;
 		break;
 	    }
-	return err;
+	return ERROR_BAD_REQUEST;
 }
 process_code getProcessCode(char* arg){
 	process_code p = P_UNKNOWN;
@@ -199,7 +263,7 @@ t_parser_error_codes parsearComando(int argc, char** argv, parser_result* result
 	result->msg_type 	= op_code;
 
 	if(!checkCantidadArgumentos(p_code,op_code,argc)){
-		printf("La cantidad de argumentos no es válida");
+		printf("La cantidad de argumentos no es válida\n");
 		return ERROR_BAD_REQUEST;
 	}
 	printf("comando %s\n",argv[1]);
@@ -209,35 +273,53 @@ t_parser_error_codes parsearComando(int argc, char** argv, parser_result* result
 
 			break;
 		case P_BROKER:
-			return parsearMsgBroker(argc,argv,result);
-
-			break;
 		case P_GAMECARD:
-
-
-			break;
 		case P_TEAM:
+			return parsearMsgGeneral(result->module,argc,argv,result);
 
 			break;
 		default:
-
+			return ERROR_BAD_REQUEST;
 			break;
     }
 
     return ERROR_BAD_REQUEST;
 }
-void enviarMensajeAModulo(int socket,op_code ope,t_buffer* buffer){
+t_parser_error_codes enviarMensajeAModulo(process_code proc,op_code ope,t_buffer* buffer){
+	//Levanto el socket
+	t_config* config = config_create("./gameBoy.config");
+	if(config == NULL){
+		printf("No se puede leer el archivo de configuración de Game Boy\n");
+		return ERROR_CONFIG_FILE;
+	}
+	char* ipServidor = "";
+	char* puertoServidor ="";
+	if(proc == P_BROKER){
+		ipServidor = config_get_string_value(config, "IP_BROKER");
+		puertoServidor = config_get_string_value(config, "PUERTO_BROKER");
+	}
+	if(proc == P_TEAM){
+		ipServidor = config_get_string_value(config, "IP_TEAM");
+		puertoServidor = config_get_string_value(config, "PUERTO_TEAM");
+
+	}
+	if(strcmp(ipServidor,"")==0 || strcmp(puertoServidor,"") == 0) return ERROR_CONFIG_FILE;
+
+	int gameBoyBroker = crearSocketCliente(ipServidor, puertoServidor);
+
 	t_paquete* paquete = malloc(sizeof(t_paquete));
 	paquete->codigo_operacion = ope;
 	paquete->buffer = buffer;
 	int tamanio_a_enviar;
 	void* mensajeSerializado = serializarPaquete(paquete, &tamanio_a_enviar);
-	int enviado = send(socket, mensajeSerializado, tamanio_a_enviar, 0);
+	int enviado = send(gameBoyBroker, mensajeSerializado, tamanio_a_enviar, 0);
 
 	if(enviado == -1){
-		printf("No se envió el mensaje serializado");
+		printf("No se envió el mensaje serializado\n");
+		return ERROR_SEND;
 	}else{
-		printf("Se conectó y se envía el mensaje");
+		printf("Se conectó y se enviaron %d bytes\n",enviado);
+		return PARSE_SUCCESS;
 	}
 
 	free(mensajeSerializado);
@@ -245,55 +327,26 @@ void enviarMensajeAModulo(int socket,op_code ope,t_buffer* buffer){
 
 }
 int main(int argc, char** argv){
-//-------Levantar config---------------
-	t_config* config = config_create("./gameBoy.config");
-	char* ipServidorBroker = config_get_string_value(config, "IP_BROKER");
-	char* puertoServidorBroker = config_get_string_value(config, "PUERTO_BROKER");
-	char* ipServidorTeam = config_get_string_value(config, "IP_TEAM");
-	char* puertoServidorTeam = config_get_string_value(config, "PUERTO_TEAM");
 
-	if(config == NULL){
-		printf("No se puede leer el archivo de configuración de Game Boy\n");
-	}else{
-		printf("Leí la IP %s del PUERTO %s\n", ipServidorBroker, puertoServidorBroker);
-	}
-//------------------------------------
-	printf("El comando es %s",argv[1]);
 	parser_result result;
 	t_parser_error_codes p = parsearComando(argc,argv, &result);
 	if(p != PARSE_SUCCESS){
 		printf("Error al parsear\n");
-		return ERROR_BAD_REQUEST;
+		return p;
 	}
 	else{
-		int gameBoyBroker = crearSocketCliente(ipServidorBroker, puertoServidorBroker);
 		switch(result.module){
+		case P_SUSCRIPTOR:
+			printf("suscripcion aún no desarrollada\n");
+		break;
 		case P_BROKER:
-
-			enviarMensajeAModulo(gameBoyBroker,result.msg_type,result.buffer);
-			break;
+		case P_TEAM:
+		case P_GAMECARD:
+			enviarMensajeAModulo(result.module,result.msg_type,result.buffer);
+		break;
+		default:
+			return ERROR_BAD_REQUEST;
+		break;
 		}
 	}
-
-/*
-	t_new_pokemon pokemon;
-		pokemon.nombre_pokemon = "Pikachu";
-		pokemon.pos_x = 4;
-		pokemon.pos_y = 5;
-		pokemon.cantidad = 2;
-
-	int gameBoyBroker = crearSocketCliente(ipServidorBroker, puertoServidorBroker);
-
-	enviarNewPokemon(gameBoyBroker, pokemon);
-
- 	PARA QUE EL SERVIDOR TEAM RECIBA EL MENSAJE HABRÁ QUE HACER UN SWITCH
- 	t_appeared_pokemon pokemon1;
-	pokemon1.nombre_pokemon = "Nidoran";
-	pokemon1.pos_x = 10;
-	pokemon1.pos_y = 3;
-
-	int gameBoyTeam = crearSocketCliente(ipServidorTeam, puertoServidorTeam);
-	printf("Socket Cliente %d\n", gameBoyTeam);
-
-	enviarAppearedPokemon(gameBoyTeam, pokemon1); */
 }
