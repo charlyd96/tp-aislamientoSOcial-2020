@@ -67,7 +67,7 @@ void atenderCliente(int socket_cliente){
 }
 int main(void){
 	crearConfigBroker();
-	close(5);
+
 	int socketServidorBroker = crearSocketServidor(config_broker->ip_broker, config_broker->puerto_broker);
 
 	if(socketServidorBroker == -1){

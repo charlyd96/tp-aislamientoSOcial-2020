@@ -120,7 +120,6 @@ t_error_codes parsearAppearedPokemon(process_code proc,char** argv,parser_result
 
 	//por default id 0
 	app_pokemon.id_mensaje_correlativo = 0;
-	app_pokemon.id_mensaje = 0;
 
 	app_pokemon.nombre_pokemon = argv[3];
 	app_pokemon.pos_x = atoi(argv[4]);
@@ -160,7 +159,6 @@ t_error_codes parsearCaughtPokemon(process_code proc,char** argv,parser_result* 
 	if(proc != P_BROKER) return ERROR_BAD_REQUEST;
 
 	t_caught_pokemon caught_pokemon;
-	caught_pokemon.id_mensaje = 0;
 	caught_pokemon.id_mensaje_correlativo = atoi(argv[3]);
 	caught_pokemon.atrapo_pokemon = atoi(argv[4]);
 

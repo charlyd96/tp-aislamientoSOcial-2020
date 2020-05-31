@@ -70,7 +70,6 @@ t_buffer* serializarAppearedPokemon(t_appeared_pokemon mensaje){
 
 	buffer->size = 3* sizeof(uint32_t) + largo_nombre;
 	if(mensaje.id_mensaje_correlativo != 0) buffer->size += sizeof(uint32_t);
-	if(mensaje.id_mensaje != 0) buffer->size += sizeof(uint32_t);
 
 	void* stream = malloc(buffer->size);
 
@@ -132,7 +131,6 @@ t_buffer* serializarCatchPokemon(t_catch_pokemon mensaje){
 t_buffer* serializarCaughtPokemon(t_caught_pokemon mensaje){
 	t_buffer* buffer = malloc(sizeof(t_buffer));
 	buffer->size = 2* sizeof(uint32_t);
-	if(mensaje.id_mensaje != 0) buffer->size += sizeof(uint32_t);
 
 	void* stream = malloc(buffer->size);
 	int offset = 0;
@@ -142,11 +140,6 @@ t_buffer* serializarCaughtPokemon(t_caught_pokemon mensaje){
 
 	memcpy(stream + offset, &(mensaje.id_mensaje_correlativo), sizeof(uint32_t));
 	offset += sizeof(uint32_t);
-
-	if(mensaje.id_mensaje != 0){
-		memcpy(stream + offset, &(mensaje.id_mensaje), sizeof(uint32_t));
-		offset += sizeof(uint32_t);
-	}
 
 	buffer->stream = stream;
 	return buffer;
