@@ -56,13 +56,51 @@ bool existeArchivoConfig(char* path){
 void atenderCliente(int socket_cliente){
 	int cod_op = recibirOperacion(socket_cliente);
 	switch(cod_op){
-	case NEW_POKEMON:
-		printf("Recibi NEW_POKEMON");
-		t_new_pokemon* new_pokemon= recibirNewPokemon(socket_cliente);
-		/**
-		 * tratarRecepcionNewPokemon(new_pokemon)
-		 */
-		break;
+		case NEW_POKEMON:
+			printf("Recibi NEW_POKEMON");
+			t_new_pokemon* new_pokemon= recibirNewPokemon(socket_cliente);
+			/**
+			 * tratarRecepcionNewPokemon(new_pokemon)
+			 */
+			break;
+		case GET_POKEMON:
+			printf("Recibi GET_POKEMON");
+			t_get_pokemon* get_pokemon= recibirGetPokemon(socket_cliente);
+			/**
+			 * tratarRecepcionGetPokemon(get_pokemon)
+			 */
+			break;
+		case CATCH_POKEMON:
+			printf("Recibi CATCH_POKEMON");
+			t_catch_pokemon* catch_pokemon= recibirCatchPokemon(socket_cliente);
+			/**
+			 * tratarRecepcionCatchPokemon(catch_pokemon)
+			 */
+			break;
+		case APPEARED_POKEMON:
+			printf("Recibi APPEARED");
+			t_appeared_pokemon* app_pokemon= recibirAppearedPokemon(socket_cliente);
+			/**
+			 * tratarRecepcionAppPokemon(app_pokemon)
+			 */
+			break;
+		case LOCALIZED_POKEMON:
+			printf("Recibi LOCALIZED_POKEMON");
+			t_localized_pokemon* localized_pokemon= recibirLocalizedPokemon(socket_cliente);
+			/**
+			 * tratarRecepcionLocalizedPokemon(localized_pokemon)
+			 */
+			break;
+		case CAUGHT_POKEMON:
+			printf("Recibi CAUGHT_POKEMON");
+			t_caught_pokemon* caught_pokemon= recibirCaughtPokemon(socket_cliente);
+			/**
+			 * tratarRecepcionCaughtPokemon(caught_pokemon)
+			 */
+			break;
+		default:
+			printf("La operación no es correcta");
+			break;
 	}
 }
 int main(void){

@@ -20,3 +20,11 @@
 
 [INFO] 03:23:44:683 LOG/(17399:17399): Se hizo el Log.
 
+[INFO] 19:35:54:418 LOG/(13680:13680): Se hizo el Log.
+
+[INFO] 19:40:54:140 LOG/(14110:14110): Se hizo el Log.
+
+[INFO] 19:42:18:934 LOG/(14156:14156): Se hizo el Log.
+
+[INFO] 19:43:00:103 LOG/(14172:14172): Se hizo el Log.
+

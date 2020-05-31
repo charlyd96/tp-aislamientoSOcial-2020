@@ -85,8 +85,7 @@ typedef struct {
 typedef struct {
 	char* nombre_pokemon;
 	uint32_t cant_pos;
-	uint32_t pos_x;
-	uint32_t pos_y;
+	char* posiciones; //Lista de posiciones con el formato de los .config "[2|1,1|1]"
 	uint32_t id_mensaje_correlativo;
 } t_localized_pokemon;
 
