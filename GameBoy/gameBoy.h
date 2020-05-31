@@ -30,6 +30,6 @@ typedef enum{
     ERROR_BAD_TYPE_PARSE,
 	ERROR_CONFIG_FILE,
 	ERROR_SEND
-}t_parser_error_codes;
+}t_error_codes;
 
 #endif /* GAMEBOY_H_ */

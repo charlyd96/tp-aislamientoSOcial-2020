@@ -56,31 +56,41 @@ typedef struct {
 	uint32_t pos_x;
 	uint32_t pos_y;
 	uint32_t cantidad;
-	uint32_t id;
+	uint32_t id_mensaje;
 } t_new_pokemon;
+
+typedef struct {
+	char* nombre_pokemon;
+	uint32_t id_mensaje;
+} t_get_pokemon;
+typedef struct {
+	char* nombre_pokemon;
+	uint32_t pos_x;
+	uint32_t pos_y;
+	uint32_t id_mensaje;
+}t_catch_pokemon;
 
 typedef struct {
 	char* nombre_pokemon;
 	uint32_t pos_x;
 	uint32_t pos_y;
-	uint32_t id;
-} t_appeared_pokemon, t_catch_pokemon;
+	uint32_t id_mensaje_correlativo;
+	uint32_t id_mensaje;
+} t_appeared_pokemon;
 
 typedef struct {
-	uint32_t id;
 	uint32_t atrapo_pokemon;
+	uint32_t id_mensaje_correlativo;
+	uint32_t id_mensaje;
 } t_caught_pokemon;
-
-typedef struct {
-	char* nombre_pokemon;
-	uint32_t id;
-} t_get_pokemon;
 
 typedef struct {
 	char* nombre_pokemon;
 	uint32_t cant_pos;
 	uint32_t pos_x;
 	uint32_t pos_y;
+	uint32_t id_mensaje_correlativo;
+	uint32_t id_mensaje;
 } t_localized_pokemon;
 
 #endif /* PROTOCOLO_H_ */

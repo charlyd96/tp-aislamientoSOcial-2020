@@ -47,5 +47,6 @@ t_list* colaLocalizedPokemon;
 
 int crearConfigBroker();
 bool existeArchivoConfig(char* path);
+void atenderCliente(int socket_cliente);
 
 #endif /* BROKER_H_ */

@@ -50,10 +50,24 @@ bool existeArchivoConfig(char* path){
 		return false;
 	}
 }
-
+/**
+ * Función específica el broker, debería estar en un funcionesBroker.c
+ */
+void atenderCliente(int socket_cliente){
+	int cod_op = recibirOperacion(socket_cliente);
+	switch(cod_op){
+	case NEW_POKEMON:
+		printf("Recibi NEW_POKEMON");
+		t_new_pokemon* new_pokemon= recibirNewPokemon(socket_cliente);
+		/**
+		 * tratarRecepcionNewPokemon(new_pokemon)
+		 */
+		break;
+	}
+}
 int main(void){
 	crearConfigBroker();
-
+	close(5);
 	int socketServidorBroker = crearSocketServidor(config_broker->ip_broker, config_broker->puerto_broker);
 
 	if(socketServidorBroker == -1){
@@ -64,6 +78,8 @@ int main(void){
 
 	int cliente = aceptarCliente(socketServidorBroker);
 
-	char* recibido = recibirNewPokemon(cliente);
-	printf("Mensaje recibido %s", recibido);
+	atenderCliente(cliente);
+
+	if(socketServidorBroker != -1) close(socketServidorBroker);
+
 }

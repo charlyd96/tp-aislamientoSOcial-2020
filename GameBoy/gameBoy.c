@@ -88,7 +88,7 @@ bool checkCantidadArgumentos(process_code proc,op_code ope, int argc){
 /**
  * Parsea los argv, y los serializa en un void* listo para enviar según el protocolo
  */
-t_parser_error_codes parsearNewPokemon(process_code proc,char** argv,parser_result* result){
+t_error_codes parsearNewPokemon(process_code proc,char** argv,parser_result* result){
 	t_new_pokemon new_pokemon;
 	//./gameboy BROKER NEW_POKEMON [POKEMON] [POSX] [POSY] [CANTIDAD]
 	//./gameboy GAMECARD NEW_POKEMON [POKEMON] [POSX] [POSY] [CANTIDAD] [ID_MENSAJE]
@@ -96,14 +96,14 @@ t_parser_error_codes parsearNewPokemon(process_code proc,char** argv,parser_resu
 	if(proc != P_BROKER && proc != P_GAMECARD) return ERROR_BAD_REQUEST;
 
 	//por default id 0
-	new_pokemon.id = 0;
+	new_pokemon.id_mensaje = 0;
 
 	new_pokemon.nombre_pokemon = argv[3];
 
 	new_pokemon.pos_x = atoi(argv[4]);
 	new_pokemon.pos_y = atoi(argv[5]);
 	new_pokemon.cantidad = atoi(argv[6]);
-	if(proc == P_GAMECARD) new_pokemon.id = atoi(argv[7]);
+	if(proc == P_GAMECARD) new_pokemon.id_mensaje = atoi(argv[7]);
 
 	t_buffer* buffer = serializarNewPokemon(new_pokemon);
 
@@ -111,7 +111,7 @@ t_parser_error_codes parsearNewPokemon(process_code proc,char** argv,parser_resu
 	return PARSE_SUCCESS;
 
 }
-t_parser_error_codes parsearAppearedPokemon(process_code proc,char** argv,parser_result* result){
+t_error_codes parsearAppearedPokemon(process_code proc,char** argv,parser_result* result){
 	//./gameboy BROKER APPEARED_POKEMON [POKEMON] [POSX] [POSY] [ID_MENSAJE_CORRELATIVO]
 	//./gameboy TEAM APPEARED_POKEMON [POKEMON] [POSX] [POSY]
 	if(proc != P_BROKER && proc != P_TEAM) return ERROR_BAD_REQUEST;
@@ -119,12 +119,13 @@ t_parser_error_codes parsearAppearedPokemon(process_code proc,char** argv,parser
 	t_appeared_pokemon app_pokemon;
 
 	//por default id 0
-	app_pokemon.id = 0;
+	app_pokemon.id_mensaje_correlativo = 0;
+	app_pokemon.id_mensaje = 0;
 
 	app_pokemon.nombre_pokemon = argv[3];
 	app_pokemon.pos_x = atoi(argv[4]);
 	app_pokemon.pos_y = atoi(argv[5]);
-	if(proc == P_BROKER) app_pokemon.id = atoi(argv[6]);
+	if(proc == P_BROKER) app_pokemon.id_mensaje_correlativo = atoi(argv[6]);
 
 	t_buffer* buffer = serializarAppearedPokemon(app_pokemon);
 
@@ -132,7 +133,7 @@ t_parser_error_codes parsearAppearedPokemon(process_code proc,char** argv,parser
 	return PARSE_SUCCESS;
 
 }
-t_parser_error_codes parsearCatchPokemon(process_code proc,char** argv,parser_result* result){
+t_error_codes parsearCatchPokemon(process_code proc,char** argv,parser_result* result){
 	//./gameboy GAMECARD CATCH_POKEMON [POKEMON] [POSX] [POSY] [ID_MENSAJE]
 	//./gameboy BROKER CATCH_POKEMON [POKEMON] [POSX] [POSY]
 	if(proc != P_BROKER && proc != P_GAMECARD) return ERROR_BAD_REQUEST;
@@ -140,12 +141,12 @@ t_parser_error_codes parsearCatchPokemon(process_code proc,char** argv,parser_re
 	t_catch_pokemon catch_pokemon;
 
 	//por default id 0
-	catch_pokemon.id = 0;
+	catch_pokemon.id_mensaje = 0;
 
 	catch_pokemon.nombre_pokemon = argv[3];
 	catch_pokemon.pos_x = atoi(argv[4]);
 	catch_pokemon.pos_y = atoi(argv[5]);
-	if(proc == P_GAMECARD) catch_pokemon.id = atoi(argv[6]);
+	if(proc == P_GAMECARD) catch_pokemon.id_mensaje = atoi(argv[6]);
 
 	t_buffer* buffer = serializarCatchPokemon(catch_pokemon);
 
@@ -153,14 +154,14 @@ t_parser_error_codes parsearCatchPokemon(process_code proc,char** argv,parser_re
 	return PARSE_SUCCESS;
 
 }
-t_parser_error_codes parsearCaughtPokemon(process_code proc,char** argv,parser_result* result){
+t_error_codes parsearCaughtPokemon(process_code proc,char** argv,parser_result* result){
 	//./gameboy BROKER CAUGHT_POKEMON [ID_MENSAJE_CORRELATIVO] [OK/FAIL]
 
 	if(proc != P_BROKER) return ERROR_BAD_REQUEST;
 
 	t_caught_pokemon caught_pokemon;
-
-	caught_pokemon.id = atoi(argv[3]);
+	caught_pokemon.id_mensaje = 0;
+	caught_pokemon.id_mensaje_correlativo = atoi(argv[3]);
 	caught_pokemon.atrapo_pokemon = atoi(argv[4]);
 
 	t_buffer* buffer = serializarCaughtPokemon(caught_pokemon);
@@ -169,7 +170,7 @@ t_parser_error_codes parsearCaughtPokemon(process_code proc,char** argv,parser_r
 	return PARSE_SUCCESS;
 
 }
-t_parser_error_codes parsearGetPokemon(process_code proc,char** argv,parser_result* result){
+t_error_codes parsearGetPokemon(process_code proc,char** argv,parser_result* result){
 	//./gameboy BROKER GET_POKEMON [POKEMON]
 	//./gameboy GAMECARD GET_POKEMON [POKEMON] [ID_MENSAJE]
 
@@ -177,11 +178,11 @@ t_parser_error_codes parsearGetPokemon(process_code proc,char** argv,parser_resu
 
 	t_get_pokemon get_pokemon;
 
-	get_pokemon.id = 0;
+	get_pokemon.id_mensaje = 0;
 
 	get_pokemon.nombre_pokemon = argv[3];
 	if(proc == P_GAMECARD){
-		get_pokemon.id = atoi(argv[4]);
+		get_pokemon.id_mensaje = atoi(argv[4]);
 	}
 
 	t_buffer* buffer = serializarGetPokemon(get_pokemon);
@@ -190,7 +191,7 @@ t_parser_error_codes parsearGetPokemon(process_code proc,char** argv,parser_resu
 	return PARSE_SUCCESS;
 
 }
-t_parser_error_codes parsearMsgGeneral(process_code proc,int argc,char** argv,parser_result *result){
+t_error_codes parsearMsgGeneral(process_code proc,int argc,char** argv,parser_result *result){
 
 	switch (result->msg_type)
 	    {
@@ -242,7 +243,7 @@ op_code getOperationCode(char* arg){
 
 	return op;
 }
-t_parser_error_codes parsearComando(int argc, char** argv, parser_result* result)
+t_error_codes parsearComando(int argc, char** argv, parser_result* result)
 {
     if(argc < 4)
     {
@@ -285,9 +286,9 @@ t_parser_error_codes parsearComando(int argc, char** argv, parser_result* result
 
     return ERROR_BAD_REQUEST;
 }
-t_parser_error_codes enviarMensajeAModulo(process_code proc,op_code ope,t_buffer* buffer){
+t_error_codes enviarMensajeAModulo(process_code proc,op_code ope,t_buffer* buffer){
 	//Levanto el socket
-	t_config* config = config_create("./gameBoy.config");
+	t_config* config = config_create("../gameBoy.config");
 	if(config == NULL){
 		printf("No se puede leer el archivo de configuración de Game Boy\n");
 		return ERROR_CONFIG_FILE;
@@ -329,7 +330,7 @@ t_parser_error_codes enviarMensajeAModulo(process_code proc,op_code ope,t_buffer
 int main(int argc, char** argv){
 
 	parser_result result;
-	t_parser_error_codes p = parsearComando(argc,argv, &result);
+	t_error_codes p = parsearComando(argc,argv, &result);
 	if(p != PARSE_SUCCESS){
 		printf("Error al parsear\n");
 		return p;
