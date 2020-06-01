@@ -94,11 +94,11 @@ int aceptarCliente(int socket_servidor){
 	return socket_cliente;
 }
 
-int recibirOperacion(int socket_cliente){
-	int cod_op;
+op_code recibirOperacion(int socket_cliente){
+	op_code cod_op;
 	int recibido = recv(socket_cliente, &cod_op, sizeof(uint32_t), MSG_WAITALL);
 	if(recibido == 0){
-		return -1;
+		return OP_UNKNOWN;
 	}
 	return cod_op;
 }
@@ -167,11 +167,10 @@ int enviarCaughtPokemon(int socket_cliente, t_caught_pokemon mensaje){
 t_new_pokemon* recibirNewPokemon(int socket_cliente){
 	uint32_t size_buffer, largo_nombre, pos_x, pos_y, cantidad;
 	uint32_t id_mensaje = 0;
-	t_new_pokemon* new_pokemon;
-	int bytes_recibidos = 0;
+	uint32_t bytes_recibidos = 0;
 
 	recv(socket_cliente, &size_buffer, sizeof(uint32_t), MSG_WAITALL);
-	bytes_recibidos += sizeof(uint32_t);
+
 	recv(socket_cliente, &largo_nombre, sizeof(uint32_t), MSG_WAITALL);
 	bytes_recibidos += sizeof(uint32_t);
 	char* nombre_pokemon = malloc(largo_nombre);
@@ -189,14 +188,8 @@ t_new_pokemon* recibirNewPokemon(int socket_cliente){
 		recv(socket_cliente, &id_mensaje, sizeof(uint32_t), MSG_WAITALL);
 		bytes_recibidos += sizeof(uint32_t);
 	}
-	printf("buffer size %d\n", size_buffer);
-	printf("largo %d\n", largo_nombre);
-	printf("nombre %s\n", nombre_pokemon);
-	printf("pos x %d\n", pos_x);
-	printf("pos y %d\n", pos_y);
-	printf("cantidad %d\n", cantidad);
-	printf("id msg %d\n", id_mensaje);
 
+	t_new_pokemon* new_pokemon = malloc(sizeof(t_new_pokemon));
 	new_pokemon->nombre_pokemon = nombre_pokemon;
 	new_pokemon->pos_x = pos_x;
 	new_pokemon->pos_y = pos_y;
@@ -209,10 +202,9 @@ t_new_pokemon* recibirNewPokemon(int socket_cliente){
 t_appeared_pokemon* recibirAppearedPokemon(int socket_cliente){
 
 	uint32_t size_buffer, largo_nombre, pos_x, pos_y,id_mensaje_correlativo;
-	int bytes_recibidos = 0;
+	uint32_t bytes_recibidos = 0;
 
 	recv(socket_cliente, &size_buffer, sizeof(uint32_t), MSG_WAITALL);
-	bytes_recibidos += sizeof(uint32_t);
 	recv(socket_cliente, &largo_nombre, sizeof(uint32_t), MSG_WAITALL);
 	bytes_recibidos += sizeof(uint32_t);
 	char* nombre_pokemon = malloc(largo_nombre);
@@ -228,13 +220,11 @@ t_appeared_pokemon* recibirAppearedPokemon(int socket_cliente){
 		bytes_recibidos += sizeof(uint32_t);
 	}
 
-	t_appeared_pokemon* appeared_pokemon;
+	t_appeared_pokemon* appeared_pokemon = malloc(sizeof(t_appeared_pokemon));
 	appeared_pokemon->nombre_pokemon = nombre_pokemon;
 	appeared_pokemon->pos_x = pos_x;
 	appeared_pokemon->pos_y = pos_y;
 	appeared_pokemon->id_mensaje_correlativo = id_mensaje_correlativo;
-
-	printf("El pokemon es %s\n", appeared_pokemon->nombre_pokemon);
 
 	return appeared_pokemon;
 }
@@ -242,10 +232,9 @@ t_get_pokemon* recibirGetPokemon(int socket_cliente){
 
 	uint32_t size_buffer, largo_nombre;
 	uint32_t id_mensaje = 0;
-	int bytes_recibidos = 0;
+	uint32_t bytes_recibidos = 0;
 
 	recv(socket_cliente, &size_buffer, sizeof(uint32_t), MSG_WAITALL);
-	bytes_recibidos += sizeof(uint32_t);
 
 	recv(socket_cliente, &largo_nombre, sizeof(uint32_t), MSG_WAITALL);
 	bytes_recibidos += sizeof(uint32_t);
@@ -260,11 +249,9 @@ t_get_pokemon* recibirGetPokemon(int socket_cliente){
 		bytes_recibidos += sizeof(uint32_t);
 	}
 
-	t_get_pokemon* get_pokemon;
+	t_get_pokemon* get_pokemon = malloc(sizeof(t_get_pokemon));
 	get_pokemon->nombre_pokemon = nombre_pokemon;
 	get_pokemon->id_mensaje = id_mensaje;
-
-	printf("El pokemon es %s\n", get_pokemon->nombre_pokemon);
 
 	return get_pokemon;
 }
@@ -273,11 +260,10 @@ t_localized_pokemon* recibirLocalizedPokemon(int socket_cliente){
 	uint32_t id_mensaje_correlativo = 0;
 	uint32_t pos_x = 0;
 	uint32_t pos_y = 0;
-	int bytes_recibidos = 0;
+	uint32_t bytes_recibidos = 0;
 	char* posicionesString = "";
 
 	recv(socket_cliente, &size_buffer, sizeof(uint32_t), MSG_WAITALL);
-	bytes_recibidos += sizeof(uint32_t);
 
 	recv(socket_cliente, &largo_nombre, sizeof(uint32_t), MSG_WAITALL);
 	bytes_recibidos += sizeof(uint32_t);
@@ -313,13 +299,11 @@ t_localized_pokemon* recibirLocalizedPokemon(int socket_cliente){
 		bytes_recibidos += sizeof(uint32_t);
 	}
 
-	t_localized_pokemon* localized_pokemon;
+	t_localized_pokemon* localized_pokemon = malloc(sizeof(t_localized_pokemon));
 	localized_pokemon->nombre_pokemon = nombre_pokemon;
 	localized_pokemon->cant_pos = cant_pos;
 	localized_pokemon->posiciones = posicionesString;
 	localized_pokemon->id_mensaje_correlativo = id_mensaje_correlativo;
-
-	printf("El pokemon es %s\n", localized_pokemon->nombre_pokemon);
 
 	return localized_pokemon;
 }
@@ -327,10 +311,9 @@ t_catch_pokemon* recibirCatchPokemon(int socket_cliente){
 
 	uint32_t size_buffer, largo_nombre, pos_x, pos_y;
 	uint32_t id_mensaje = 0;
-	int bytes_recibidos = 0;
+	uint32_t bytes_recibidos = 0;
 
 	recv(socket_cliente, &size_buffer, sizeof(uint32_t), MSG_WAITALL);
-	bytes_recibidos += sizeof(uint32_t);
 
 	recv(socket_cliente, &largo_nombre, sizeof(uint32_t), MSG_WAITALL);
 	bytes_recibidos += sizeof(uint32_t);
@@ -351,13 +334,11 @@ t_catch_pokemon* recibirCatchPokemon(int socket_cliente){
 		bytes_recibidos += sizeof(uint32_t);
 	}
 
-	t_catch_pokemon* catch_pokemon;
+	t_catch_pokemon* catch_pokemon = malloc(sizeof(t_catch_pokemon));
 	catch_pokemon->nombre_pokemon = nombre_pokemon;
 	catch_pokemon->pos_x = pos_x;
 	catch_pokemon->pos_y = pos_y;
 	catch_pokemon->id_mensaje = id_mensaje;
-
-	printf("El pokemon es %s\n", catch_pokemon->nombre_pokemon);
 
 	return catch_pokemon;
 }
@@ -372,11 +353,9 @@ t_caught_pokemon* recibirCaughtPokemon(int socket_cliente){
 
 	recv(socket_cliente, &id_mensaje_correlativo, sizeof(uint32_t), MSG_WAITALL);
 
-	t_caught_pokemon* caught_pokemon;
+	t_caught_pokemon* caught_pokemon = malloc(sizeof(t_caught_pokemon));
 	caught_pokemon->atrapo_pokemon = atrapo_pokemon;
 	caught_pokemon->id_mensaje_correlativo = id_mensaje_correlativo;
-
-	printf("El resultado es %d id_correlativo %d \n", caught_pokemon->atrapo_pokemon, caught_pokemon->id_mensaje_correlativo);
 
 	return caught_pokemon;
 }

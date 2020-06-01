@@ -31,7 +31,7 @@ int crearSocketServidor(char* ip, char* puerto);
 //Dado un servidor, acepta al Cliente que se este queriendo conectar a el.
 int aceptarCliente(int socket_servidor);
 
-int recibirOperacion(int socket_cliente);
+op_code recibirOperacion(int socket_cliente);
 
 int enviarMensaje(int nroSocket,op_code operacion,t_buffer* buffer);
 
