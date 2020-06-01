@@ -196,7 +196,7 @@ t_error_codes parsearMsgGeneral(process_code proc,int argc,char** argv,parser_re
 	    case NEW_POKEMON:
 			return parsearNewPokemon(proc, argv,result);
 		break;
-
+	    case APPEARED_POKEMON:
 	    	return parsearAppearedPokemon(proc,argv,result);
 		break;
 
