@@ -29,11 +29,45 @@ typedef struct{
 } t_configuracion;
 
 typedef struct{
-	//me faltan cosas
 	t_list* suscriptores_yaEnviados;
 	t_list* suscriptores_retornaronACK;
-	t_list* suscriptores;
 } t_mensaje_suscriptor;
+
+typedef struct{
+	t_list* suscriptores;
+} t_nodo_cola;
+
+typedef struct {
+	uint32_t largo_nombre;
+	char* nombre_pokemon;
+	uint32_t pos_x;
+	uint32_t pos_y;
+	uint32_t cantidad;
+} t_new_pokemon_memoria;
+
+typedef struct {
+	uint32_t largo_nombre;
+	char* nombre_pokemon;
+	uint32_t pos_x;
+	uint32_t pos_y;
+} t_appeared_pokemon_memoria, t_catch_pokemon_memoria;
+
+typedef struct {
+	uint32_t atrapo_pokemon;
+} t_caught_pokemon_memoria;
+
+typedef struct {
+	uint32_t largo_nombre;
+	char* nombre_pokemon;
+} t_get_pokemon_memoria;
+
+typedef struct {
+	uint32_t largo_nombre;
+	char* nombre_pokemon;
+	uint32_t cant_pos;
+	uint32_t pos_x;
+	uint32_t pos_y;
+} t_localized_pokemon_memoria;
 
 t_configuracion* config_broker;
 t_config* config_ruta;

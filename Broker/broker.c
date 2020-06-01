@@ -8,14 +8,11 @@
 #include "broker.h"
 
 int crearConfigBroker(){
-
 	t_log* logBrokerInterno = log_create("broker.txt", "LOG", 0, LOG_LEVEL_INFO);
 
     log_info(logBrokerInterno, "Se hizo el Log.\n");
 
-	//Valido que exista la ruta de configuración
-
-	if (!existeArchivoConfig(pathConfigBroker)) {
+    if (!existeArchivoConfig(pathConfigBroker)) {
 		log_error(logBrokerInterno, "Verificar path del archivo \n");
 	    return -1;
 	}
@@ -50,9 +47,7 @@ bool existeArchivoConfig(char* path){
 		return false;
 	}
 }
-/**
- * Función específica el broker, debería estar en un funcionesBroker.c
- */
+
 void atenderCliente(int socket_cliente){
 	printf("Atender cliente %d \n", socket_cliente);
 	op_code cod_op = recibirOperacion(socket_cliente);
@@ -110,6 +105,7 @@ void atenderCliente(int socket_cliente){
 			break;
 	}
 }
+
 int main(void){
 	crearConfigBroker();
 
@@ -119,11 +115,11 @@ int main(void){
 		printf("No se pudo crear el Servidor Broker");
 	}else{
 		printf("Socket Servidor %d\n", socketServidorBroker);
-
-		int cliente = aceptarCliente(socketServidorBroker);
-
-		atenderCliente(cliente);
 	}
+
+	int cliente = aceptarCliente(socketServidorBroker);
+
+	atenderCliente(cliente);
 
 	if(socketServidorBroker != -1) close(socketServidorBroker);
 
