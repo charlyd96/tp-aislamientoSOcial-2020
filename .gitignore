@@ -54,6 +54,7 @@ dkms.conf
 
 # Project files
 */Debug/*
+/Debug/
 .cproject
 .project
 .settings
@@ -61,4 +62,4 @@ dkms.conf
 
 # Log files
 *.log
-*.c
+*.txt
