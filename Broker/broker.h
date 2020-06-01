@@ -72,6 +72,9 @@ typedef struct {
 t_configuracion* config_broker;
 t_config* config_ruta;
 
+t_log* logBrokerInterno = log_create("broker.txt", "LOG", 0, LOG_LEVEL_INFO);
+t_log* logBroker = log_create("broker.log", "LOG", 0, LOG_LEVEL_INFO);
+
 t_list* colaNewPokemon;
 t_list* colaAppearedPokemon;
 t_list* colaCatchPokemon;

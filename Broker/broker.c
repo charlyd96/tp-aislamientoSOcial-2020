@@ -8,9 +8,7 @@
 #include "broker.h"
 
 int crearConfigBroker(){
-	t_log* logBrokerInterno = log_create("broker.txt", "LOG", 0, LOG_LEVEL_INFO);
-
-    log_info(logBrokerInterno, "Se hizo el Log.\n");
+	log_info(logBrokerInterno, "Se hizo el Log.\n");
 
     if (!existeArchivoConfig(pathConfigBroker)) {
 		log_error(logBrokerInterno, "Verificar path del archivo \n");
@@ -53,52 +51,28 @@ void atenderCliente(int socket_cliente){
 	op_code cod_op = recibirOperacion(socket_cliente);
 	switch(cod_op){
 		case NEW_POKEMON:
-			printf("Recibi NEW_POKEMON");
-			t_new_pokemon* new_pokemon= recibirNewPokemon(socket_cliente);
-			printf("nombre: %s\n x: %d\n y: %d\n cant: %d\n id: %d\n",new_pokemon->nombre_pokemon,new_pokemon->pos_x,new_pokemon->pos_y,new_pokemon->cantidad,new_pokemon->id_mensaje);
-			/**
-			 * tratarRecepcionNewPokemon(new_pokemon)
-			 */
-			break;
-		case GET_POKEMON:
-			printf("Recibi GET_POKEMON\n");
-			t_get_pokemon* get_pokemon= recibirGetPokemon(socket_cliente);
-			printf(" nombre: %s\n id: %d\n",get_pokemon->nombre_pokemon,get_pokemon->id_mensaje);
-			/**
-			 * tratarRecepcionGetPokemon(get_pokemon)
-			 */
-			break;
-		case CATCH_POKEMON:
-			printf("Recibi CATCH_POKEMON\n");
-			t_catch_pokemon* catch_pokemon= recibirCatchPokemon(socket_cliente);
-			printf(" nombre: %s\n x: %d\n y: %d\n id: %d\n",catch_pokemon->nombre_pokemon,catch_pokemon->pos_x,catch_pokemon->pos_y,catch_pokemon->id_mensaje);
-			/**
-			 * tratarRecepcionCatchPokemon(catch_pokemon)
-			 */
+			t_new_pokemon* new_pokemon = recibirNewPokemon(socket_cliente);
+			log_info(logBroker, "Llego el mensaje NEW_POKEMON.");
 			break;
 		case APPEARED_POKEMON:
-			printf("Recibi APPEARED\n");
-			t_appeared_pokemon* app_pokemon= recibirAppearedPokemon(socket_cliente);
-			printf(" nombre: %s\n x: %d\n y: %d\n id correlativo: %d\n",app_pokemon->nombre_pokemon,app_pokemon->pos_x,app_pokemon->pos_y,app_pokemon->id_mensaje_correlativo);
-			/**
-			 * tratarRecepcionAppPokemon(app_pokemon)
-			 */
+			t_appeared_pokemon* app_pokemon = recibirAppearedPokemon(socket_cliente);
+			log_info(logBroker, "Llego el mensaje APPEARED_POKEMON.");
 			break;
-		case LOCALIZED_POKEMON:
-			printf("Recibi LOCALIZED_POKEMON\n");
-			t_localized_pokemon* localized_pokemon= recibirLocalizedPokemon(socket_cliente);
-			printf(" nombre: %s\n cantidad: %d\n posiciones: %s\n id correlativo: %d\n",localized_pokemon->nombre_pokemon,localized_pokemon->cant_pos,localized_pokemon->posiciones,localized_pokemon->id_mensaje_correlativo);
-			/**
-			 * tratarRecepcionLocalizedPokemon(localized_pokemon)
-			 */
+		case CATCH_POKEMON:
+			t_catch_pokemon* catch_pokemon = recibirCatchPokemon(socket_cliente);
+			log_info(logBroker, "Llego el mensaje CATCH_POKEMON.");
 			break;
 		case CAUGHT_POKEMON:
-			printf(" Recibi CAUGHT_POKEMON\n");
 			t_caught_pokemon* caught_pokemon= recibirCaughtPokemon(socket_cliente);
-			printf(" resultado: %d\n id correlativo: %d\n",caught_pokemon->atrapo_pokemon,caught_pokemon->id_mensaje_correlativo);
-			/**
-			 * tratarRecepcionCaughtPokemon(caught_pokemon)
-			 */
+			log_info(logBroker, "Llego el mensaje CAUGHT_POKEMON.");
+			break;
+		case GET_POKEMON:
+			t_get_pokemon* get_pokemon = recibirGetPokemon(socket_cliente);
+			log_info(logBroker, "Llego el mensaje GET_POKEMON.");
+			break;
+		case LOCALIZED_POKEMON:
+			t_localized_pokemon* localized_pokemon = recibirLocalizedPokemon(socket_cliente);
+			log_info(logBroker, "Llego el mensaje LOCALIZED_POKEMON.");
 			break;
 		default:
 			printf("La operación no es correcta");
@@ -112,9 +86,9 @@ int main(void){
 	int socketServidorBroker = crearSocketServidor(config_broker->ip_broker, config_broker->puerto_broker);
 
 	if(socketServidorBroker == -1){
-		printf("No se pudo crear el Servidor Broker");
+		printf("No se pudo crear el Servidor Broker.");
 	}else{
-		printf("Socket Servidor %d\n", socketServidorBroker);
+		printf("Socket Servidor %d.\n", socketServidorBroker);
 	}
 
 	int cliente = aceptarCliente(socketServidorBroker);
