@@ -16,6 +16,7 @@
 #include <sys/socket.h>
 #include <signal.h>
 #include "protocolo.h"
+#include <commons/string.h>
 
 void* serializarPaquete(t_paquete* paquete, int *bytes);
 t_buffer* serializarNewPokemon(t_new_pokemon pokemon);

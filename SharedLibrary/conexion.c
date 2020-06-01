@@ -94,180 +94,268 @@ int aceptarCliente(int socket_servidor){
 	return socket_cliente;
 }
 
-int recibirOperacion(int socket_cliente){
-	int cod_op;
+op_code recibirOperacion(int socket_cliente){
+	op_code cod_op;
 	int recibido = recv(socket_cliente, &cod_op, sizeof(uint32_t), MSG_WAITALL);
 	if(recibido == 0){
-		return -1;
+		return OP_UNKNOWN;
 	}
 	return cod_op;
 }
+/**
+ * Envía un mensaje por el socket indicado
+ *
+ */
+int enviarMensaje(int nroSocket,op_code operacion,t_buffer* buffer){
+	t_paquete* paquete = malloc(sizeof(t_paquete));
 
-void atenderCliente(int socket_cliente){
-	int cod_op = recibirOperacion(socket_cliente);
-	switch(cod_op){
-	case NEW_POKEMON:
-		recibirNewPokemon(socket_cliente);
-		printf("Recibi NEW_POKEMON");
-		break;
+	paquete->codigo_operacion = operacion;
+	paquete->buffer = buffer;
+
+	int tamanio_a_enviar;
+
+	void* mensajeSerializado = serializarPaquete(paquete, &tamanio_a_enviar);
+	int enviado = send(nroSocket, mensajeSerializado, tamanio_a_enviar, 0);
+
+	if(enviado == -1){
+		printf("No se envió el mensaje serializado\n");
+	}else{
+		printf("Se conectó y se enviaron %d bytes\n",enviado);
 	}
+
+	free(mensajeSerializado);
+	eliminarPaquete(paquete);
+	return enviado;
 }
 
-void enviarNewPokemon(int socket_cliente, t_new_pokemon mensaje){
-	t_log* logger = log_create("gameBoy.log", "GAMEBOY", 0, LOG_LEVEL_INFO);
-
-
+int enviarNewPokemon(int socket_cliente, t_new_pokemon mensaje){
 	t_buffer* buffer = serializarNewPokemon(mensaje);
 
-	t_paquete* paquete = malloc(sizeof(t_paquete));
+	return enviarMensaje(socket_cliente,NEW_POKEMON,buffer);
+}
+/*
+ * el campo id_mensaje_correlativo debe iniciarse en 0 en caso de no querer serializarlo
+ *
+ */
+int enviarAppearedPokemon(int socket_cliente, t_appeared_pokemon mensaje){
+	t_buffer* buffer = serializarAppearedPokemon(mensaje);
 
-	paquete->codigo_operacion = NEW_POKEMON;
-	paquete->buffer = buffer;
+	return enviarMensaje(socket_cliente,APPEARED_POKEMON,buffer);
+}
+int enviarGetPokemon(int socket_cliente, t_get_pokemon mensaje){
+	t_buffer* buffer = serializarGetPokemon(mensaje);
 
-	int tamanio_a_enviar;
-
-	void* mensajeSerializado = serializarPaquete(paquete, &tamanio_a_enviar);
-
-	int enviado = send(socket_cliente, mensajeSerializado, tamanio_a_enviar, 0);
-
-	if(enviado == -1){
-		printf("No se envió el mensaje serializado");
-	}else{
-		log_info(logger, "Se conectó y se envía el mensaje");
-	}
-
-	free(mensajeSerializado);
-	eliminarPaquete(paquete);
+	return enviarMensaje(socket_cliente,GET_POKEMON,buffer);
 }
 
-char* recibirNewPokemon(int socket_cliente){
+int enviarLocalizedPokemon(int socket_cliente, t_localized_pokemon mensaje){
+	t_buffer* buffer = serializarLocalizedPokemon(mensaje);
+
+	return enviarMensaje(socket_cliente,LOCALIZED_POKEMON,buffer);
+}
+int enviarCatchPokemon(int socket_cliente, t_catch_pokemon mensaje){
+	t_buffer* buffer = serializarCatchPokemon(mensaje);
+
+	return enviarMensaje(socket_cliente,CATCH_POKEMON,buffer);
+}
+int enviarCaughtPokemon(int socket_cliente, t_caught_pokemon mensaje){
+	t_buffer* buffer = serializarCaughtPokemon(mensaje);
+
+	return enviarMensaje(socket_cliente,CAUGHT_POKEMON,buffer);
+}
+
+t_new_pokemon* recibirNewPokemon(int socket_cliente){
 	uint32_t size_buffer, largo_nombre, pos_x, pos_y, cantidad;
+	uint32_t id_mensaje = 0;
+	uint32_t bytes_recibidos = 0;
 
-//	op_code tipo_mensaje;
-
-//	recv(socket_cliente, &(tipo_mensaje), sizeof(uint32_t), MSG_WAITALL);
 	recv(socket_cliente, &size_buffer, sizeof(uint32_t), MSG_WAITALL);
+
 	recv(socket_cliente, &largo_nombre, sizeof(uint32_t), MSG_WAITALL);
+	bytes_recibidos += sizeof(uint32_t);
 	char* nombre_pokemon = malloc(largo_nombre);
 	recv(socket_cliente, nombre_pokemon, largo_nombre, MSG_WAITALL);
+	bytes_recibidos += largo_nombre;
 	recv(socket_cliente, &pos_x, sizeof(uint32_t), MSG_WAITALL);
+	bytes_recibidos += sizeof(uint32_t);
 	recv(socket_cliente, &pos_y, sizeof(uint32_t), MSG_WAITALL);
+	bytes_recibidos += sizeof(uint32_t);
 	recv(socket_cliente, &cantidad, sizeof(uint32_t), MSG_WAITALL);
+	bytes_recibidos += sizeof(uint32_t);
 
-//	printf("operacion %d\n", tipo_mensaje);
-	printf("buffer size %d\n", size_buffer);
-	printf("largo %d\n", largo_nombre);
-	printf("nombre %s\n", nombre_pokemon);
-	printf("pos x %d\n", pos_x);
-	printf("pos y %d\n", pos_y);
-	printf("cantidad %d\n", cantidad);
-
-	t_new_pokemon new_pokemon;
-	new_pokemon.nombre_pokemon = nombre_pokemon;
-	new_pokemon.pos_x = pos_x;
-	new_pokemon.pos_y = pos_y;
-	new_pokemon.cantidad = cantidad;
-
-	printf("El pokemon es %s\n", new_pokemon.nombre_pokemon);
-
-	return nombre_pokemon;
-}
-
-void enviarAppearedPokemon(int socket_cliente, t_appeared_pokemon mensaje){
-	t_buffer* buffer = malloc(sizeof(t_buffer));
-
-	uint32_t largo_nombre  = strlen(mensaje.nombre_pokemon) + 1;
-
-	buffer->size = sizeof(uint32_t) + largo_nombre + 2 * sizeof(uint32_t);
-	void* stream = malloc(buffer->size);
-
-	int offset = 0;
-
-	memcpy(stream + offset, &(largo_nombre), sizeof(uint32_t));
-	offset += sizeof(uint32_t);
-
-	memcpy(stream + offset, mensaje.nombre_pokemon, largo_nombre);
-	offset += largo_nombre;
-
-	memcpy(stream + offset, &(mensaje.pos_x), sizeof(uint32_t));
-	offset += sizeof(uint32_t);
-
-	memcpy(stream + offset, &(mensaje.pos_y), sizeof(uint32_t));
-	offset += sizeof(uint32_t);
-
-	buffer->stream = stream;
-
-	t_paquete* paquete = malloc(sizeof(t_paquete));
-
-	paquete->codigo_operacion = APPEARED_POKEMON;
-	paquete->buffer = buffer;
-
-	int tamanio_a_enviar;
-
-	void* mensajeSerializado = serializarPaquete(paquete, &tamanio_a_enviar);
-
-	int enviado = send(socket_cliente, mensajeSerializado, tamanio_a_enviar, 0);
-
-	if(enviado == -1){
-		printf("No se envió el mensaje serializado");
-	}else{
-		printf("Lo que se envía es: %d\n", enviado);
+	//Si el buffer es más largo, me falta recibir el id_mensaje
+	if(size_buffer > bytes_recibidos){
+		recv(socket_cliente, &id_mensaje, sizeof(uint32_t), MSG_WAITALL);
+		bytes_recibidos += sizeof(uint32_t);
 	}
 
-	free(mensajeSerializado);
-	eliminarPaquete(paquete);
+	t_new_pokemon* new_pokemon = malloc(sizeof(t_new_pokemon));
+	new_pokemon->nombre_pokemon = nombre_pokemon;
+	new_pokemon->pos_x = pos_x;
+	new_pokemon->pos_y = pos_y;
+	new_pokemon->cantidad = cantidad;
+	new_pokemon->id_mensaje = id_mensaje;
+
+	return new_pokemon;
 }
 
-char* recibirAppearedPokemon(int socket_cliente){
-	t_log* logger = log_create("broker.log", "BROKER", 0, LOG_LEVEL_INFO);
-	uint32_t size_buffer, largo_nombre, pos_x, pos_y;
+t_appeared_pokemon* recibirAppearedPokemon(int socket_cliente){
 
-	op_code tipo_mensaje;
+	uint32_t size_buffer, largo_nombre, pos_x, pos_y,id_mensaje_correlativo;
+	uint32_t bytes_recibidos = 0;
 
-	recv(socket_cliente, &(tipo_mensaje), sizeof(uint32_t), MSG_WAITALL);
 	recv(socket_cliente, &size_buffer, sizeof(uint32_t), MSG_WAITALL);
 	recv(socket_cliente, &largo_nombre, sizeof(uint32_t), MSG_WAITALL);
+	bytes_recibidos += sizeof(uint32_t);
 	char* nombre_pokemon = malloc(largo_nombre);
 	recv(socket_cliente, nombre_pokemon, largo_nombre, MSG_WAITALL);
+	bytes_recibidos += largo_nombre;
 	recv(socket_cliente, &pos_x, sizeof(uint32_t), MSG_WAITALL);
+	bytes_recibidos += sizeof(uint32_t);
 	recv(socket_cliente, &pos_y, sizeof(uint32_t), MSG_WAITALL);
+	bytes_recibidos += sizeof(uint32_t);
 
-	t_appeared_pokemon appeared_pokemon;
-	appeared_pokemon.nombre_pokemon = nombre_pokemon;
-	appeared_pokemon.pos_x = pos_x;
-	appeared_pokemon.pos_y = pos_y;
+	if(size_buffer > bytes_recibidos){
+		recv(socket_cliente, &id_mensaje_correlativo, sizeof(uint32_t), MSG_WAITALL);
+		bytes_recibidos += sizeof(uint32_t);
+	}
 
-	log_info(logger,"Se recibe un %d, con un buffer de %d, un largo de %d, el nombre %s, la pos en x %d y la pos en y %d", tipo_mensaje, size_buffer, largo_nombre, nombre_pokemon, pos_x, pos_y);
+	t_appeared_pokemon* appeared_pokemon = malloc(sizeof(t_appeared_pokemon));
+	appeared_pokemon->nombre_pokemon = nombre_pokemon;
+	appeared_pokemon->pos_x = pos_x;
+	appeared_pokemon->pos_y = pos_y;
+	appeared_pokemon->id_mensaje_correlativo = id_mensaje_correlativo;
 
-	printf("El pokemon es %s\n", appeared_pokemon.nombre_pokemon);
+	return appeared_pokemon;
+}
+t_get_pokemon* recibirGetPokemon(int socket_cliente){
 
-	return nombre_pokemon;
+	uint32_t size_buffer, largo_nombre;
+	uint32_t id_mensaje = 0;
+	uint32_t bytes_recibidos = 0;
+
+	recv(socket_cliente, &size_buffer, sizeof(uint32_t), MSG_WAITALL);
+
+	recv(socket_cliente, &largo_nombre, sizeof(uint32_t), MSG_WAITALL);
+	bytes_recibidos += sizeof(uint32_t);
+
+	char* nombre_pokemon = malloc(largo_nombre);
+	recv(socket_cliente, nombre_pokemon, largo_nombre, MSG_WAITALL);
+	bytes_recibidos += largo_nombre;
+
+	//Si me queda buffer por recibir, es el id_mensaje
+	if(size_buffer > bytes_recibidos){
+		recv(socket_cliente, &id_mensaje, sizeof(uint32_t), MSG_WAITALL);
+		bytes_recibidos += sizeof(uint32_t);
+	}
+
+	t_get_pokemon* get_pokemon = malloc(sizeof(t_get_pokemon));
+	get_pokemon->nombre_pokemon = nombre_pokemon;
+	get_pokemon->id_mensaje = id_mensaje;
+
+	return get_pokemon;
+}
+t_localized_pokemon* recibirLocalizedPokemon(int socket_cliente){
+	uint32_t size_buffer, largo_nombre,cant_pos;
+	uint32_t id_mensaje_correlativo = 0;
+	uint32_t pos_x = 0;
+	uint32_t pos_y = 0;
+	uint32_t bytes_recibidos = 0;
+	char* posicionesString = "";
+
+	recv(socket_cliente, &size_buffer, sizeof(uint32_t), MSG_WAITALL);
+
+	recv(socket_cliente, &largo_nombre, sizeof(uint32_t), MSG_WAITALL);
+	bytes_recibidos += sizeof(uint32_t);
+
+	char* nombre_pokemon = malloc(largo_nombre);
+	recv(socket_cliente, nombre_pokemon, largo_nombre, MSG_WAITALL);
+	bytes_recibidos += largo_nombre;
+
+	recv(socket_cliente, &cant_pos, sizeof(uint32_t), MSG_WAITALL);
+	bytes_recibidos += sizeof(uint32_t);
+
+	strcat(posicionesString,"[");
+	//Por cada cant_pos, recibir un par de enteros (armo el formato "[1|2,2|2]")
+	for(int i = 1; i<=cant_pos; i++){
+		recv(socket_cliente, &pos_x, sizeof(uint32_t), MSG_WAITALL);
+		bytes_recibidos += sizeof(uint32_t);
+
+		strcat(posicionesString,string_itoa(pos_x));
+		strcat(posicionesString,"|");
+
+		recv(socket_cliente, &pos_y, sizeof(uint32_t), MSG_WAITALL);
+		bytes_recibidos += sizeof(uint32_t);
+
+		strcat(posicionesString,string_itoa(pos_y));
+
+		if(i < cant_pos) strcat(posicionesString,",");
+	}
+	strcat(posicionesString,"]");
+
+	//Si me queda buffer por recibir, es el id_mensaje_correlativo
+	if(size_buffer > bytes_recibidos){
+		recv(socket_cliente, &id_mensaje_correlativo, sizeof(uint32_t), MSG_WAITALL);
+		bytes_recibidos += sizeof(uint32_t);
+	}
+
+	t_localized_pokemon* localized_pokemon = malloc(sizeof(t_localized_pokemon));
+	localized_pokemon->nombre_pokemon = nombre_pokemon;
+	localized_pokemon->cant_pos = cant_pos;
+	localized_pokemon->posiciones = posicionesString;
+	localized_pokemon->id_mensaje_correlativo = id_mensaje_correlativo;
+
+	return localized_pokemon;
+}
+t_catch_pokemon* recibirCatchPokemon(int socket_cliente){
+
+	uint32_t size_buffer, largo_nombre, pos_x, pos_y;
+	uint32_t id_mensaje = 0;
+	uint32_t bytes_recibidos = 0;
+
+	recv(socket_cliente, &size_buffer, sizeof(uint32_t), MSG_WAITALL);
+
+	recv(socket_cliente, &largo_nombre, sizeof(uint32_t), MSG_WAITALL);
+	bytes_recibidos += sizeof(uint32_t);
+
+	char* nombre_pokemon = malloc(largo_nombre);
+	recv(socket_cliente, nombre_pokemon, largo_nombre, MSG_WAITALL);
+	bytes_recibidos += largo_nombre;
+
+	recv(socket_cliente, &pos_x, sizeof(uint32_t), MSG_WAITALL);
+	bytes_recibidos += sizeof(uint32_t);
+
+	recv(socket_cliente, &pos_y, sizeof(uint32_t), MSG_WAITALL);
+	bytes_recibidos += sizeof(uint32_t);
+
+	//Si me queda buffer por recibir, es el id_mensaje
+	if(size_buffer > bytes_recibidos){
+		recv(socket_cliente, &id_mensaje, sizeof(uint32_t), MSG_WAITALL);
+		bytes_recibidos += sizeof(uint32_t);
+	}
+
+	t_catch_pokemon* catch_pokemon = malloc(sizeof(t_catch_pokemon));
+	catch_pokemon->nombre_pokemon = nombre_pokemon;
+	catch_pokemon->pos_x = pos_x;
+	catch_pokemon->pos_y = pos_y;
+	catch_pokemon->id_mensaje = id_mensaje;
+
+	return catch_pokemon;
 }
 
-/* HAY QUE REVISARLO
-void recibirCliente(int* socket)
-{
-	int cod_op;
-	if(recv(*socket, &cod_op, sizeof(uint32_t), MSG_WAITALL) == -1)
-		cod_op = -1;
-	procesarSolicitud(cod_op, *socket);
+t_caught_pokemon* recibirCaughtPokemon(int socket_cliente){
+
+	uint32_t size_buffer, atrapo_pokemon, id_mensaje_correlativo;
+
+	recv(socket_cliente, &size_buffer, sizeof(uint32_t), MSG_WAITALL);
+
+	recv(socket_cliente, &atrapo_pokemon, sizeof(uint32_t), MSG_WAITALL);
+
+	recv(socket_cliente, &id_mensaje_correlativo, sizeof(uint32_t), MSG_WAITALL);
+
+	t_caught_pokemon* caught_pokemon = malloc(sizeof(t_caught_pokemon));
+	caught_pokemon->atrapo_pokemon = atrapo_pokemon;
+	caught_pokemon->id_mensaje_correlativo = id_mensaje_correlativo;
+
+	return caught_pokemon;
 }
-
-void procesarSolicitud(int cod_op, int cliente) {
-	int size;
-	printf("cod_op %d y cliente %d",cod_op,cliente);
-
-	switch (cod_op) {
-		case NEW_POKEMON:
-			printf("Recibí NEW_POKEMON");
-//			recibirNewPokemon(cliente);
-			break;
-		case APPEARED_POKEMON:
-			printf("Recibí APPEARED_POKEMON");
-//			recibirAppearedPokemon(cliente);
-		case 0:
-			pthread_exit(NULL);
-		case -1:
-			pthread_exit(NULL);
-		}
-} */
