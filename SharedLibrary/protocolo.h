@@ -17,13 +17,13 @@
 pthread_t thread;
 
 typedef enum {
-	NEW_POKEMON = 1,
-	APPEARED_POKEMON = 2,
-	CATCH_POKEMON = 3,
-	CAUGHT_POKEMON = 4,
-	GET_POKEMON = 5,
-	LOCALIZED_POKEMON = 6,
-	OP_UNKNOWN = 7
+	NEW_POKEMON,
+	APPEARED_POKEMON,
+	CATCH_POKEMON,
+	CAUGHT_POKEMON,
+	GET_POKEMON,
+	LOCALIZED_POKEMON,
+	OP_UNKNOWN
 } op_code;
 typedef enum {
 	P_BROKER,
@@ -56,31 +56,37 @@ typedef struct {
 	uint32_t pos_x;
 	uint32_t pos_y;
 	uint32_t cantidad;
-	uint32_t id;
+	uint32_t id_mensaje;
 } t_new_pokemon;
 
 typedef struct {
 	char* nombre_pokemon;
+	uint32_t id_mensaje;
+} t_get_pokemon;
+typedef struct {
+	char* nombre_pokemon;
 	uint32_t pos_x;
 	uint32_t pos_y;
-	uint32_t id;
-} t_appeared_pokemon, t_catch_pokemon;
+	uint32_t id_mensaje;
+}t_catch_pokemon;
 
 typedef struct {
-	uint32_t id;
+	char* nombre_pokemon;
+	uint32_t pos_x;
+	uint32_t pos_y;
+	uint32_t id_mensaje_correlativo;
+} t_appeared_pokemon;
+
+typedef struct {
 	uint32_t atrapo_pokemon;
+	uint32_t id_mensaje_correlativo;
 } t_caught_pokemon;
 
 typedef struct {
 	char* nombre_pokemon;
-	uint32_t id;
-} t_get_pokemon;
-
-typedef struct {
-	char* nombre_pokemon;
 	uint32_t cant_pos;
-	uint32_t pos_x;
-	uint32_t pos_y;
+	char* posiciones; //Lista de posiciones con el formato de los .config "[2|1,1|1]"
+	uint32_t id_mensaje_correlativo;
 } t_localized_pokemon;
 
 #endif /* PROTOCOLO_H_ */

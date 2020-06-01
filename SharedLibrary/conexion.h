@@ -31,21 +31,26 @@ int crearSocketServidor(char* ip, char* puerto);
 //Dado un servidor, acepta al Cliente que se este queriendo conectar a el.
 int aceptarCliente(int socket_servidor);
 
-int recibirOperacion(int socket_cliente);
+op_code recibirOperacion(int socket_cliente);
 
-void atenderCliente(int socket_cliente);
+int enviarMensaje(int nroSocket,op_code operacion,t_buffer* buffer);
 
 //Dado un Socket, envía un mensaje del tipo NEW_POKEMON.
-void enviarNewPokemon(int socket_cliente, t_new_pokemon mensaje);
+int enviarNewPokemon(int socket_cliente, t_new_pokemon mensaje);
+int enviarGetPokemon(int socket_cliente, t_get_pokemon mensaje);
+int enviarCatchPokemon(int socket_cliente, t_catch_pokemon mensaje);
+int enviarAppearedPokemon(int socket_cliente, t_appeared_pokemon mensaje);
+int enviarLocalizedPokemon(int socket_cliente, t_localized_pokemon mensaje);
+int enviarCaughtPokemon(int socket_cliente, t_caught_pokemon mensaje);
+
 
 //Dado un Socket, recibe un mensaje del tipo NEW_POKEMON.
-char* recibirNewPokemon(int socket_cliente);
-
-//Dado un Socket, envía un mensaje del tipo APPEARED_POKEMON.
-void enviarAppearedPokemon(int socket_cliente, t_appeared_pokemon mensaje);
-
-//Dado un Socket, recibe un mensaje del tipo APPEARED_POKEMON.
-char* recibirAppearedPokemon(int socket_cliente);
+t_new_pokemon* recibirNewPokemon(int socket_cliente);
+t_appeared_pokemon* recibirAppearedPokemon(int socket_cliente);
+t_catch_pokemon* recibirCatchPokemon(int socket_cliente);
+t_caught_pokemon* recibirCaughtPokemon(int socket_cliente);
+t_get_pokemon* recibirGetPokemon(int socket_cliente);
+t_localized_pokemon* recibirLocalizedPokemon(int socket_cliente);
 
 /* HAY QUE REVISARLO
 void recibirCliente(int* socket);
