@@ -8,10 +8,10 @@
 #include "broker.h"
 
 int crearConfigBroker(){
-	log_info(logBrokerInterno, "Se hizo el Log.\n");
+	log_info(logBrokerInterno, "Se hizo el Log.");
 
     if (!existeArchivoConfig(pathConfigBroker)) {
-		log_error(logBrokerInterno, "Verificar path del archivo \n");
+		log_error(logBrokerInterno, "ERROR: Verificar path del archivo.\n");
 	    return -1;
 	}
 
@@ -47,7 +47,7 @@ bool existeArchivoConfig(char* path){
 }
 
 void atenderCliente(int socket_cliente){
-	printf("Atender cliente %d \n", socket_cliente);
+	printf("Atender Cliente %d: \n", socket_cliente);
 	op_code cod_op = recibirOperacion(socket_cliente);
 	switch(cod_op){
 		case NEW_POKEMON:
@@ -80,8 +80,19 @@ void atenderCliente(int socket_cliente){
 	}
 }
 
-int main(void){
+void inicializarColas(){
 	crearConfigBroker();
+
+	colaNewPokemon = list_create();
+	colaAppearedPokemon = list_create();
+	colaCatchPokemon = list_create();
+	colaCaughtPokemon = list_create();
+	colaGetPokemon = list_create();
+	colaLocalizedPokemon = list_create();
+}
+
+int main(void){
+	inicializarColas();
 
 	int socketServidorBroker = crearSocketServidor(config_broker->ip_broker, config_broker->puerto_broker);
 
@@ -96,5 +107,4 @@ int main(void){
 	atenderCliente(cliente);
 
 	if(socketServidorBroker != -1) close(socketServidorBroker);
-
 }
