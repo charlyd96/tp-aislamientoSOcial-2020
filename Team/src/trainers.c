@@ -29,6 +29,7 @@ void* Trainer_to_plan_ready (void *this_team)//(mapPokemons pokemon_in_map, t_li
         count++;
         if ( trainer->actual_status ==NEW ||trainer->actual_status == BLOCKED_NOTHING_TO_DO)
         {
+        	printf ("Entrenador con índice %d tiene estado %d\n", count, trainer->actual_status);
             u_int32_t Tx= trainer->posx;
             u_int32_t Ty= trainer->posy;
             u_int32_t Px= actual_pokemon->posx;
