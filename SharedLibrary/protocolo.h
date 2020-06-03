@@ -25,6 +25,7 @@ typedef enum {
 	LOCALIZED_POKEMON,
 	OP_UNKNOWN
 } op_code;
+
 typedef enum {
 	P_BROKER,
 	P_TEAM,
@@ -38,12 +39,11 @@ typedef struct {
 	void* stream;
 } t_buffer;
 
-typedef struct
-{
-    op_code 	 msg_type;
+typedef struct {
+    op_code msg_type;
     process_code module;
-    t_buffer*        buffer;
-    uint32_t     timeout;
+    t_buffer* buffer;
+    uint32_t timeout;
 } parser_result;
 
 typedef struct {
@@ -63,12 +63,13 @@ typedef struct {
 	char* nombre_pokemon;
 	uint32_t id_mensaje;
 } t_get_pokemon;
+
 typedef struct {
 	char* nombre_pokemon;
 	uint32_t pos_x;
 	uint32_t pos_y;
 	uint32_t id_mensaje;
-}t_catch_pokemon;
+} t_catch_pokemon;
 
 typedef struct {
 	char* nombre_pokemon;
