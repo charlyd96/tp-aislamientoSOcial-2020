@@ -11,7 +11,7 @@
 #include "team.h"
 
 typedef enum {
-    EXECUTING_CATCH=0,        //Ejecutando: desplazándose al pokemon a atrapar
+    OP_EXECUTING_CATCH=0,        //Ejecutando: desplazándose al pokemon a atrapar
     EXECUTING_DEADLOCK=1     //Ejecutando: desplazándose hacia otro entrenador para solucionar un deadlock
 } Operation;
 

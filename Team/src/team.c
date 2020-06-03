@@ -30,10 +30,13 @@ Team * Team_Init(void)
 
     this_team->ReadyQueue= list_create  ();                 //*********Mejorar la ubicación de esta instrucción***************//
     this_team->mapped_pokemons = list_create();             //*********Mejorar la ubicación de esta instrucción***************//
+    this_team->BlockedQueue = list_create();
+    sem_init (&((this_team)->qb_sem1), 0, 0);
+    sem_init (&((this_team)->qb_sem2), 0, 1);
     sem_init (&((this_team)->poklist_sem), 0, 0);           //*********Mejorar la ubicación de esta instrucción***************//
     sem_init ((&(this_team)->poklist_sem2), 0, 1);          //*********Mejorar la ubicación de esta instrucción***************//
-    sem_init (&((this_team)->q_sem1), 0, 0);                 //*********Mejorar la ubicación de esta instrucción***************//
-    sem_init (&((this_team)->q_sem2), 0, 1);                 //*********Mejorar la ubicación de esta instrucción***************//
+    sem_init (&((this_team)->qr_sem1), 0, 0);                 //*********Mejorar la ubicación de esta instrucción***************//
+    sem_init (&((this_team)->qr_sem2), 0, 1);                 //*********Mejorar la ubicación de esta instrucción***************//
 
     return (this_team);
 }
@@ -85,11 +88,11 @@ void imprimir_lista (t_list *lista)
 exec_error fifo_exec (Team* this_team)
 {
        Team *team= this_team;
-       sem_wait ( &(this_team->q_sem1) );
-       sem_wait ( &(this_team->q_sem2) );
+       sem_wait ( &(this_team->qr_sem1) );
+       sem_wait ( &(this_team->qr_sem2) );
        Trainer* trainer= list_get(team->ReadyQueue, 0);
-       trainer->actual_status= EXECUTING_CATCH;
-       sem_post ( &(this_team->q_sem2) );
+       trainer->actual_status= EXEC;
+       sem_post ( &(this_team->qr_sem2) );
        sem_post ( &(trainer->t_sem) );
 }
 

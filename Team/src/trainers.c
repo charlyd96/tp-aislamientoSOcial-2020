@@ -56,8 +56,10 @@ void* Trainer_to_plan_ready (void *this_team)//(mapPokemons pokemon_in_map, t_li
         ( (Trainer*) list_get (team->trainers, index))->actual_objective.posx = actual_pokemon->posx;
         ( (Trainer*) list_get (team->trainers, index))->actual_objective.posy = actual_pokemon->posy;
         ( (Trainer*) list_get (team->trainers, index))->actual_objective.name  = string_duplicate (actual_pokemon->name);
+        puts ("cambiando estado");
         ( (Trainer*) list_get (team->trainers, index))->actual_status= READY;
-        ( (Trainer*) list_get (team->trainers, index))->actual_operation= EXECUTING_CATCH;
+        printf ("Despues de cambiar estado:%d\n",  ((Trainer*) list_get (team->trainers, index))->actual_status);
+        ( (Trainer*) list_get (team->trainers, index))->actual_operation= OP_EXECUTING_CATCH;
         send_trainer_to_ready (team, index);
 
         count=-1;
@@ -74,10 +76,10 @@ void send_trainer_to_ready (Team *this_team, u_int32_t index)
     Team *team=this_team;
     printf ("El entrenador planificado tiene indice %d\n",index);
     printf ("Su estado es %d\n" , ((Trainer*) list_get(team->trainers, index))->actual_status ) ;
-    sem_wait ( &(team->q_sem2) );
+    sem_wait ( &(team->qr_sem2) );
     list_add  (team->ReadyQueue , list_get (team->trainers, index) );
-    sem_post ( &(team->q_sem2) );
-    sem_post ( &(team->q_sem1) );
+    sem_post ( &(team->qr_sem2) );
+    sem_post ( &(team->qr_sem1) );
 }
 
 void send_trainer_to_exec (Team* this_team, char* planning_algorithm)
@@ -98,6 +100,7 @@ void send_trainer_to_exec (Team* this_team, char* planning_algorithm)
     if (!strcmp(planning_algorithm, "FIFO"))
     {
        error= fifo_exec (this_team);
+
     }
     /*
     *TO DO: sjfcd_exec()
@@ -107,7 +110,8 @@ void send_trainer_to_exec (Team* this_team, char* planning_algorithm)
 
     }
 }
-
+//--Hay que buscar la forma de mandar al entrenador a la lista de bloqueados, siendo que trainer_routine no recibe la lista.
+//--Podemos hacer que las colas sean variables globales o bien pasarle la estructura completa this_team
 
 void* trainer_routine (void *train)
 {
@@ -115,12 +119,15 @@ void* trainer_routine (void *train)
     trainer->actual_status = NEW;
     sem_wait(&(trainer)->t_sem);
     printf ("Operacion del entrenador: %d\n",trainer->actual_operation);
+    printf ("Antes del switch:%d\n",  trainer->actual_status);
     switch (trainer->actual_operation)
     {
-        case EXECUTING_CATCH:
+        case OP_EXECUTING_CATCH:
         puts ("Yendo a cazar pokemon");
-        move_trainer_to_pokemon (train);
+        move_trainer_to_pokemon (train); //Entre paréntesis debería ir "trainer". No sé por qué funciona así
+        printf ("Despues de ejecutar:%d\n",  trainer->actual_status);
         puts ("Voy a mandar un CATCH_POKEMON");
+
         sem_wait(&(trainer)->t_sem);
 
         break;

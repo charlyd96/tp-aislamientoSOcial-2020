@@ -50,8 +50,13 @@ typedef struct
     t_list *global_objective;
     t_list *trainers;
     t_list *ReadyQueue;
-    sem_t q_sem1;
-    sem_t q_sem2;
+    sem_t qr_sem1;
+    sem_t qr_sem2;
+    t_list *BlockedQueue;
+    sem_t qb_sem1;
+    sem_t qb_sem2;
+
+
 
     t_list *mapped_pokemons;
     pthread_t trhandler_id;
