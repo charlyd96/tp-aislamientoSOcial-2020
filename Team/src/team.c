@@ -24,19 +24,21 @@ Team * Team_Init(void)
     Team *this_team =malloc (sizeof(Team)) ;
     this_team->config = malloc (sizeof (Config));
     this_team->config->team_config = get_config();
-
+    sem_init (&trainer_count, 0, 0);					//*********Mejorar la ubicación de esta instrucción***************//
+    sem_init (&using_cpu, 0,1);
     Team_load_trainers_config(this_team);
     Team_load_global_config(this_team->config);
 
     this_team->ReadyQueue= list_create  ();                 //*********Mejorar la ubicación de esta instrucción***************//
     this_team->mapped_pokemons = list_create();             //*********Mejorar la ubicación de esta instrucción***************//
-    this_team->BlockedQueue = list_create();
-    sem_init (&((this_team)->qb_sem1), 0, 0);
-    sem_init (&((this_team)->qb_sem2), 0, 1);
+    BlockedQueue = list_create();
+    sem_init (&qb_sem1, 0, 0);
+    sem_init (&qb_sem2, 0, 1);
+
     sem_init (&((this_team)->poklist_sem), 0, 0);           //*********Mejorar la ubicación de esta instrucción***************//
     sem_init ((&(this_team)->poklist_sem2), 0, 1);          //*********Mejorar la ubicación de esta instrucción***************//
     sem_init (&((this_team)->qr_sem1), 0, 0);                 //*********Mejorar la ubicación de esta instrucción***************//
-    sem_init (&((this_team)->qr_sem2), 0, 1);                 //*********Mejorar la ubicación de esta instrucción***************//
+    sem_init (&((this_team)->qr_sem2), 0, 1);
 
     return (this_team);
 }
@@ -84,16 +86,19 @@ void imprimir_lista (t_list *lista)
     list_iterate (lista, imprimir);
 }
 
-
+/* Consumidor de cola Ready */
 exec_error fifo_exec (Team* this_team)
 {
        Team *team= this_team;
        sem_wait ( &(this_team->qr_sem1) );
        sem_wait ( &(this_team->qr_sem2) );
-       Trainer* trainer= list_get(team->ReadyQueue, 0);
+       sem_wait (&using_cpu);
+       Trainer* trainer= list_remove (team->ReadyQueue, 0);
        trainer->actual_status= EXEC;
        sem_post ( &(this_team->qr_sem2) );
        sem_post ( &(trainer->t_sem) );
+
+
 }
 
 

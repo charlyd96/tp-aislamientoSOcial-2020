@@ -21,6 +21,12 @@
 
 
 
+/* Recursos compartidos */
+t_list *BlockedQueue;
+sem_t qb_sem1;
+sem_t qb_sem2;
+sem_t using_cpu;
+extern sem_t trainer_count;
 
 
 /* Errores para identificar estado en la ejecución de los hilos */
@@ -35,8 +41,8 @@ typedef struct
 {
     char *name;
     u_int32_t cant;
-    u_int32_t posx;
-    u_int32_t posy;
+    int posx;
+    int posy;
 } mapPokemons;
 
 
@@ -52,9 +58,7 @@ typedef struct
     t_list *ReadyQueue;
     sem_t qr_sem1;
     sem_t qr_sem2;
-    t_list *BlockedQueue;
-    sem_t qb_sem1;
-    sem_t qb_sem2;
+
 
 
 

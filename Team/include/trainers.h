@@ -10,6 +10,13 @@
 
 #include "team.h"
 
+extern t_list *BlockedQueue;
+extern sem_t qb_sem1;
+extern sem_t qb_sem2;
+sem_t trainer_count;
+extern sem_t using_cpu;
+
+
 typedef enum {
     OP_EXECUTING_CATCH=0,        //Ejecutando: desplazándose al pokemon a atrapar
     EXECUTING_DEADLOCK=1     //Ejecutando: desplazándose hacia otro entrenador para solucionar un deadlock

@@ -18,7 +18,6 @@
 void* Trainer_to_plan_ready (void *this_team)//(mapPokemons pokemon_in_map, t_list* trainer)
 {
     int index=0, count=-1;
-    int flag=0;
     u_int32_t distance_min= 100000  ; //Arreglar esta hardcodeada trucha
     mapPokemons *actual_pokemon;
     Team *team= this_team;
@@ -29,7 +28,6 @@ void* Trainer_to_plan_ready (void *this_team)//(mapPokemons pokemon_in_map, t_li
         count++;
         if ( trainer->actual_status ==NEW ||trainer->actual_status == BLOCKED_NOTHING_TO_DO)
         {
-        	printf ("Entrenador con índice %d tiene estado %d\n", count, trainer->actual_status);
             u_int32_t Tx= trainer->posx;
             u_int32_t Ty= trainer->posy;
             u_int32_t Px= actual_pokemon->posx;
@@ -39,8 +37,10 @@ void* Trainer_to_plan_ready (void *this_team)//(mapPokemons pokemon_in_map, t_li
             {
                 distance_min=distance;
                 index=count;
-                flag=1;
+
             }
+
+
         }
 
     }
@@ -52,24 +52,24 @@ void* Trainer_to_plan_ready (void *this_team)//(mapPokemons pokemon_in_map, t_li
         actual_pokemon =  list_remove (team->mapped_pokemons, 0)  ;
         sem_post( &(team->poklist_sem2));
 
-        list_iterate (team->trainers,calculate_distance);
-        ( (Trainer*) list_get (team->trainers, index))->actual_objective.posx = actual_pokemon->posx;
-        ( (Trainer*) list_get (team->trainers, index))->actual_objective.posy = actual_pokemon->posy;
-        ( (Trainer*) list_get (team->trainers, index))->actual_objective.name  = string_duplicate (actual_pokemon->name);
-        puts ("cambiando estado");
-        ( (Trainer*) list_get (team->trainers, index))->actual_status= READY;
-        printf ("Despues de cambiar estado:%d\n",  ((Trainer*) list_get (team->trainers, index))->actual_status);
-        ( (Trainer*) list_get (team->trainers, index))->actual_operation= OP_EXECUTING_CATCH;
-        send_trainer_to_ready (team, index);
+        sem_wait (&trainer_count); //Este semáforo bloquea el proceso de planificación si no hay entrenadores para mandar a ready
+		list_iterate (team->trainers,calculate_distance);
+		( (Trainer*) list_get (team->trainers, index))->actual_objective.posx = actual_pokemon->posx;
+		( (Trainer*) list_get (team->trainers, index))->actual_objective.posy = actual_pokemon->posy;
+		( (Trainer*) list_get (team->trainers, index))->actual_objective.name  = string_duplicate (actual_pokemon->name);
+		( (Trainer*) list_get (team->trainers, index))->actual_status= READY;
+		( (Trainer*) list_get (team->trainers, index))->actual_operation= OP_EXECUTING_CATCH;
+		send_trainer_to_ready (team, index);
 
-        count=-1;
-        index=-1;
-        distance_min= 100000  ; //Arreglar esta hardcodeada trucha
+		count=-1;
+		index=-1;
+		distance_min= 100000  ; //Arreglar esta hardcodeada trucha
+
     } //else: se cumplio el objetivo global -> verificar deadlocks
 
 }
 
-
+/* Productor hacia cola Ready */
 void send_trainer_to_ready (Team *this_team, u_int32_t index)
 
 {
@@ -127,10 +127,12 @@ void* trainer_routine (void *train)
         move_trainer_to_pokemon (train); //Entre paréntesis debería ir "trainer". No sé por qué funciona así
         printf ("Despues de ejecutar:%d\n",  trainer->actual_status);
         puts ("Voy a mandar un CATCH_POKEMON");
+        list_add (BlockedQueue,train);
 
-        sem_wait(&(trainer)->t_sem);
 
-        break;
+        sem_post(&using_cpu);
+        sem_wait(&(trainer->t_sem));//Esto no debería estar aca. Si el proceso es interrumpido justo despues de hacer sem_post,
+        break;				 	   // podria arrancar a ejecutar un nuevo proceso en la cpu antes de que el actual salga
 
         case EXECUTING_DEADLOCK:
         puts ("solucionar deadlock");
@@ -154,7 +156,6 @@ void move_trainer_to_pokemon (Trainer *trainer)
 
     while ( (*Tx != *Px) || (*Ty!=*Py) )
     {
-        printf ("Distancia+1:%d,   Distancia: %d\n" , calculate_distance (*Tx+1, *Ty, *Px, *Py  ), calculate_distance (*Tx, *Ty, *Px, *Py ));
 
         if ( calculate_distance (*Tx+1, *Ty, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
         *Tx=*Tx+1;
@@ -179,7 +180,7 @@ void move_trainer_to_pokemon (Trainer *trainer)
             printf ("Posición pokemon: (%d,%d)\n", (int)trainer->actual_objective.posx, (int)trainer->actual_objective.posy);
             printf ("Posición entrenador: (%d,%d)\n", (int)trainer->posx, (int)trainer->posy);
 
-        usleep (3000000);
+        usleep (300000);
     }
     puts   ("Llegué a la ubicación del Pokemon. Vamos a verificarlo:");
     printf ("Posición entrenador: (%d,%d)\n", (int)trainer->posx,(int)trainer->posy);

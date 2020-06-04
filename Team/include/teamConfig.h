@@ -11,6 +11,9 @@
 #include <commons/config.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <semaphore.h>
+
+extern sem_t trainer_count;
 
 typedef struct {
     t_config* team_config;

@@ -13,6 +13,7 @@
 #include "../include/team.h"
 #include "../include/trainers.h"
 
+
 void liberar_listas (Team *this_team);
 
 
@@ -82,6 +83,9 @@ void Team_load_trainers_config(Team *this_team)
         list_add (entrenadores->personal_objective, *(objetivos+k));
 
         sem_init (&(entrenadores->t_sem), 0, 0);
+        sem_post (&trainer_count);
+
+
 
         /*  Añado el entrenador creado, ya cada uno con su lista bag y lista de objetivos, a la lista de entrenadores */
         list_add(this_team->trainers, entrenadores);

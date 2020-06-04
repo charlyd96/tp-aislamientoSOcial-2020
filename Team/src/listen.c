@@ -14,7 +14,7 @@ void* listen_routine (void *this_team)
 
     mapPokemons *pokemon_to_add = malloc (sizeof(mapPokemons));
     Team* team= this_team;
-    int socket= crearSocketServidor ("127.0.0.2", "5011");
+    int socket= crearSocketServidor ("127.0.0.2", "5010");
 
 while (1)
     {

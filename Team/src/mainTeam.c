@@ -6,7 +6,7 @@
  */
 
 #include "../include/team.h"
-
+int varPrueba =5;
 int main(void)
 {
     Team* squad = Team_Init ();
