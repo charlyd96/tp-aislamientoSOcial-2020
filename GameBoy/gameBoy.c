@@ -79,7 +79,9 @@ bool checkCantidadArgumentos(process_code proc,op_code ope, int argc){
 					break;
 			}
             break;
-
+		case P_SUSCRIPTOR:
+			flag = argc == COUNT_ARGS_SUSCRIBE;
+			break;
 	    default:
 	        flag = false;
             break;
@@ -190,6 +192,12 @@ t_error_codes parsearGetPokemon(process_code proc,char** argv,parser_result* res
 	return PARSE_SUCCESS;
 
 }
+t_error_codes parsearMsgSuscribir(int argc,char** argv,parser_result * result){
+	uint32_t timeout = (uint32_t)atoi(argv[3]);
+	result->timeout = timeout;
+
+	return PARSE_SUCCESS;
+}
 t_error_codes parsearMsgGeneral(process_code proc,int argc,char** argv,parser_result *result){
 
 	switch (result->msg_type)
@@ -247,6 +255,7 @@ t_error_codes parsearComando(int argc, char** argv, parser_result* result)
     if(argc < 4)
     {
         logInfoAux("No se proporcionaron la cantidad minima de argumentos");
+		return ERROR_BAD_ARGUMENTS_QUANTITY;
     }
     process_code p_code = getProcessCode(argv[1]);
     if(p_code == P_UNKNOWN){
@@ -267,9 +276,8 @@ t_error_codes parsearComando(int argc, char** argv, parser_result* result)
 		return ERROR_BAD_REQUEST;
 	}
     switch(p_code){
-
 		case P_SUSCRIPTOR:
-
+			return parsearMsgSuscribir(argc,argv,result);
 			break;
 		case P_BROKER:
 		case P_GAMECARD:
@@ -341,8 +349,45 @@ t_error_codes enviarMensajeAModulo(process_code proc,op_code ope,t_buffer* buffe
 	}
 
 }
-int main(int argc, char** argv){
+t_error_codes suscribirse(parser_result result){
+	//Levanto el socket
+		t_config* config = config_create("../gameBoy.config");
+		if(config == NULL){
+			logInfoAux("No se puede leer el archivo de configuración de Game Boy");
+			return ERROR_CONFIG_FILE;
+		}
+		char* ipServidor = "";
+		char* puertoServidor ="";
 
+		ipServidor = config_get_string_value(config, "IP_BROKER");
+		puertoServidor = config_get_string_value(config, "PUERTO_BROKER");
+
+		if(strcmp(ipServidor,"")==0 || strcmp(puertoServidor,"") == 0) return ERROR_CONFIG_FILE;
+
+		int gameBoyBroker = crearSocketCliente(ipServidor, puertoServidor);
+		if(gameBoyBroker != -1){
+			logInfo("Conexión en socket %d a Broker para suscribirse",gameBoyBroker);
+		}else{
+			logInfoAux("Conexión fallida con Broker para suscribirse");
+			return ERROR_SEND;
+		}
+		config_destroy(config);
+
+		t_suscribe msgSuscribe = {SUSCRIBE_GAMEBOY,result.msg_type,result.timeout};
+		int enviado = enviarSuscripcion(gameBoyBroker,msgSuscribe);
+
+		close(gameBoyBroker);
+		if(enviado == -1){
+			logInfoAux("No se envió el mensaje");
+			return ERROR_SEND;
+		}else{
+			logInfo("Se enviaron %d bytes a la cola %d",enviado,result.msg_type);
+			return PARSE_SUCCESS;
+		}
+
+
+}
+int main(int argc, char** argv){
 	iniciarLogger("../gameBoy.log","GAMEBOY",true,LOG_LEVEL_INFO);
 	iniciarLoggerAux("../gameBoyAuxiliar.log","GAMEBOY AUX",true,LOG_LEVEL_WARNING);
 	parser_result result;
@@ -354,7 +399,7 @@ int main(int argc, char** argv){
 	else{
 		switch(result.module){
 		case P_SUSCRIPTOR:
-			logInfoAux("suscripcion aún no desarrollada");
+			p = suscribirse(result);
 		break;
 		case P_BROKER:
 		case P_TEAM:

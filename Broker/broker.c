@@ -111,14 +111,13 @@ void atenderCliente(int socket_cliente){
 
 void inicializarColas(){
 	crearConfigBroker();
-/*
+
 	colaNewPokemon = list_create();
 	colaAppearedPokemon = list_create();
 	colaCatchPokemon = list_create();
 	colaCaughtPokemon = list_create();
 	colaGetPokemon = list_create();
 	colaLocalizedPokemon = list_create();
-	*/
 }
 
 int main(void){
@@ -135,6 +134,7 @@ int main(void){
 	}
 
 	while(1){
+		//Aviso, si falla (como cuando se bloquea el puerto) hace un loop infinito
 		int cliente = aceptarCliente(socketServidorBroker);
 		atenderCliente(cliente);
 	}
