@@ -23,6 +23,9 @@ typedef enum {
 	CAUGHT_POKEMON,
 	GET_POKEMON,
 	LOCALIZED_POKEMON,
+	SUSCRIBE_TEAM,
+	SUSCRIBE_GAMECARD,
+	SUSCRIBE_GAMEBOY,
 	OP_UNKNOWN
 } op_code;
 
@@ -90,4 +93,9 @@ typedef struct {
 	uint32_t id_mensaje_correlativo;
 } t_localized_pokemon;
 
+typedef struct{
+	op_code tipo_suscripcion;
+	op_code cola_suscribir;
+	uint32_t timeout; //Solo en caso de gameboy
+} t_suscribe;
 #endif /* PROTOCOLO_H_ */

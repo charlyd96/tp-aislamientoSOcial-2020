@@ -327,6 +327,7 @@ t_error_codes enviarMensajeAModulo(process_code proc,op_code ope,t_buffer* buffe
 	void* mensajeSerializado = serializarPaquete(paquete, &tamanio_a_enviar);
 	int enviado = send(gameBoyBroker, mensajeSerializado, tamanio_a_enviar, 0);
 
+	close(gameBoyBroker);
 	if(enviado == -1){
 		logInfoAux("No se envió el mensaje");
 		free(mensajeSerializado);
