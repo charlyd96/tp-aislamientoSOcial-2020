@@ -12,6 +12,7 @@
 #include "gameBoy.h"
 #include "conexion.h"
 #include "serializacion.h"
+#include "logger.h"
 #include <commons/config.h>
 
 bool checkCantidadArgumentos(process_code proc,op_code ope, int argc){
@@ -78,7 +79,9 @@ bool checkCantidadArgumentos(process_code proc,op_code ope, int argc){
 					break;
 			}
             break;
-
+		case P_SUSCRIPTOR:
+			flag = argc == COUNT_ARGS_SUSCRIBE;
+			break;
 	    default:
 	        flag = false;
             break;
@@ -189,6 +192,12 @@ t_error_codes parsearGetPokemon(process_code proc,char** argv,parser_result* res
 	return PARSE_SUCCESS;
 
 }
+t_error_codes parsearMsgSuscribir(int argc,char** argv,parser_result * result){
+	uint32_t timeout = (uint32_t)atoi(argv[3]);
+	result->timeout = timeout;
+
+	return PARSE_SUCCESS;
+}
 t_error_codes parsearMsgGeneral(process_code proc,int argc,char** argv,parser_result *result){
 
 	switch (result->msg_type)
@@ -213,7 +222,7 @@ t_error_codes parsearMsgGeneral(process_code proc,int argc,char** argv,parser_re
 	        break;
 
 	    default:
-	    	printf("El argumento no es valido\n");
+	    	logInfoAux("El argumento no es valido");
 	    	return ERROR_BAD_REQUEST;
 		break;
 	    }
@@ -245,31 +254,30 @@ t_error_codes parsearComando(int argc, char** argv, parser_result* result)
 {
     if(argc < 4)
     {
-        printf("No se proporcionaron la cantidad minima de argumentos\n");
+        logInfoAux("No se proporcionaron la cantidad minima de argumentos");
+		return ERROR_BAD_ARGUMENTS_QUANTITY;
     }
     process_code p_code = getProcessCode(argv[1]);
     if(p_code == P_UNKNOWN){
-		printf("El argumento proceso no es correcto\n");
+		logInfoAux("El argumento proceso no es correcto");
     	return ERROR_BAD_REQUEST;
     }
 
     op_code op_code = getOperationCode(argv[2]);
 	if(op_code == OP_UNKNOWN){
-		printf("El tipo de operación no es correcto\n");
+		logInfoAux("El tipo de operación no es correcto");
 		return ERROR_BAD_REQUEST;
 	}
 	result->module 		= p_code;
 	result->msg_type 	= op_code;
 
 	if(!checkCantidadArgumentos(p_code,op_code,argc)){
-		printf("La cantidad de argumentos no es válida\n");
+		logInfoAux("La cantidad de argumentos no es válida");
 		return ERROR_BAD_REQUEST;
 	}
-	printf("comando %s\n",argv[1]);
     switch(p_code){
-
 		case P_SUSCRIPTOR:
-
+			return parsearMsgSuscribir(argc,argv,result);
 			break;
 		case P_BROKER:
 		case P_GAMECARD:
@@ -288,23 +296,37 @@ t_error_codes enviarMensajeAModulo(process_code proc,op_code ope,t_buffer* buffe
 	//Levanto el socket
 	t_config* config = config_create("../gameBoy.config");
 	if(config == NULL){
-		printf("No se puede leer el archivo de configuración de Game Boy\n");
+		logInfoAux("No se puede leer el archivo de configuración de Game Boy");
 		return ERROR_CONFIG_FILE;
 	}
 	char* ipServidor = "";
 	char* puertoServidor ="";
+	char* nombreModulo = "";
 	if(proc == P_BROKER){
 		ipServidor = config_get_string_value(config, "IP_BROKER");
 		puertoServidor = config_get_string_value(config, "PUERTO_BROKER");
+		nombreModulo = "BROKER";
 	}
 	if(proc == P_TEAM){
 		ipServidor = config_get_string_value(config, "IP_TEAM");
 		puertoServidor = config_get_string_value(config, "PUERTO_TEAM");
-
+		nombreModulo = "TEAM";
+	}
+	if(proc == P_GAMECARD){
+		ipServidor = config_get_string_value(config, "IP_GAMECARD");
+		puertoServidor = config_get_string_value(config, "PUERTO_GAMECARD");
+		nombreModulo = "GAMECARD";
 	}
 	if(strcmp(ipServidor,"")==0 || strcmp(puertoServidor,"") == 0) return ERROR_CONFIG_FILE;
 
 	int gameBoyBroker = crearSocketCliente(ipServidor, puertoServidor);
+	if(gameBoyBroker != -1){
+		logInfo("Conexión en socket %d a %s",gameBoyBroker,nombreModulo);
+	}else{
+		logInfoAux("Conexión fallida con %s",nombreModulo);
+		return ERROR_SEND;
+	}
+	config_destroy(config);
 
 	t_paquete* paquete = malloc(sizeof(t_paquete));
 	paquete->codigo_operacion = ope;
@@ -313,39 +335,83 @@ t_error_codes enviarMensajeAModulo(process_code proc,op_code ope,t_buffer* buffe
 	void* mensajeSerializado = serializarPaquete(paquete, &tamanio_a_enviar);
 	int enviado = send(gameBoyBroker, mensajeSerializado, tamanio_a_enviar, 0);
 
+	close(gameBoyBroker);
 	if(enviado == -1){
-		printf("No se envió el mensaje serializado\n");
+		logInfoAux("No se envió el mensaje");
+		free(mensajeSerializado);
+		eliminarPaquete(paquete);
 		return ERROR_SEND;
 	}else{
-		printf("Se conectó y se enviaron %d bytes\n",enviado);
+		logInfo("Se enviaron %d bytes a la cola %d",enviado,paquete->codigo_operacion);
+		free(mensajeSerializado);
+		eliminarPaquete(paquete);
 		return PARSE_SUCCESS;
 	}
 
-	free(mensajeSerializado);
-	eliminarPaquete(paquete);
+}
+t_error_codes suscribirse(parser_result result){
+	//Levanto el socket
+		t_config* config = config_create("../gameBoy.config");
+		if(config == NULL){
+			logInfoAux("No se puede leer el archivo de configuración de Game Boy");
+			return ERROR_CONFIG_FILE;
+		}
+		char* ipServidor = "";
+		char* puertoServidor ="";
+
+		ipServidor = config_get_string_value(config, "IP_BROKER");
+		puertoServidor = config_get_string_value(config, "PUERTO_BROKER");
+
+		if(strcmp(ipServidor,"")==0 || strcmp(puertoServidor,"") == 0) return ERROR_CONFIG_FILE;
+
+		int gameBoyBroker = crearSocketCliente(ipServidor, puertoServidor);
+		if(gameBoyBroker != -1){
+			logInfo("Conexión en socket %d a Broker para suscribirse",gameBoyBroker);
+		}else{
+			logInfoAux("Conexión fallida con Broker para suscribirse");
+			return ERROR_SEND;
+		}
+		config_destroy(config);
+
+		t_suscribe msgSuscribe = {SUSCRIBE_GAMEBOY,result.msg_type,result.timeout};
+		int enviado = enviarSuscripcion(gameBoyBroker,msgSuscribe);
+
+		close(gameBoyBroker);
+		if(enviado == -1){
+			logInfoAux("No se envió el mensaje");
+			return ERROR_SEND;
+		}else{
+			logInfo("Se enviaron %d bytes a la cola %d",enviado,result.msg_type);
+			return PARSE_SUCCESS;
+		}
+
 
 }
 int main(int argc, char** argv){
-
+	iniciarLogger("../gameBoy.log","GAMEBOY",true,LOG_LEVEL_INFO);
+	iniciarLoggerAux("../gameBoyAuxiliar.log","GAMEBOY AUX",true,LOG_LEVEL_WARNING);
 	parser_result result;
 	t_error_codes p = parsearComando(argc,argv, &result);
+
 	if(p != PARSE_SUCCESS){
-		printf("Error al parsear\n");
-		return p;
+		logInfo("Error al parsear");
 	}
 	else{
 		switch(result.module){
 		case P_SUSCRIPTOR:
-			printf("suscripcion aún no desarrollada\n");
+			p = suscribirse(result);
 		break;
 		case P_BROKER:
 		case P_TEAM:
 		case P_GAMECARD:
-			enviarMensajeAModulo(result.module,result.msg_type,result.buffer);
+			p = enviarMensajeAModulo(result.module,result.msg_type,result.buffer);
 		break;
 		default:
-			return ERROR_BAD_REQUEST;
+			p = ERROR_BAD_REQUEST;
 		break;
 		}
 	}
+	destruirLogger();
+	destruirLoggerAux();
+	return p;
 }
