@@ -27,7 +27,13 @@ sem_t qb_sem1;
 sem_t qb_sem2;
 sem_t using_cpu;
 extern sem_t trainer_count;
+extern cola_caught;
+extern sem_t qcaught_sem;
 
+
+sem_t poklist_sem;
+sem_t poklist_sem2;
+t_list *mapped_pokemons;
 
 /* Errores para identificar estado en la ejecución de los hilos */
 typedef enum{
@@ -41,8 +47,8 @@ typedef struct
 {
     char *name;
     u_int32_t cant;
-    int posx;
-    int posy;
+    u_int32_t posx;
+    u_int32_t posy;
 } mapPokemons;
 
 
@@ -59,13 +65,8 @@ typedef struct
     sem_t qr_sem1;
     sem_t qr_sem2;
 
-
-
-
-    t_list *mapped_pokemons;
     pthread_t trhandler_id;
-    sem_t poklist_sem;
-    sem_t poklist_sem2;
+
 } Team;
 
 /*Genera lista con strings de pokemones que conforman el objetivo global*/

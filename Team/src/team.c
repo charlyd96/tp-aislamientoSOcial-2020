@@ -30,15 +30,18 @@ Team * Team_Init(void)
     Team_load_global_config(this_team->config);
 
     this_team->ReadyQueue= list_create  ();                 //*********Mejorar la ubicación de esta instrucción***************//
-    this_team->mapped_pokemons = list_create();             //*********Mejorar la ubicación de esta instrucción***************//
+    mapped_pokemons = list_create();             //*********Mejorar la ubicación de esta instrucción***************//
+    cola_caught = list_create();
     BlockedQueue = list_create();
     sem_init (&qb_sem1, 0, 0);
     sem_init (&qb_sem2, 0, 1);
 
-    sem_init (&((this_team)->poklist_sem), 0, 0);           //*********Mejorar la ubicación de esta instrucción***************//
-    sem_init ((&(this_team)->poklist_sem2), 0, 1);          //*********Mejorar la ubicación de esta instrucción***************//
-    sem_init (&((this_team)->qr_sem1), 0, 0);                 //*********Mejorar la ubicación de esta instrucción***************//
+    sem_init (&poklist_sem, 0, 0);           //*********Mejorar la ubicación de esta instrucción***************//
+    sem_init (&poklist_sem2, 0, 1);          //*********Mejorar la ubicación de esta instrucción***************//
+    sem_init (&((this_team)->qr_sem1), 0, 0);               //*********Mejorar la ubicación de esta instrucción***************//
     sem_init (&((this_team)->qr_sem2), 0, 1);
+    sem_init (&qcaught1_sem,0,0);
+    sem_init (&qcaught1_sem,0,1);
 
     return (this_team);
 }
@@ -90,13 +93,14 @@ void imprimir_lista (t_list *lista)
 exec_error fifo_exec (Team* this_team)
 {
        Team *team= this_team;
+       sem_wait (&using_cpu);
        sem_wait ( &(this_team->qr_sem1) );
        sem_wait ( &(this_team->qr_sem2) );
-       sem_wait (&using_cpu);
+
        Trainer* trainer= list_remove (team->ReadyQueue, 0);
        trainer->actual_status= EXEC;
        sem_post ( &(this_team->qr_sem2) );
-       sem_post ( &(trainer->t_sem) );
+       sem_post ( &(trainer->trainer_sem) );
 
 
 }
@@ -139,8 +143,8 @@ u_int32_t Trainer_handler_create (Team *this_team)
 
 void listen_new_pokemons (Team *this_team)
 {
-    pthread_t thread;
-    pthread_create (&thread, NULL, listen_routine , this_team);
+    pthread_t thread; //OJO. Esta variable se está perdiendo
+    pthread_create (&thread, NULL, listen_gameboy_routine , this_team);
     pthread_detach (thread);
 }
 

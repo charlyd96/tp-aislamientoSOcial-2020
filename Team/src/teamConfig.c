@@ -82,7 +82,7 @@ void Team_load_trainers_config(Team *this_team)
         for (int k=0 ; *(objetivos + k) != NULL ; k++)
         list_add (entrenadores->personal_objective, *(objetivos+k));
 
-        sem_init (&(entrenadores->t_sem), 0, 0);
+        sem_init (&(entrenadores->trainer_sem), 0, 0);
         sem_post (&trainer_count);
 
 

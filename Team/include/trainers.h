@@ -15,7 +15,9 @@ extern sem_t qb_sem1;
 extern sem_t qb_sem2;
 sem_t trainer_count;
 extern sem_t using_cpu;
-
+extern t_list *mapped_pokemons;
+extern sem_t poklist_sem;
+extern sem_t poklist_sem2;
 
 typedef enum {
     OP_EXECUTING_CATCH=0,        //Ejecutando: desplazándose al pokemon a atrapar
@@ -45,7 +47,7 @@ typedef struct
     Status actual_status;
     Operation actual_operation;
     pthread_t thread_id;
-    sem_t t_sem;
+    sem_t trainer_sem;
 
     /* Posición del entrenador */
     u_int32_t posx;
@@ -67,6 +69,13 @@ typedef enum{
     TRAINER_NO_OBJECTIVES
 } trainer_error;
 
+typedef struct
+{
+	u_int32_t id_corr;
+	sem_t trainer_sem;
+	mapPokemons actual_objective;
+}catch_internal;
+
 
 void * trainer_routine (void *trainer);
 
@@ -78,5 +87,6 @@ void move_trainer_to_pokemon (Trainer *train);
 
 u_int32_t calculate_distance (u_int32_t Tx, u_int32_t Ty, u_int32_t Px, u_int32_t Py );
 
+int send_catch_and_recv_id (catch_internal mensaje_catch);
 
 #endif /* INCLUDE_TRAINERS_H_ */
