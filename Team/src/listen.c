@@ -57,10 +57,10 @@ void process_request (int cod_op, int *socket)
 
 }
 
-int send_catch_and_recv_id (catch_internal mensaje_catch)
+int send_catch (Trainer *trainer)
 {
 	sem_post(&using_cpu);
-	t_catch_pokemon catch_pokemon;
+	t_catch_pokemon message;
 
 	int socket = crearSocketCliente("127.0.01","5007");
 	printf ("socket vale %d\n", socket);
@@ -68,28 +68,26 @@ int send_catch_and_recv_id (catch_internal mensaje_catch)
 	if (socket != -1)
 	{
 
-		catch_pokemon.nombre_pokemon=mensaje_catch.actual_objective.name;
-		catch_pokemon.pos_x=mensaje_catch.actual_objective.posx;
-		catch_pokemon.pos_y=mensaje_catch.actual_objective.posy;
-		catch_pokemon.id_mensaje=0;
+		message.nombre_pokemon=trainer->actual_objective.name;
+		message.pos_x=trainer->actual_objective.posx;
+		message.pos_y=trainer->actual_objective.posy;
+		message.id_mensaje=0;
 
-		enviarCatchPokemon(socket, catch_pokemon);
+		enviarCatchPokemon (socket, message);
 		sleep (5);
-		recv(socket,&(mensaje_catch.id_corr),sizeof(uint32_t),MSG_WAITALL); //Recibir ID
 
-		search_caught_msg (mensaje_catch);
+		recv (socket,&(message.id_mensaje),sizeof(uint32_t),MSG_WAITALL); //Recibir ID
 		close (socket);
 
-		//Comunicar a la cola caught el ID a esperar
-		printf ("ID recibido: %d\n", catch_pokemon.id_mensaje);
-
-		//sem_wait
-		sleep (5);
+		int response;
+		push_to_caugth (imessage.id_mensaje, &response); //Comunicar a la cola caught el ID a esperar
+		sem_wait (trainer->trainer_sem); //Bloqueo el hilo hasta que llegue la respuesta
+		return (response);
 
 	} else
 		 {
 		 puts ("Fallo al conectarse al Broker");
-		 exit (-2);
+		 return (DEFAULT_CATCH);
 		 }
 
 

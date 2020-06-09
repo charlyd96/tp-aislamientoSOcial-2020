@@ -126,13 +126,11 @@ void* trainer_routine (void *train)
 				printf ("Despues de ejecutar:%d\n",  trainer->actual_status);
 				puts ("Voy a mandar un CATCH_POKEMON");
 				list_add (BlockedQueue,train); //Por el momento esta cola no se utiliza para nada
-				catch_internal mensaje_catch;
-				mensaje_catch.trainer_sem= trainer->trainer_sem;
-				mensaje_catch.actual_objective= trainer->actual_objective;
 
-				int accert = send_catch_and_recv_id (mensaje_catch);
+				int result= send_catch (trainer);
+            
 
-				if (accert == 1 )
+				if (result == 1 )
 				{
 					//Eliminar objetivo personal de la lista de entrenadores (salvo que sea un pokemon de otro entrenador, deadlock)
 					//Eliminar objetivo global de la lista de objetivos globales
