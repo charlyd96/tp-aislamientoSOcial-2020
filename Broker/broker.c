@@ -52,6 +52,11 @@ void atenderCliente(int socket_cliente){
 	switch(cod_op){
 		/*case NEW_POKEMON:{
 			t_new_pokemon* new_pokemon = recibirNewPokemon(socket_cliente);
+			pthread_t hiloMensaje;
+			pthread_create(&hiloMensaje, NULL, (void*)enviarId, socket_cliente);
+			pthread_detach(hiloMensaje);
+			//t_new_pokemon_memoria* guardarEnMemoriaBroker(new_pokemon);
+			//administrarMemoria(t_new_pokemon_memoria*);
 			log_info(logBroker, "Llegó el mensaje NEW_POKEMON.");
 			break;
 		}
@@ -203,11 +208,18 @@ void inicializarColas(){
 	colaLocalizedPokemon = list_create();
 }
 
+void inicializarMemoria(){
+	punteroMemoria = malloc(config_broker->tam_memoria);
+
+	algoritmoMemoria = config_broker->algoritmo_memoria;
+}
+
 int main(void){
 	logBroker = log_create("broker.log", "Broker", 0, LOG_LEVEL_INFO);
 	logBrokerInterno = log_create("brokerInterno.log", "Broker Interno", 0, LOG_LEVEL_INFO);
 
 	inicializarColas();
+	inicializarMemoria();
 
 	socketServidorBroker = crearSocketServidor(config_broker->ip_broker, config_broker->puerto_broker);
 

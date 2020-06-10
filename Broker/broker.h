@@ -71,6 +71,14 @@ typedef struct {
 	uint32_t pos_y;
 } t_localized_pokemon_memoria;
 
+typedef struct {
+	bool libre;
+} t_particion_memoria;
+
+typedef enum {FIFO, LRU} t_algoritmo_reemplazo;
+
+typedef enum {FF, BF} t_algoritmo_particion_libre;
+
 /* VARIABLES GLOBALES */
 
 t_configuracion* config_broker;
@@ -82,6 +90,8 @@ t_log* logBroker;
 char* pathConfigBroker = "broker.config";
 int socketServidorBroker;
 int cliente;
+void* punteroMemoria;
+char* algoritmoMemoria;
 
 t_list* colaNewPokemon;
 t_list* colaAppearedPokemon;
@@ -89,6 +99,8 @@ t_list* colaCatchPokemon;
 t_list* colaCaughtPokemon;
 t_list* colaGetPokemon;
 t_list* colaLocalizedPokemon;
+
+t_list* particiones;
 
 /* FUNCIONES */
 
