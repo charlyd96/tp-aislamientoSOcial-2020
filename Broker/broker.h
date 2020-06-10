@@ -13,11 +13,14 @@
 #include "serializacion.h"
 #include <commons/config.h>
 #include <commons/collections/list.h>
+#include <commons/log.h>
 #include <pthread.h>
+
 
 char* pathConfigBroker = "broker.config";
 uint32_t ID_MENSAJES = 0;
-typedef struct{
+
+typedef struct {
 	int tam_memoria;
 	int tam_minimo_particion;
 	char* algoritmo_memoria;
@@ -57,6 +60,16 @@ typedef struct {
 	uint32_t pos_x;
 	uint32_t pos_y;
 } t_localized_pokemon_memoria;
+
+typedef struct {
+	bool libre;
+} t_particion_memoria;
+
+typedef enum {FIFO, LRU} t_algoritmo_reemplazo;
+
+typedef enum {FF, BF} t_algoritmo_particion_libre;
+
+/* VARIABLES GLOBALES */
 
 t_configuracion* config_broker;
 t_config* config_ruta;
@@ -101,6 +114,9 @@ typedef struct{
 	t_caught_pokemon* mensaje;
 } t_nodo_cola_caught;
 
+t_list* particiones;
+
+/* FUNCIONES */
 
 int crearConfigBroker();
 bool existeArchivoConfig(char* path);
@@ -130,6 +146,5 @@ t_cola* cola_get;
 t_cola* cola_localized;
 t_cola* cola_catch;
 t_cola* cola_caught;
-
 
 #endif /* BROKER_H_ */

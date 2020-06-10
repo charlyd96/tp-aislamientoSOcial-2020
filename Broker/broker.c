@@ -8,7 +8,7 @@
 #include "broker.h"
 
 int crearConfigBroker(){
-	log_info(logBrokerInterno, "Se hizo el Log.");
+	log_info(logBrokerInterno, "Se inicializó el Log.");
 
     if (!existeArchivoConfig(pathConfigBroker)) {
 		log_error(logBrokerInterno, "ERROR: Verificar path del archivo.\n");
@@ -276,11 +276,13 @@ void atenderCliente(int socket_cliente){
 			handleSuscribeGameboyMsg(socket_cliente);
 			break;
 		}
-		default:
-			log_info(logBroker, "La operación no es correcta.");
+		default:{
+			log_info(logBrokerInterno, "No se pudo conectar ningún proceso.");
 			break;
+		}
 	}
 }
+
 
 void inicializarEstructuras(){
 	crearConfigBroker();
@@ -310,12 +312,19 @@ void inicializarEstructuras(){
 	cola_caught->suscriptores = list_create();
 }
 
+void inicializarMemoria(){
+	punteroMemoria = malloc(config_broker->tam_memoria);
+
+	algoritmoMemoria = config_broker->algoritmo_memoria;
+}
+
 int main(void){
+
 	logBroker = log_create("broker.log", "LOG", 0, LOG_LEVEL_INFO);
 	logBrokerInterno= log_create("brokerInterno.log", "LOG", 0, LOG_LEVEL_INFO);
 	inicializarEstructuras();
 
-	int socketServidorBroker = crearSocketServidor(config_broker->ip_broker, config_broker->puerto_broker);
+	socketServidorBroker = crearSocketServidor(config_broker->ip_broker, config_broker->puerto_broker);
 
 	if(socketServidorBroker == -1){
 		printf("No se pudo crear el Servidor Broker.");
@@ -325,8 +334,15 @@ int main(void){
 	}
 
 	while(1){
-		int cliente = aceptarCliente(socketServidorBroker);
+		cliente = aceptarCliente(socketServidorBroker);
 		atenderCliente(cliente);
 	}
-	if(socketServidorBroker != -1) close(socketServidorBroker);
+
+	if(socketServidorBroker != -1){
+		close(socketServidorBroker);
+		log_info(logBrokerInterno, "Se cerró el Socket %d.", socketServidorBroker);
+	}
+
+	log_destroy(logBrokerInterno);
+	log_destroy(logBroker);
 }
