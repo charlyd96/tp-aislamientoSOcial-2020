@@ -16,7 +16,7 @@
 #include <pthread.h>
 
 char* pathConfigBroker = "broker.config";
-
+uint32_t ID_MENSAJES = 0;
 typedef struct{
 	int tam_memoria;
 	int tam_minimo_particion;
@@ -105,7 +105,24 @@ typedef struct{
 int crearConfigBroker();
 bool existeArchivoConfig(char* path);
 void atenderCliente(int socket_cliente);
-void encolarNewPokemon(t_new_pokemon* new);
+
+void encolarNewPokemon(t_new_pokemon* msg);
+void encolarAppearedPokemon(t_appeared_pokemon* msg);
+void encolarGetPokemon(t_get_pokemon* msg);
+void encolarLocalizedPokemon(t_localized_pokemon* msg);
+void encolarCatchPokemon(t_catch_pokemon* msg);
+void encolarCaughtPokemon(t_caught_pokemon* msg);
+
+void handleNewPokemonMsg(int socket);
+void handleAppearedPokemonMsg(int socket);
+void handleGetPokemonMsg(int socket);
+void handleLocalizedPokemonMsg(int socket);
+void handleCatchPokemonMsg(int socket);
+void handleCaughtPokemonMsg(int socket);
+
+void handleSuscribeTeamMsg(int socket);
+void handleSuscribeGameboyMsg(int socket);
+void handleSuscribeGameCardMsg(int socket);
 
 t_cola* cola_new;
 t_cola* cola_appeared;
