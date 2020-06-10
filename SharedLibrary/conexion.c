@@ -87,7 +87,7 @@ int aceptarCliente(int socket_servidor){
 
 	if(socket_cliente != -1){
 		t_log* logger = log_create("conexion.log", "CONEXION", 0, LOG_LEVEL_INFO);
-		log_info(logger, "Se acepta la conexión de un cliente");
+		log_info(logger, "Se acepta la conexión de un Cliente.");
 		log_destroy(logger);
 	}
 

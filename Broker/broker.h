@@ -13,11 +13,12 @@
 #include "serializacion.h"
 #include <commons/config.h>
 #include <commons/collections/list.h>
+#include <commons/log.h>
 #include <pthread.h>
 
-char* pathConfigBroker = "broker.config";
+/* STRUCTS */
 
-typedef struct{
+typedef struct {
 	int tam_memoria;
 	int tam_minimo_particion;
 	char* algoritmo_memoria;
@@ -28,14 +29,15 @@ typedef struct{
 	int frecuencia_compatacion;
 } t_configuracion;
 
-typedef struct{
+typedef struct {
 	t_list* suscriptores_yaEnviados;
 	t_list* suscriptores_retornaronACK;
 } t_mensaje_suscriptor;
 
-typedef struct{
-	t_list* suscriptores;
-} t_nodo_cola;
+typedef struct {
+	pthread_t hilo;
+	int socket;
+} t_nodo;
 
 typedef struct {
 	uint32_t largo_nombre;
@@ -69,11 +71,17 @@ typedef struct {
 	uint32_t pos_y;
 } t_localized_pokemon_memoria;
 
+/* VARIABLES GLOBALES */
+
 t_configuracion* config_broker;
 t_config* config_ruta;
 
 t_log* logBrokerInterno;
 t_log* logBroker;
+
+char* pathConfigBroker = "broker.config";
+int socketServidorBroker;
+int cliente;
 
 t_list* colaNewPokemon;
 t_list* colaAppearedPokemon;
@@ -82,8 +90,13 @@ t_list* colaCaughtPokemon;
 t_list* colaGetPokemon;
 t_list* colaLocalizedPokemon;
 
+/* FUNCIONES */
+
 int crearConfigBroker();
 bool existeArchivoConfig(char* path);
 void atenderCliente(int socket_cliente);
 
+void atenderSuscripcion(t_suscribe* suscriptor, int socket_cliente);
+
+void mostrar();
 #endif /* BROKER_H_ */
