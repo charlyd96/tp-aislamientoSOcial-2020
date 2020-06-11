@@ -15,11 +15,25 @@
 #include <pthread.h>
 #include <trainers.h>
 
+#define DEFAULT_CATCH       1 
+
 extern t_list *mapped_pokemons;
 t_list *cola_caught;
 sem_t qcaught1_sem;
 sem_t qcaught2_sem;
+
+
+
 void* get_opcode (int *socket);
 
-void process_request (int cod_op, int *socket_cliente);
+void process_request_recv (int cod_op, int *socket_cliente);
+
+int send_catch (Trainer *trainer);
+
+int search_caught(u_int32_t id_corr, sem_t *trainer_sem);
+
+
+
+
+void * send_catch_routine (void * train);
 #endif /* INCLUDE_LISTEN_H_ */

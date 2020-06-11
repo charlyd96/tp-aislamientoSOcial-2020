@@ -13,7 +13,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include "teamConfig.h"
-
+#include <protocolo.h>
 #define WORLD_POSITION db_world_pos
 #define PRINT_TEST 0
 #define LIBERAR 0
@@ -27,9 +27,9 @@ sem_t qb_sem1;
 sem_t qb_sem2;
 sem_t using_cpu;
 extern sem_t trainer_count;
-extern cola_caught;
-extern sem_t qcaught_sem;
-
+extern t_list *cola_caught;
+extern sem_t qcaught1_sem;
+extern sem_t qcaught2_sem;
 
 sem_t poklist_sem;
 sem_t poklist_sem2;
@@ -41,6 +41,14 @@ typedef enum{
     PENDING,        //Fue desalojado por el planificador y aún tiene instrucciones por ejecutar
 } exec_error;
 
+
+
+typedef struct
+{
+	char *broker_IP;
+	char *broker_port;
+	op_code colaSuscripcion;
+} conexionColas;
 
 /* Pokemones en el mapa interno del Team*/
 typedef struct
@@ -78,16 +86,20 @@ u_int32_t Trainer_handler_create(Team *this_team);
 /*  Inicializa el proceso Team   */
 Team* Team_Init(void);
 
-void listen_new_pokemons (Team *this_team);
 
-void* listen_routine (void *pokemons_in_map);
+
+void* listen_routine_gameboy (void *config);
 
 void send_trainer_to_exec (Team* this_team, char *planning_algorithm);
 
 exec_error fifo_exec (Team* this_team);
 
+void subscribe (Config *config) ;
+
+void listen_new_pokemons (Config *config);
 
 void liberar_listas(Team *this_team);
 void imprimir_lista (t_list *get_list);
 
+void* listen_routine_colas (void *conexion);
 #endif /* TEAM_H_ */

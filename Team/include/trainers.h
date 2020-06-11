@@ -56,6 +56,9 @@ typedef struct
     /* Objetivo actual a ser capturado*/
     mapPokemons actual_objective;
 
+    u_int32_t catch_result;
+    Config *config;
+
 } Trainer;
 
 
@@ -87,6 +90,7 @@ void move_trainer_to_pokemon (Trainer *train);
 
 u_int32_t calculate_distance (u_int32_t Tx, u_int32_t Ty, u_int32_t Px, u_int32_t Py );
 
-int send_catch_and_recv_id (catch_internal mensaje_catch);
+
+int send_catch (Trainer *trainer);
 
 #endif /* INCLUDE_TRAINERS_H_ */

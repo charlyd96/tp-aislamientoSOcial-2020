@@ -22,12 +22,16 @@ Team * Team_Init(void)
 {
 
     Team *this_team =malloc (sizeof(Team)) ;
+
     this_team->config = malloc (sizeof (Config));
     this_team->config->team_config = get_config();
+
     sem_init (&trainer_count, 0, 0);					//*********Mejorar la ubicación de esta instrucción***************//
     sem_init (&using_cpu, 0,1);
-    Team_load_trainers_config(this_team);
     Team_load_global_config(this_team->config);
+    Team_load_trainers_config(this_team);
+
+
 
     this_team->ReadyQueue= list_create  ();                 //*********Mejorar la ubicación de esta instrucción***************//
     mapped_pokemons = list_create();             //*********Mejorar la ubicación de esta instrucción***************//
@@ -141,11 +145,42 @@ u_int32_t Trainer_handler_create (Team *this_team)
 //          ***** Recibe una estructura de tipo Team. Añade nodos con data ingresda por consola ****
 // ============================================================================================================
 
-void listen_new_pokemons (Team *this_team)
+
+
+void listen_new_pokemons (Config *config)
 {
     pthread_t thread; //OJO. Esta variable se está perdiendo
-    pthread_create (&thread, NULL, listen_gameboy_routine , this_team);
+    pthread_create (&thread, NULL, listen_routine_gameboy , config);
     pthread_detach (thread);
 }
 
 
+void subscribe (Config *configuracion)
+{
+
+	conexionColas *conexionAppeared = malloc (sizeof (conexionColas));
+	conexionAppeared->broker_IP=configuracion->broker_IP;
+
+	conexionAppeared->broker_port=configuracion->broker_port;
+	conexionAppeared->colaSuscripcion=APPEARED_POKEMON;
+	pthread_t thread1; //OJO. Esta variable se está perdiendo
+	pthread_create (&thread1, NULL, listen_routine_colas , conexionAppeared);
+	pthread_detach (thread);
+
+	conexionColas *conexionLocalized = malloc (sizeof (conexionColas));
+	conexionLocalized->broker_IP=configuracion->broker_IP;
+	conexionLocalized->broker_port=configuracion->broker_port;
+	conexionLocalized->colaSuscripcion=LOCALIZED_POKEMON;
+	pthread_t thread2; //OJO. Esta variable se está perdiendo
+	pthread_create (&thread2, NULL, listen_routine_colas , conexionLocalized);
+	pthread_detach (thread);
+
+	conexionColas *conexionCaught = malloc (sizeof (conexionColas));
+	conexionCaught->broker_IP=configuracion->broker_IP;
+	conexionCaught->broker_port=configuracion->broker_port;
+	conexionCaught->colaSuscripcion=CAUGHT_POKEMON;
+	pthread_t thread3; //OJO. Esta variable se está perdiendo
+	pthread_create (&thread3, NULL, listen_routine_colas , conexionCaught);
+	pthread_detach (thread);
+
+}

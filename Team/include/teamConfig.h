@@ -15,6 +15,7 @@
 
 extern sem_t trainer_count;
 
+
 typedef struct {
     t_config* team_config;
     u_int32_t reconnection_time;
@@ -22,12 +23,16 @@ typedef struct {
     char *planning_algorithm;
     u_int32_t quantum;
     u_int32_t initial_estimation;
-    char* broker_IP;
+    char *broker_IP;
     char *broker_port;
+    char *team_IP;
+    char *team_port;
+
 } Config;
 
+
 /*Para crear puntero a archivo de configuración*/
-t_config* get_config(void);
+t_config *get_config(void);
 
 
 /*Para cargar las configuraciones globales y específicas de los entrenadores*/

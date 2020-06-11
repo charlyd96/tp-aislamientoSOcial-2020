@@ -9,32 +9,33 @@
 
 
 
-void* listen_gameboy_routine (void *this_team)
+void * listen_routine_gameboy (void *configuracion)
 {
+	Config *config=configuracion;
 
-    int socket= crearSocketServidor ("127.0.0.2", "5020");
-
+    int socket= crearSocketServidor (config->team_IP, config->team_port);
+    printf ("Puerto= %s\n",config->team_port);
+    printf ("IP= %s\n",config->team_IP);
     while (1) //Este while en realidad debería llevar como condición, que el proceso Team no haya ganado.
 		{
 		sleep (2);
 		pthread_t thread;
 		int socket_cliente = aceptarCliente (socket);
-
+		printf ("Socket cliente: %d\n", socket_cliente);
 		pthread_create (&thread, NULL, (void *) get_opcode, &socket_cliente);
 		pthread_detach (thread);
-		printf ("Socket cliente: %d\n", socket_cliente);
 		}
 }
 
 
-void* get_opcode (int *socket)
+void * get_opcode (int *socket)
 {
 	int cod_op;
 	cod_op=recibirOperacion(*socket);
-	process_request(cod_op, socket);
+	process_request_recv(cod_op, socket);
 }
 
-void process_request (int cod_op, int *socket)
+void process_request_recv (int cod_op, int *socket)
 {
 	int socket_cliente= *socket;
     switch (cod_op)
@@ -53,16 +54,41 @@ void process_request (int cod_op, int *socket)
 				sem_post(&poklist_sem2);
 				break;
 				}
-    	}
-
+    	
+			case CAUGHT_POKEMON:{ puts ("recibi caught");}
+			/*
+			*Desarrollar
+			*/
+		break;
+		}
 }
 
 int send_catch (Trainer *trainer)
 {
-	sem_post(&using_cpu);
-	t_catch_pokemon message;
+	pthread_t thread;
+	void *retorno;
+	pthread_create(&thread, NULL, (void *) send_catch_routine, trainer);
+	pthread_join(thread,&retorno);
+	//sem_wait (&(trainer->trainer_sem));//Bloqueo el hilo hasta que llegue la respuesta
+	//return (trainer->catch_result); 
+	//Si esto funciona, sacar esta línea
 
-	int socket = crearSocketCliente("127.0.01","5007");
+	return (* (int*)retorno);
+}
+
+void * send_catch_routine (void * train)
+{	
+	Trainer *trainer=train;
+	trainer->actual_status = BLOCKED_WAITING_REPLY;
+	sem_post(&using_cpu); //Disponibilizar la CPU para otro entrenador
+	puts ("hilo join");
+	
+	char *IP= trainer->config->broker_IP;
+	char *puerto= trainer->config->broker_port;
+
+	t_catch_pokemon message;
+	puts ("estoy por aqui");
+	int socket = crearSocketCliente (IP,puerto);
 	printf ("socket vale %d\n", socket);
 
 	if (socket != -1)
@@ -79,18 +105,39 @@ int send_catch (Trainer *trainer)
 		recv (socket,&(message.id_mensaje),sizeof(uint32_t),MSG_WAITALL); //Recibir ID
 		close (socket);
 
-		int response;
-		push_to_caugth (imessage.id_mensaje, &response); //Comunicar a la cola caught el ID a esperar
-		sem_wait (trainer->trainer_sem); //Bloqueo el hilo hasta que llegue la respuesta
-		return (response);
+		int retorno;
+		retorno=search_caught (message.id_mensaje, &(trainer->trainer_sem) ); //Buscar en la cola caught con el ID correlativo
+																			  //Esta función bloquea a este hilo hasta que la CPU 
+																			  //lo habilite nuevamente 
+		return ((int *)retorno);
 
 	} else
 		 {
 		 puts ("Fallo al conectarse al Broker");
-		 return (DEFAULT_CATCH);
+		 return ((int*)DEFAULT_CATCH);
 		 }
 
+}
 
+void* listen_routine_colas (void *con)
+
+{
+	conexionColas *conexion=con;
+
+	int socket = crearSocketCliente (conexion->broker_IP,conexion->broker_port);
+	if (socket != -1)
+		{
+			switch (conexion->colaSuscripcion)
+			{	
+				case (APPEARED_POKEMON): puts ("appeared");
+				break;
+				case (LOCALIZED_POKEMON): puts ("localized");
+				break;
+				case (CAUGHT_POKEMON): puts ("caugth");
+				break;
+
+			}
+		}
 
 }
 
@@ -104,43 +151,42 @@ int send_catch (Trainer *trainer)
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-search_caught_msg (catch_internal mensaje_catch)
+int search_caught (u_int32_t id_corr, sem_t *trainer_sem)
 {
 
 
-		bool compare_id_corr (void *element)
-		{
-		catch_internal *mensaje_catch = element;
-
-		if (id_corr  ==  (int*)element )
+	bool compare_id_corr (void *element)
+	{
+		if (id_corr  ==  *(u_int32_t*)element)
 		return (true);
 		else return (false);
-		}
+	}
 
-	    if (list_any_satisfy (cola_caught,compare_id_corr) == True)
-	    //Encontré un mensaje con ese ID
-
-	    return ();
+	if (list_any_satisfy (cola_caught,compare_id_corr) == true)
+	{
+		sem_wait (trainer_sem);
+		return (true);//Encontré un mensaje con ese ID
+	} 
+	else 
+	{
+		sem_wait (trainer_sem);
+		return (false);//No encontré un mensaje con ese ID
+	} 
+	
 }
+/**
+ * Preguntar si los mensajes CAUGHT pueden guardarse todos, sin tener en cuenta el ID correlativo
+ * El motivo es que si cuando el broker me devuelve el ID, el planificador del SO tarda un rato en volver
+ * a planificar a ese hilo que debe informar a CAUGHT, el broker podría haber enviado la respueta CAUGHT 
+ * correspondiente antes de que yo le haya avisado a CAUGHT qué mensaje filtrar
+ * 
+*/
 
-
-
+/*
 void listen_caught_queue (void *)
 {
 
 	// Crear servidor y recibir mensajes del broker. Crear un hilo para tratar cada mensaje
 }
 
+*/

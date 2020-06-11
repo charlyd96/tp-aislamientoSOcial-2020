@@ -85,7 +85,7 @@ void Team_load_trainers_config(Team *this_team)
         sem_init (&(entrenadores->trainer_sem), 0, 0);
         sem_post (&trainer_count);
 
-
+        entrenadores->config = this_team->config;
 
         /*  Añado el entrenador creado, ya cada uno con su lista bag y lista de objetivos, a la lista de entrenadores */
         list_add(this_team->trainers, entrenadores);
@@ -108,6 +108,7 @@ void Team_load_trainers_config(Team *this_team)
     if (PRINT_TEST == 1) //Ver DEFINE en archivo team.h
     list_iterate(this_team->trainers, _imprimir_lista);
 
+    config_destroy (config);
 }
 
 // ============================================================================================================
@@ -116,13 +117,15 @@ void Team_load_trainers_config(Team *this_team)
 
 void Team_load_global_config(Config *config)
 {
-    config->reconnection_time      = config_get_int_value(config->team_config, "TIEMPO_RECONEXION");
-    config->cpu_cycle              = config_get_int_value(config->team_config, "RETARDO_CICLO_CPU");
-    config->planning_algorithm     = string_duplicate(config_get_string_value(config->team_config, "ALGORITMO_PLANIFICACION"));
-    config->quantum                = config_get_int_value(config->team_config, "QUANTUM");
-    config->initial_estimation     = config_get_int_value(config->team_config, "ESTIMACION_INICIAL");
-    config->broker_IP              = string_duplicate (config_get_string_value(config->team_config, "IP_BROKER"));
-    config->broker_port            = string_duplicate (config_get_string_value(config->team_config, "PUERTO_BROKER"));
+    config->reconnection_time    = config_get_int_value(config->team_config, "TIEMPO_RECONEXION");
+    config->cpu_cycle            = config_get_int_value(config->team_config, "RETARDO_CICLO_CPU");
+    config->planning_algorithm   = string_duplicate(config_get_string_value(config->team_config, "ALGORITMO_PLANIFICACION"));
+    config->quantum              = config_get_int_value(config->team_config, "QUANTUM");
+    config->initial_estimation   = config_get_int_value(config->team_config, "ESTIMACION_INICIAL");
+    config->broker_IP            = string_duplicate (config_get_string_value(config->team_config, "IP_BROKER"));
+    config->broker_port          = string_duplicate (config_get_string_value(config->team_config, "PUERTO_BROKER"));
+    config->team_IP              = string_duplicate (config_get_string_value(config->team_config, "IP_TEAM"));
+    config->team_port            = string_duplicate (config_get_string_value(config->team_config, "PUERTO_TEAM"));
 
     /* Just to test the correct reading from the configurations file to the globals configurations*/
     if (PRINT_TEST == 1)
@@ -135,9 +138,11 @@ void Team_load_global_config(Config *config)
         printf ("ESTIMACION_INICIAL= %d\n",config->initial_estimation);
         printf ("IP_BROKER= %s\n", config->broker_IP);
         printf ("PUERTO_BROKER= %s\n", config->broker_port);
+        printf ("IP_TEAM= %s\n", config->team_IP);
+        printf ("PUERTO_TEAM= %s\n", config->team_port);
     }
 
-    config_destroy (config->team_config);
+
 }
 
 
