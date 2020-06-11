@@ -7,6 +7,8 @@
 
 #include "broker.h"
 
+/* FUNCIONES - INICIALIZACIÓN */
+
 int crearConfigBroker(){
 	log_info(logBrokerInterno, "Se inicializó el Log.");
 
@@ -45,67 +47,166 @@ bool existeArchivoConfig(char* path){
 		return false;
 	}
 }
-// ----------- FUNCIONES ENCOLAR -----------------------------------------------------
-void encolarNewPokemon(t_new_pokemon* mensaje){
-	t_nodo_cola_new* nodo = malloc(sizeof(t_nodo_cola_new));
-	nodo->mensaje = mensaje;
-	nodo->susc_enviados = list_create();
-	nodo->susc_ack = list_create();
 
-	list_add(cola_new->nodos,nodo);
+void inicializarColas(){
+	crearConfigBroker();
+
+	cola_new = malloc(sizeof(t_cola));
+	cola_appeared = malloc(sizeof(t_cola));
+	cola_get = malloc(sizeof(t_cola));
+	cola_localized = malloc(sizeof(t_cola));
+	cola_catch = malloc(sizeof(t_cola));
+	cola_caught = malloc(sizeof(t_cola));
+
+	cola_new->nodos = list_create();;
+	cola_new->suscriptores = list_create();
+
+	cola_appeared->nodos = list_create();
+	cola_appeared->suscriptores = list_create();
+
+	cola_get->nodos = list_create();
+	cola_get->suscriptores = list_create();
+
+	cola_localized->nodos = list_create();
+	cola_localized->suscriptores = list_create();
+
+	cola_catch->nodos = list_create();
+	cola_catch->suscriptores = list_create();
+
+	cola_caught->nodos = list_create();
+	cola_caught->suscriptores = list_create();
 }
-void encolarAppearedPokemon(t_appeared_pokemon* mensaje){
-	t_nodo_cola_appeared* nodo = malloc(sizeof(t_nodo_cola_appeared));
-	nodo->mensaje = mensaje;
-	nodo->susc_enviados = list_create();
-	nodo->susc_ack = list_create();
 
-	list_add(cola_appeared->nodos,nodo);
+void inicializarMemoria(){
+	punteroMemoria = malloc(config_broker->tam_memoria);
+
+	algoritmoMemoria = config_broker->algoritmo_memoria;
 }
-void encolarCatchPokemon(t_catch_pokemon* mensaje){
-	t_nodo_cola_catch* nodo = malloc(sizeof(t_nodo_cola_catch));
-	nodo->mensaje = mensaje;
-	nodo->susc_enviados = list_create();
-	nodo->susc_ack = list_create();
 
-	list_add(cola_catch->nodos,nodo);
+/* FUNCIONES - CONEXIÓN */
+
+void atenderCliente(int socket_cliente){
+	printf("Atender Cliente %d: \n", socket_cliente);
+	op_code cod_op = recibirOperacion(socket_cliente);
+	switch(cod_op){
+		case NEW_POKEMON:{
+			atenderMensajeNewPokemon(socket_cliente);
+			break;
+		}
+		case APPEARED_POKEMON:{
+			atenderMensajeAppearedPokemon(socket_cliente);
+			break;
+		}
+		case CATCH_POKEMON:{
+			atenderMensajeCatchPokemon(socket_cliente);
+			break;
+		}
+		case CAUGHT_POKEMON:{
+			atenderMensajeCaughtPokemon(socket_cliente);
+			break;
+		}
+		case GET_POKEMON:{
+			atenderMensajeGetPokemon(socket_cliente);
+			break;
+		}
+		case LOCALIZED_POKEMON:{
+			atenderMensajeLocalizedPokemon(socket_cliente);
+			break;
+		}
+		case SUSCRIBE_TEAM:{
+			atenderSuscripcionTeam(socket_cliente);
+			break;
+		}
+		case SUSCRIBE_GAMECARD:{
+			atenderSuscripcionGameCard(socket_cliente);
+			break;
+		}
+		case SUSCRIBE_GAMEBOY:{
+			atenderSuscripcionGameBoy(socket_cliente);
+			break;
+		}
+		default:{
+			log_info(logBrokerInterno, "No se pudo conectar ningún proceso.");
+			break;
+		}
+	}
 }
-void encolarCaughtPokemon(t_caught_pokemon* mensaje){
-	t_nodo_cola_caught* nodo = malloc(sizeof(t_nodo_cola_caught));
-	nodo->mensaje = mensaje;
-	nodo->susc_enviados = list_create();
-	nodo->susc_ack = list_create();
 
-	list_add(cola_caught->nodos,nodo);
+void atenderMensajeNewPokemon(int socket_cliente){
+	t_new_pokemon* new_pokemon = recibirNewPokemon(socket_cliente);
+	log_info(logBroker, "Llegó el mensaje NEW_POKEMON.");
+
+	encolarNewPokemon(new_pokemon);
+	int enviado = devolverID(socket_cliente);
 }
-void encolarGetPokemon(t_get_pokemon* mensaje){
-	t_nodo_cola_get* nodo = malloc(sizeof(t_nodo_cola_get));
-	nodo->mensaje = mensaje;
-	nodo->susc_enviados = list_create();
-	nodo->susc_ack = list_create();
 
-	list_add(cola_get->nodos,nodo);
+void atenderMensajeAppearedPokemon(int socket_cliente){
+	t_appeared_pokemon* app_pokemon = recibirAppearedPokemon(socket_cliente);
+	log_info(logBroker, "Llegó el mensaje APPEARED_POKEMON.");
+
+	encolarAppearedPokemon(app_pokemon);
+	int enviado = devolverID(socket_cliente);
 }
-void encolarLocalizedPokemon(t_localized_pokemon* mensaje){
-	t_nodo_cola_localized* nodo = malloc(sizeof(t_nodo_cola_localized));
-	nodo->mensaje = mensaje;
-	nodo->susc_enviados = list_create();
-	nodo->susc_ack = list_create();
 
-	list_add(cola_localized->nodos,nodo);
+void atenderMensajeCatchPokemon(int socket_cliente){
+	t_catch_pokemon* mensaje = recibirCatchPokemon(socket_cliente);
+	log_info(logBroker, "Llegó el mensaje CATCH_POKEMON.");
+
+	encolarCatchPokemon(mensaje);
+	int enviado = devolverID(socket_cliente);
 }
-// -----------------------------------------------------------------------------------------
-int devolverID(int nroSocket){
-	uint32_t id = ID_MENSAJES ++; //Sincronizar obviously
-	void*stream = malloc(sizeof(uint32_t));
 
-	memcpy(stream, &(id), sizeof(uint32_t));
+void atenderMensajeCaughtPokemon(int socket_cliente){
+	t_caught_pokemon* mensaje = recibirCaughtPokemon(socket_cliente);
+	log_info(logBroker, "Llegó el mensaje CAUGHT_POKEMON.");
 
-	int enviado = send(nroSocket, stream, sizeof(uint32_t), 0);
-
-	return enviado;
+	encolarCaughtPokemon(mensaje);
+	int enviado = devolverID(socket_cliente);
 }
-int suscribir(int socket,op_code cola){
+
+void atenderMensajeGetPokemon(int socket_cliente){
+	t_get_pokemon* mensaje = recibirGetPokemon(socket_cliente);
+	log_info(logBroker, "Llegó el mensaje GET_POKEMON.");
+
+	encolarGetPokemon(mensaje);
+	int enviado = devolverID(socket_cliente);
+}
+
+void atenderMensajeLocalizedPokemon(int socket_cliente){
+	t_localized_pokemon* mensaje = recibirLocalizedPokemon(socket_cliente);
+	log_info(logBroker, "Llegó el mensaje LOCALIZED_POKEMON.");
+
+	encolarLocalizedPokemon(mensaje);
+	int enviado = devolverID(socket_cliente);
+}
+
+void atenderSuscripcionTeam(int socket_cliente){
+	t_suscribe* suscribe_team = recibirSuscripcion(SUSCRIBE_TEAM,socket_cliente);
+
+	int index = suscribir(socket_cliente,suscribe_team->cola_suscribir);
+	log_info(logBroker, "Se suscribió al team, indice %d",index);
+}
+
+void atenderSuscripcionGameBoy(int socket_cliente){
+	t_suscribe* suscribe_gameboy = recibirSuscripcion(SUSCRIBE_GAMEBOY,socket_cliente);
+
+	int index = suscribir(socket_cliente,suscribe_gameboy->cola_suscribir);
+	log_info(logBroker, "Se suscribió al Gameboy, indice %d",index);
+
+	sleep(suscribe_gameboy->timeout);
+	desuscribir(index,suscribe_gameboy->cola_suscribir);
+}
+
+void atenderSuscripcionGameCard(int socket_cliente){
+	t_suscribe* suscribe_gamecard = recibirSuscripcion(SUSCRIBE_GAMECARD,socket_cliente);
+
+	int index = suscribir(socket_cliente,suscribe_gamecard->cola_suscribir);
+	log_info(logBroker, "Se suscribió al gamecard, indice %d",index);
+}
+
+/* FUNCIONES - PROCESAMIENTO */
+
+int suscribir(int socket, op_code cola){
 	int index = 0;
 	switch(cola){
 		case NEW_POKEMON:{
@@ -134,6 +235,7 @@ int suscribir(int socket,op_code cola){
 		}
 		default:
 			index = -1;
+			log_info(logBrokerInterno, "No se suscribe ningún proceso.");
 	}
 	return index;
 }
@@ -169,160 +271,80 @@ void desuscribir(int index,op_code cola){
 			break;
 	}
 }
-// --------------- HANDLES DE CADA MENSAJE -----------------------------------------------
-void handleSuscribeGameboyMsg(int socket_cliente){
-	t_suscribe* suscribe_gameboy = recibirSuscripcion(SUSCRIBE_GAMEBOY,socket_cliente);
-	log_info(logBroker, "Llego el mensaje SUSCRIBE_GAMEBOY.");
 
-	int index = suscribir(socket_cliente,suscribe_gameboy->cola_suscribir);
-	log_info(logBroker, "Se suscribió al Gameboy, indice %d",index);
+void encolarNewPokemon(t_new_pokemon* mensaje){
+	t_nodo_cola_new* nodo = malloc(sizeof(t_nodo_cola_new));
+	nodo->mensaje = mensaje;
+	nodo->susc_enviados = list_create();
+	nodo->susc_ack = list_create();
 
-	sleep(suscribe_gameboy->timeout);
-	desuscribir(index,suscribe_gameboy->cola_suscribir);
-}
-void handleSuscribeTeamMsg(int socket_cliente){
-	t_suscribe* suscribe_team = recibirSuscripcion(SUSCRIBE_TEAM,socket_cliente);
-	log_info(logBroker, "Llego el mensaje SUSCRIBE_TEAM.");
-
-	int index = suscribir(socket_cliente,suscribe_team->cola_suscribir);
-	log_info(logBroker, "Se suscribió al team, indice %d",index);
-}
-void handleSuscribeGameCardMsg(int socket_cliente){
-	t_suscribe* suscribe_gamecard = recibirSuscripcion(SUSCRIBE_GAMECARD,socket_cliente);
-	log_info(logBroker, "Llego el mensaje SUSCRIBE_GAMECARD.");
-
-	int index = suscribir(socket_cliente,suscribe_gamecard->cola_suscribir);
-	log_info(logBroker, "Se suscribió al gamecard, indice %d",index);
+	list_add(cola_new->nodos,nodo);
 }
 
-void handleNewPokemonMsg(int socket_cliente){
-	t_new_pokemon* new_pokemon = recibirNewPokemon(socket_cliente);
-	log_info(logBroker, "Llego el mensaje NEW_POKEMON.");
-	encolarNewPokemon(new_pokemon);
-	int enviado = devolverID(socket_cliente);
-}
-void handleAppearedPokemonMsg(int socket_cliente){
-	t_appeared_pokemon* app_pokemon = recibirAppearedPokemon(socket_cliente);
-	log_info(logBroker, "Llego el mensaje APPEARED_POKEMON.");
+void encolarAppearedPokemon(t_appeared_pokemon* mensaje){
+	t_nodo_cola_appeared* nodo = malloc(sizeof(t_nodo_cola_appeared));
+	nodo->mensaje = mensaje;
+	nodo->susc_enviados = list_create();
+	nodo->susc_ack = list_create();
 
-	encolarAppearedPokemon(app_pokemon);
-	int enviado = devolverID(socket_cliente);
-}
-void handleCatchPokemonMsg(int socket_cliente){
-	t_catch_pokemon* mensaje = recibirCatchPokemon(socket_cliente);
-	log_info(logBroker, "Llego el mensaje CATCH_POKEMON.");
-
-	encolarCatchPokemon(mensaje);
-	int enviado = devolverID(socket_cliente);
-}
-void handleCaughtPokemonMsg(int socket_cliente){
-	t_caught_pokemon* mensaje = recibirCaughtPokemon(socket_cliente);
-	log_info(logBroker, "Llego el mensaje CAUGHT_POKEMON.");
-
-	encolarCaughtPokemon(mensaje);
-	int enviado = devolverID(socket_cliente);
-}
-void handleGetPokemonMsg(int socket_cliente){
-	t_get_pokemon* mensaje = recibirGetPokemon(socket_cliente);
-	log_info(logBroker, "Llego el mensaje GET_POKEMON.");
-
-	encolarGetPokemon(mensaje);
-	int enviado = devolverID(socket_cliente);
-}
-void handleLocalizedPokemonMsg(int socket_cliente){
-	t_localized_pokemon* mensaje = recibirLocalizedPokemon(socket_cliente);
-	log_info(logBroker, "Llego el mensaje LOCALIZED_POKEMON.");
-
-	encolarLocalizedPokemon(mensaje);
-	int enviado = devolverID(socket_cliente);
-}
-void atenderCliente(int socket_cliente){
-	printf("Atender Cliente %d: \n", socket_cliente);
-	op_code cod_op = recibirOperacion(socket_cliente);
-	switch(cod_op){
-		case NEW_POKEMON:{
-			handleNewPokemonMsg(socket_cliente);
-			break;
-		}
-		case APPEARED_POKEMON:{
-			handleAppearedPokemonMsg(socket_cliente);
-			break;
-		}
-		case CATCH_POKEMON:{
-			handleCatchPokemonMsg(socket_cliente);
-			break;
-		}
-		case CAUGHT_POKEMON:{
-			handleCaughtPokemonMsg(socket_cliente);
-			break;
-		}
-		case GET_POKEMON:{
-			handleGetPokemonMsg(socket_cliente);
-			break;
-		}
-		case LOCALIZED_POKEMON:{
-			handleLocalizedPokemonMsg(socket_cliente);
-			break;
-		}
-		case SUSCRIBE_TEAM:{
-			handleSuscribeTeamMsg(socket_cliente);
-			break;
-		}
-		case SUSCRIBE_GAMECARD:{
-			handleSuscribeGameCardMsg(socket_cliente);
-			break;
-		}
-		case SUSCRIBE_GAMEBOY:{
-			handleSuscribeGameboyMsg(socket_cliente);
-			break;
-		}
-		default:{
-			log_info(logBrokerInterno, "No se pudo conectar ningún proceso.");
-			break;
-		}
-	}
+	list_add(cola_appeared->nodos,nodo);
 }
 
+void encolarCatchPokemon(t_catch_pokemon* mensaje){
+	t_nodo_cola_catch* nodo = malloc(sizeof(t_nodo_cola_catch));
+	nodo->mensaje = mensaje;
+	nodo->susc_enviados = list_create();
+	nodo->susc_ack = list_create();
 
-void inicializarEstructuras(){
-	crearConfigBroker();
-	cola_new = malloc(sizeof(t_cola));
-	cola_appeared = malloc(sizeof(t_cola));
-	cola_get = malloc(sizeof(t_cola));
-	cola_localized = malloc(sizeof(t_cola));
-	cola_catch = malloc(sizeof(t_cola));
-	cola_caught = malloc(sizeof(t_cola));
-
-	cola_new->nodos = list_create();;
-	cola_new->suscriptores = list_create();
-
-	cola_appeared->nodos = list_create();
-	cola_appeared->suscriptores = list_create();
-
-	cola_get->nodos = list_create();
-	cola_get->suscriptores = list_create();
-
-	cola_localized->nodos = list_create();
-	cola_localized->suscriptores = list_create();
-
-	cola_catch->nodos = list_create();
-	cola_catch->suscriptores = list_create();
-
-	cola_caught->nodos = list_create();
-	cola_caught->suscriptores = list_create();
+	list_add(cola_catch->nodos,nodo);
 }
 
-void inicializarMemoria(){
-	punteroMemoria = malloc(config_broker->tam_memoria);
+void encolarCaughtPokemon(t_caught_pokemon* mensaje){
+	t_nodo_cola_caught* nodo = malloc(sizeof(t_nodo_cola_caught));
+	nodo->mensaje = mensaje;
+	nodo->susc_enviados = list_create();
+	nodo->susc_ack = list_create();
 
-	algoritmoMemoria = config_broker->algoritmo_memoria;
+	list_add(cola_caught->nodos,nodo);
+}
+
+void encolarGetPokemon(t_get_pokemon* mensaje){
+	t_nodo_cola_get* nodo = malloc(sizeof(t_nodo_cola_get));
+	nodo->mensaje = mensaje;
+	nodo->susc_enviados = list_create();
+	nodo->susc_ack = list_create();
+
+	list_add(cola_get->nodos,nodo);
+}
+
+void encolarLocalizedPokemon(t_localized_pokemon* mensaje){
+	t_nodo_cola_localized* nodo = malloc(sizeof(t_nodo_cola_localized));
+	nodo->mensaje = mensaje;
+	nodo->susc_enviados = list_create();
+	nodo->susc_ack = list_create();
+
+	list_add(cola_localized->nodos,nodo);
+}
+
+/* FUNCIONES - COMUNICACIÓN */
+
+int devolverID(int socket){
+	uint32_t id = ID_MENSAJE ++; //Sincronizar obviously
+	void*stream = malloc(sizeof(uint32_t));
+
+	memcpy(stream, &(id), sizeof(uint32_t));
+
+	int enviado = send(socket, stream, sizeof(uint32_t), 0);
+
+	return enviado;
 }
 
 int main(void){
+	logBroker = log_create("broker.log", "Broker", 0, LOG_LEVEL_INFO);
+	logBrokerInterno = log_create("brokerInterno.log", "Broker Interno", 0, LOG_LEVEL_INFO);
 
-	logBroker = log_create("broker.log", "LOG", 0, LOG_LEVEL_INFO);
-	logBrokerInterno= log_create("brokerInterno.log", "LOG", 0, LOG_LEVEL_INFO);
-	inicializarEstructuras();
+	inicializarColas();
+	inicializarMemoria();
 
 	socketServidorBroker = crearSocketServidor(config_broker->ip_broker, config_broker->puerto_broker);
 
