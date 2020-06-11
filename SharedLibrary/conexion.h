@@ -42,7 +42,7 @@ int enviarCatchPokemon(int socket_cliente, t_catch_pokemon mensaje);
 int enviarAppearedPokemon(int socket_cliente, t_appeared_pokemon mensaje);
 int enviarLocalizedPokemon(int socket_cliente, t_localized_pokemon mensaje);
 int enviarCaughtPokemon(int socket_cliente, t_caught_pokemon mensaje);
-
+int enviarSuscripcion(int socket_cliente,t_suscribe mensaje);
 
 //Dado un Socket, recibe un mensaje del tipo NEW_POKEMON.
 t_new_pokemon* recibirNewPokemon(int socket_cliente);
@@ -51,6 +51,8 @@ t_catch_pokemon* recibirCatchPokemon(int socket_cliente);
 t_caught_pokemon* recibirCaughtPokemon(int socket_cliente);
 t_get_pokemon* recibirGetPokemon(int socket_cliente);
 t_localized_pokemon* recibirLocalizedPokemon(int socket_cliente);
+t_suscribe* recibirSuscripcion(op_code tipo,int socket_cliente);
+
 
 /* HAY QUE REVISARLO
 void recibirCliente(int* socket);
