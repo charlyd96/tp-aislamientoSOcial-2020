@@ -178,6 +178,13 @@ void atenderMensajeLocalizedPokemon(int socket_cliente){
 
 	encolarLocalizedPokemon(mensaje);
 	int enviado = devolverID(socket_cliente);
+
+	//chachearMensaje(mensaje);
+	//hilo-enviarMensajeASuscriptores(mensaje);
+	//hilo-recibirACK(socket_cliente);
+
+	//si retorna ACK elimino el mensaje de la COLA
+	//si no retorna ACK ?
 }
 
 void atenderSuscripcionTeam(int socket_cliente){
@@ -185,6 +192,8 @@ void atenderSuscripcionTeam(int socket_cliente){
 
 	int index = suscribir(socket_cliente,suscribe_team->cola_suscribir);
 	log_info(logBroker, "Se suscribió al team, indice %d",index);
+
+	//enviar mensajes cacheados (recorrer la lista de particiones)
 }
 
 void atenderSuscripcionGameBoy(int socket_cliente){
@@ -336,6 +345,7 @@ int devolverID(int socket){
 
 	int enviado = send(socket, stream, sizeof(uint32_t), 0);
 
+	printf("ID %d\n", id);
 	return enviado;
 }
 
@@ -355,10 +365,10 @@ int main(void){
 		printf("Socket Servidor %d.\n", socketServidorBroker);
 	}
 
-	while(1){
+	//while(1){
 		cliente = aceptarCliente(socketServidorBroker);
 		atenderCliente(cliente);
-	}
+	//}
 
 	if(socketServidorBroker != -1){
 		close(socketServidorBroker);

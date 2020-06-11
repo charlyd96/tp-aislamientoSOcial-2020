@@ -103,8 +103,15 @@ typedef struct {
 } t_localized_pokemon_memoria;
 
 typedef struct {
+	uint32_t tam_minimo;
 	bool libre;
+	int id;
+	op_code tipo_mensaje;
 } t_particion_memoria;
+
+typedef struct {
+	void* mensaje_cacheado;
+} t_memoria;
 
 typedef enum {FIFO, LRU} t_algoritmo_reemplazo;
 
@@ -133,7 +140,7 @@ t_cola* cola_localized;
 t_cola* cola_catch;
 t_cola* cola_caught;
 
-t_list* particiones;
+t_memoria* particiones;
 
 /* FUNCIONES */
 
