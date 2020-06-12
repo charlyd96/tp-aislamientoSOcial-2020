@@ -330,7 +330,6 @@ void atenderCliente(int socket_cliente){
 	op_code cod_op = recibirOperacion(socket_cliente);
 	switch(cod_op){
 		case NEW_POKEMON:{
-
 			atenderMensajeNewPokemon(socket_cliente);
 			break;
 		}
@@ -699,7 +698,9 @@ int main(void){
 
 	while(1){
 		cliente = aceptarCliente(socketServidorBroker);
-		atenderCliente(cliente);
+
+		pthread_t hiloCliente;
+		pthread_create(&hiloCliente, NULL, (void*)atenderCliente, &cliente);
 	}
 
 	if(socketServidorBroker != -1){
