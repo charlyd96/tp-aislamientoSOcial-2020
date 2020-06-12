@@ -279,7 +279,7 @@ int cachearNewPokemon(t_new_pokemon* msg){
 
 int cachearAppearedPokemon(t_appeared_pokemon* msg){
 	uint32_t largo_nombre = strlen(msg->nombre_pokemon); //Sin el \0
-	uint32_t largo_stream = sizeof(uint32_t) + largo_nombre;
+	uint32_t largo_stream = 3 * sizeof(uint32_t) + largo_nombre;
 
 	void* stream = malloc(largo_stream);
 	uint32_t offset = 0;
