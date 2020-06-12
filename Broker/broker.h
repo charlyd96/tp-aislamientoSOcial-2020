@@ -18,12 +18,17 @@
 
 /* STRUCTS */
 
+typedef enum {PD,BUDDY} t_tipo_particionado;
+typedef enum {FIFO, LRU} t_algoritmo_reemplazo;
+
+typedef enum {FF, BF} t_algoritmo_particion_libre;
+
 typedef struct {
 	int tam_memoria;
 	int tam_minimo_particion;
-	char* algoritmo_memoria;
+	t_tipo_particionado algoritmo_memoria;
 	char* algoritmo_reemplazo;
-	char* algoritmo_particion_libre;
+	t_algoritmo_particion_libre algoritmo_particion_libre;
 	char* ip_broker;
 	char* puerto_broker;
 	int frecuencia_compatacion;
@@ -103,23 +108,16 @@ typedef struct {
 } t_localized_pokemon_memoria;
 
 typedef struct {
-	uint32_t tam_minimo;
 	bool libre;
-	int id;
 	op_code tipo_mensaje;
-} t_particion_memoria;
-
-typedef struct {
-	void* mensaje_cacheado;
-} t_memoria;
-
-typedef enum {FIFO, LRU} t_algoritmo_reemplazo;
-
-typedef enum {FF, BF} t_algoritmo_particion_libre;
+	uint32_t id;
+	uint32_t base;
+	uint32_t tamanio;
+} t_particion;
 
 /* VARIABLES GLOBALES */
 
-uint32_t ID_MENSAJE = 0;
+uint32_t ID_MENSAJE;
 
 t_configuracion* config_broker;
 t_config* config_ruta;
@@ -130,7 +128,7 @@ t_log* logBroker;
 char* pathConfigBroker = "broker.config";
 int socketServidorBroker;
 int cliente;
-void* punteroMemoria;
+void* cache;
 char* algoritmoMemoria;
 
 t_cola* cola_new;
@@ -140,7 +138,7 @@ t_cola* cola_localized;
 t_cola* cola_catch;
 t_cola* cola_caught;
 
-t_memoria* particiones;
+t_list* particiones;
 
 /* FUNCIONES */
 
@@ -176,7 +174,10 @@ void encolarCaughtPokemon(t_caught_pokemon* msg);
 void encolarGetPokemon(t_get_pokemon* msg);
 void encolarLocalizedPokemon(t_localized_pokemon* msg);
 
+int buscarParticionLibre(uint32_t largo_stream);
+int cachearGetPokemon(t_get_pokemon* msg);
+int buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint32_t id);
 /// COMUNICACIÓN
-int devolverID(int socket);
+int devolverID(int socket,uint32_t*id);
 
 #endif /* BROKER_H_ */

@@ -23,12 +23,18 @@ int crearConfigBroker(){
 	if (config_ruta != NULL){
 	    config_broker->tam_memoria = config_get_int_value(config_ruta, "TAMANO_MEMORIA");
 		config_broker->tam_minimo_particion = config_get_int_value(config_ruta, "TAMANO_MINIMO_PARTICION");
-	    config_broker->algoritmo_memoria = config_get_string_value(config_ruta, "ALGORITMO_MEMORIA");
-	    config_broker->algoritmo_reemplazo = config_get_string_value(config_ruta, "ALGORITMO_REEMPLAZO");
-	    config_broker->algoritmo_particion_libre = config_get_string_value(config_ruta, "ALGORITMO_PARTICION_LIBRE");
+	    config_broker->algoritmo_reemplazo = config_get_string_value(config_ruta, "ALGORITMO_REEMPLAZO");;
 	    config_broker->ip_broker = config_get_string_value(config_ruta, "IP_BROKER");
 	    config_broker->puerto_broker = config_get_string_value(config_ruta, "PUERTO_BROKER");
 	    config_broker->frecuencia_compatacion = config_get_int_value(config_ruta, "FRECUENCIA_COMPACTACION");
+
+	    char* algoritmo_mem = config_get_string_value(config_ruta, "ALGORITMO_MEMORIA");
+		if(strcmp(algoritmo_mem,"PD") == 0) config_broker->algoritmo_memoria = PD;
+		if(strcmp(algoritmo_mem,"BS") == 0) config_broker->algoritmo_memoria = BUDDY;
+
+	    char* algoritmo_libre = config_get_string_value(config_ruta, "ALGORITMO_PARTICION_LIBRE");
+	    if(strcmp(algoritmo_libre,"FF") == 0) config_broker->algoritmo_particion_libre = FF;
+	    if(strcmp(algoritmo_libre,"BF") == 0) config_broker->algoritmo_particion_libre = BF;
 	}
 
 	if(config_broker == NULL){
@@ -49,6 +55,7 @@ bool existeArchivoConfig(char* path){
 }
 
 void inicializarColas(){
+	ID_MENSAJE = 0;
 	crearConfigBroker();
 
 	cola_new = malloc(sizeof(t_cola));
@@ -78,9 +85,116 @@ void inicializarColas(){
 }
 
 void inicializarMemoria(){
-	punteroMemoria = malloc(config_broker->tam_memoria);
+	cache = malloc(config_broker->tam_memoria);
+	particiones = list_create();
 
-	algoritmoMemoria = config_broker->algoritmo_memoria;
+	//Partición libre inicial
+	t_particion* particionInicial = malloc(sizeof(t_particion));
+	particionInicial->libre = true;
+	particionInicial->base = 0;
+	particionInicial->tamanio = config_broker->tam_memoria;
+
+	list_add(particiones,particionInicial);
+}
+/* FUNCIONES CACHE */
+int buscarParticionLibre(uint32_t largo_stream) {
+	int i = 0;
+	int largo_list = list_size(particiones);
+	t_algoritmo_particion_libre algoritmo = config_broker->algoritmo_particion_libre;
+	bool encontrado = false;
+	if (algoritmo == FF) {
+		while (encontrado == false && i < largo_list) {
+			t_particion* part = list_get(particiones, i);
+			if ((part->libre) == true && largo_stream <= (part->tamanio)) {
+				encontrado = true;
+			} else {
+				i++;
+			}
+		}
+		//Si salió por encontrado
+		if (encontrado) {
+			return i;
+		}
+		//Si salió por i, no encontró ninguna que pueda contener el largo_stream
+		return -1;
+
+	} else if (algoritmo == BF) {
+		//Inicializo dif en tamaño max memoria, así el primer candidato será válido
+		int diferenciaActual = config_broker->tam_memoria;
+		int indiceCandidato = -1;
+		for (i = 0; i < largo_list; i++) {
+			t_particion* part = list_get(particiones, i);
+			if ((part->libre) == true && (part->tamanio) >= largo_stream) {
+				//Candidato, si es mejor que el anterior lo reservo
+				if (diferenciaActual > (part->tamanio) - largo_stream) {
+					diferenciaActual = (part->tamanio) - largo_stream;
+					indiceCandidato = i;
+				}
+			}
+		}
+		return indiceCandidato;
+	}
+	//Si no matcheo ningun algoritmo
+	return -1;
+}
+/**
+ * el campo "id" de la partición depende del tipo de mensaje puede referirse al id_mensaje o id_mensaje_correlativo
+ * Esta funcion es para reutilizar en cada cachearTalMensaje()
+ */
+int buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint32_t id){
+	//-> MUTEAR LISTA DE PARTICIONES
+	//buscarParticionLibre(largo_stream) devuelve el índice de la particion libre o -1 si no encuentra
+	int indice = buscarParticionLibre(largo_stream);
+	while (indice < 0) {
+		//-> Aplicar algoritmo para hacer espacio
+		//Buscar de nuevo
+		indice = buscarParticionLibre(largo_stream);
+	}
+	//Copiar estr. admin. de la particion
+	t_particion* part_libre = list_get(particiones, indice);
+
+	//alocar: (cache es un puntero void* al inicio de la caché)
+	//cache + base de la part_libre es el puntero al inicio de la partición libre
+	memcpy(cache + (part_libre->base), stream, largo_stream);
+
+	//actualizar estructura administrativa (lista de particiones)
+	t_particion* part_nueva = malloc(sizeof(t_particion));
+	part_nueva->libre = false;
+	part_nueva->tipo_mensaje = tipo_msg;
+	part_nueva->base = part_libre->base;
+	part_nueva->tamanio = largo_stream;
+	part_nueva->id = id;
+
+	part_libre->base = part_libre->base + largo_stream;
+	part_libre->tamanio = part_libre->tamanio - largo_stream;
+
+	//Y acá cambiar [{...part_libre...}] por [{nueva},{libre_mas_chica}]
+	//Pasos: Insertar la nueva -> [{nueva},{...part_libre...}]
+	list_add_in_index(particiones,indice,part_nueva);
+	//y luego eliminar/reemplazar la part_libre original
+	if(part_libre->tamanio == 0){
+		list_remove(particiones,indice+1);
+	}else{
+		list_replace(particiones,indice+1,part_libre);
+	}
+	log_info(logBroker,"La ubicación de la partición nueva es %d con largo %d",indice,largo_stream);
+	//-> DESMUTEAR LISTA DE PARTICIONES
+
+	return 1;
+}
+int cachearGetPokemon(t_get_pokemon* msg) {
+	uint32_t largo_nombre = strlen(msg->nombre_pokemon); //Sin el \0
+	uint32_t largo_stream = sizeof(uint32_t) + largo_nombre;
+	//Serializo el msg
+	void* stream = malloc(largo_stream);
+	uint32_t offset = 0;
+	memcpy(stream + offset, &largo_nombre, sizeof(uint32_t));
+	offset += sizeof(uint32_t);
+	memcpy(stream + offset, msg->nombre_pokemon, largo_nombre);	//Copio "pikachu" sin el \0
+
+	int result = buscarParticionYAlocar(largo_stream,stream,NEW_POKEMON,msg->id_mensaje);
+
+	return result;
 }
 
 /* FUNCIONES - CONEXIÓN */
@@ -135,49 +249,57 @@ void atenderCliente(int socket_cliente){
 void atenderMensajeNewPokemon(int socket_cliente){
 	t_new_pokemon* new_pokemon = recibirNewPokemon(socket_cliente);
 	log_info(logBroker, "Llegó el mensaje NEW_POKEMON.");
-
+	uint32_t id_mensaje;
 	encolarNewPokemon(new_pokemon);
-	int enviado = devolverID(socket_cliente);
+	int enviado = devolverID(socket_cliente,&id_mensaje);
+
+	new_pokemon->id_mensaje = id_mensaje;
+
 }
 
 void atenderMensajeAppearedPokemon(int socket_cliente){
 	t_appeared_pokemon* app_pokemon = recibirAppearedPokemon(socket_cliente);
 	log_info(logBroker, "Llegó el mensaje APPEARED_POKEMON.");
-
+	uint32_t id_mensaje;
 	encolarAppearedPokemon(app_pokemon);
-	int enviado = devolverID(socket_cliente);
+	int enviado = devolverID(socket_cliente,&id_mensaje);
 }
 
 void atenderMensajeCatchPokemon(int socket_cliente){
 	t_catch_pokemon* mensaje = recibirCatchPokemon(socket_cliente);
 	log_info(logBroker, "Llegó el mensaje CATCH_POKEMON.");
-
+	uint32_t id_mensaje;
 	encolarCatchPokemon(mensaje);
-	int enviado = devolverID(socket_cliente);
+	int enviado = devolverID(socket_cliente,&id_mensaje);
 }
 
 void atenderMensajeCaughtPokemon(int socket_cliente){
 	t_caught_pokemon* mensaje = recibirCaughtPokemon(socket_cliente);
 	log_info(logBroker, "Llegó el mensaje CAUGHT_POKEMON.");
-
+	uint32_t id_mensaje;
 	encolarCaughtPokemon(mensaje);
-	int enviado = devolverID(socket_cliente);
+	int enviado = devolverID(socket_cliente,&id_mensaje);
 }
 
 void atenderMensajeGetPokemon(int socket_cliente){
 	t_get_pokemon* mensaje = recibirGetPokemon(socket_cliente);
 	log_info(logBroker, "Llegó el mensaje GET_POKEMON.");
+	uint32_t id_mensaje;
 
 	encolarGetPokemon(mensaje);
-	int enviado = devolverID(socket_cliente);
+
+	int enviado = devolverID(socket_cliente,&id_mensaje);
+	mensaje->id_mensaje = id_mensaje;
+
+	int cacheado = cachearGetPokemon(mensaje);
 }
 
 void atenderMensajeLocalizedPokemon(int socket_cliente){
 	t_localized_pokemon* mensaje = recibirLocalizedPokemon(socket_cliente);
 	log_info(logBroker, "Llegó el mensaje LOCALIZED_POKEMON.");
-
+	uint32_t id_mensaje;
 	encolarLocalizedPokemon(mensaje);
-	int enviado = devolverID(socket_cliente);
+	int enviado = devolverID(socket_cliente,&id_mensaje);
 
 	//chachearMensaje(mensaje);
 	//hilo-enviarMensajeASuscriptores(mensaje);
@@ -337,8 +459,9 @@ void encolarLocalizedPokemon(t_localized_pokemon* mensaje){
 
 /* FUNCIONES - COMUNICACIÓN */
 
-int devolverID(int socket){
+int devolverID(int socket,uint32_t* id_mensaje){
 	uint32_t id = ID_MENSAJE ++; //Sincronizar obviously
+	(*id_mensaje) = ID_MENSAJE;
 	void*stream = malloc(sizeof(uint32_t));
 
 	memcpy(stream, &(id), sizeof(uint32_t));
