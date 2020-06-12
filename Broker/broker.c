@@ -177,7 +177,7 @@ int buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint32
 	}else{
 		list_replace(particiones,indice+1,part_libre);
 	}
-	log_info(logBroker,"La ubicación de la partición nueva es %d con largo %d",indice,largo_stream);
+	log_info(logBroker,"Partición nueva: indice %d, ubicacion %d, largo %d",indice,part_nueva->base,largo_stream);
 	//-> DESMUTEAR LISTA DE PARTICIONES
 
 	return 1;
@@ -488,10 +488,10 @@ int main(void){
 		printf("Socket Servidor %d.\n", socketServidorBroker);
 	}
 
-	//while(1){
+	while(1){
 		cliente = aceptarCliente(socketServidorBroker);
 		atenderCliente(cliente);
-	//}
+	}
 
 	if(socketServidorBroker != -1){
 		close(socketServidorBroker);
