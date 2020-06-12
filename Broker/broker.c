@@ -664,6 +664,7 @@ int main(void){
 
 	inicializarColas();
 	inicializarMemoria();
+	inicializarSemaforos();
 
 	socketServidorBroker = crearSocketServidor(config_broker->ip_broker, config_broker->puerto_broker);
 
@@ -681,7 +682,7 @@ int main(void){
 
 	if(socketServidorBroker != -1){
 		close(socketServidorBroker);
-		log_info(logBrokerInterno, "Se cerró el Socket %d.", socketServidorBroker);
+		log_info(logBrokerInterno, "Se cerró el Socket Servidor %d.", socketServidorBroker);
 	}
 
 	log_destroy(logBrokerInterno);

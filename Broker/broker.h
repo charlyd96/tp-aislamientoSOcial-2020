@@ -165,6 +165,7 @@ bool existeArchivoConfig(char* path);
 
 void inicializarColas();
 void inicializarMemoria();
+void inicializatSemaforos();
 
 /// CONEXIÓN
 void atenderCliente(int socket_cliente);
