@@ -144,6 +144,7 @@ t_cola* cola_caught;
 
 t_list* particiones;
 
+
 pthread_mutex_t sem_cola_new;
 pthread_mutex_t sem_cola_appeared;
 pthread_mutex_t sem_cola_catch;
@@ -157,6 +158,9 @@ sem_t mensajes_catch;
 sem_t mensajes_caught;
 sem_t mensajes_get;
 sem_t mensajes_localized;
+
+sem_t mx_particiones;
+
 
 /* FUNCIONES */
 

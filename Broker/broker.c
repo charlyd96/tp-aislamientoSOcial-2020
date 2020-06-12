@@ -6,7 +6,6 @@
  */
 
 #include "broker.h"
-
 /* FUNCIONES - INICIALIZACIÓN */
 
 int crearConfigBroker(){
@@ -164,7 +163,7 @@ int buscarParticionLibre(uint32_t largo_stream){
  * Esta funcion es para reutilizar en cada cachearTalMensaje()
  */
 int buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint32_t id){
-	//-> MUTEAR LISTA DE PARTICIONES
+	sem_wait(&mx_particiones);
 	//buscarParticionLibre(largo_stream) devuelve el índice de la particion libre o -1 si no encuentra
 	int indice = buscarParticionLibre(largo_stream);
 	while (indice < 0) {
@@ -204,7 +203,7 @@ int buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint32
 	log_info(logBroker, "Nuevo mensaje %d con posición de inicio de su partición en %d", part_nueva->tipo_mensaje, part_nueva->base);
 
 	//-> DESMUTEAR LISTA DE PARTICIONES
-
+	sem_post(&mx_particiones);
 	return 1;
 }
 
@@ -733,34 +732,35 @@ int devolverID(int socket,uint32_t* id_mensaje){
 }
 
 int main(void){
-	logBroker = log_create("broker.log", "Broker", 0, LOG_LEVEL_INFO);
-	logBrokerInterno = log_create("brokerInterno.log", "Broker Interno", 0, LOG_LEVEL_INFO);
+	logBroker = log_create("broker.log", "Broker", 1, LOG_LEVEL_INFO);
+	logBrokerInterno = log_create("brokerInterno.log", "Broker Interno", 1, LOG_LEVEL_INFO);
 
 	inicializarColas();
 	inicializarSemaforos();
 	inicializarMemoria();
+	sem_init(&mx_particiones,0,(unsigned int) 1);
 
 	socketServidorBroker = crearSocketServidor(config_broker->ip_broker, config_broker->puerto_broker);
 
-	if(socketServidorBroker == -1){
-		printf("No se pudo crear el Servidor Broker.");
-		return -1;
-	}else{
-		printf("Socket Servidor %d.\n", socketServidorBroker);
-	}
-
-	while(1){
-		cliente = aceptarCliente(socketServidorBroker);
-
-		pthread_t hiloCliente;
-		pthread_create(&hiloCliente, NULL, (void*)atenderCliente, &cliente);
-	}
 
 	if(socketServidorBroker != -1){
+		log_info(logBrokerInterno,"Socket Servidor %d.\n", socketServidorBroker);
+		while(1){
+			cliente = aceptarCliente(socketServidorBroker);
+
+			pthread_t hiloCliente;
+			pthread_create(&hiloCliente, NULL, (void*)atenderCliente, &cliente);
+
+			pthread_detach(hiloCliente);
+		}
 		close(socketServidorBroker);
 		log_info(logBrokerInterno, "Se cerró el Socket Servidor %d.", socketServidorBroker);
+	}else{
+		log_info(logBrokerInterno,"No se pudo crear el Servidor Broker.");
 	}
 
+	sem_destroy(&mx_particiones);
 	log_destroy(logBrokerInterno);
 	log_destroy(logBroker);
+	return 0;
 }
