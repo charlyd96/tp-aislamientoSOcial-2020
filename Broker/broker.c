@@ -55,7 +55,6 @@ bool existeArchivoConfig(char* path){
 }
 
 void inicializarColas(){
-	ID_MENSAJE = 0;
 	crearConfigBroker();
 
 	cola_new = malloc(sizeof(t_cola));
@@ -82,6 +81,22 @@ void inicializarColas(){
 
 	cola_caught->nodos = list_create();
 	cola_caught->suscriptores = list_create();
+}
+
+void inicializarSemaforos(){
+	pthread_mutex_init(&sem_cola_new, NULL);
+	pthread_mutex_init(&sem_cola_appeared, NULL);
+	pthread_mutex_init(&sem_cola_catch, NULL);
+	pthread_mutex_init(&sem_cola_caught, NULL);
+	pthread_mutex_init(&sem_cola_get, NULL);
+	pthread_mutex_init(&sem_cola_localized, NULL);
+
+	sem_init(&mensajes_new, 0, 0);
+	sem_init(&mensajes_appeared, 0, 0);
+	sem_init(&mensajes_catch, 0, 0);
+	sem_init(&mensajes_caught, 0, 0);
+	sem_init(&mensajes_get, 0, 0);
+	sem_init(&mensajes_localized, 0, 0);
 }
 
 void inicializarMemoria(){
@@ -479,36 +494,42 @@ int suscribir(int socket, op_code cola){
 			pthread_mutex_lock(&sem_cola_new);
 			index= list_add(cola_new->suscriptores,&socket);
 			pthread_mutex_unlock(&sem_cola_new);
+			sem_post(&sem_cola_new);
 			break;
 		}
 		case APPEARED_POKEMON:{
 			pthread_mutex_lock(&sem_cola_appeared);
 			index= list_add(cola_appeared->suscriptores,&socket);
 			pthread_mutex_unlock(&sem_cola_appeared);
+			sem_post(&sem_cola_appeared);
 			break;
 		}
 		case CATCH_POKEMON:{
 			pthread_mutex_lock(&sem_cola_catch);
 			index= list_add(cola_catch->suscriptores,&socket);
 			pthread_mutex_unlock(&sem_cola_catch);
+			sem_post(&sem_cola_catch);
 			break;
 		}
 		case CAUGHT_POKEMON:{
 			pthread_mutex_lock(&sem_cola_caught);
 			index= list_add(cola_caught->suscriptores,&socket);
 			pthread_mutex_unlock(&sem_cola_caught);
+			sem_post(&sem_cola_caught);
 			break;
 		}
 		case GET_POKEMON:{
 			pthread_mutex_lock(&sem_cola_get);
 			index= list_add(cola_get->suscriptores,&socket);
 			pthread_mutex_unlock(&sem_cola_get);
+			sem_post(&sem_cola_get);
 			break;
 		}
 		case LOCALIZED_POKEMON:{
 			pthread_mutex_lock(&sem_cola_localized);
 			index= list_add(cola_localized->suscriptores,&socket);
 			pthread_mutex_unlock(&sem_cola_localized);
+			sem_post(&sem_cola_localized);
 			break;
 		}
 		default:
@@ -522,36 +543,42 @@ void desuscribir(int index,op_code cola){
 
 	switch(cola){
 		case NEW_POKEMON:{
+			sem_wait(&mensajes_new); // No se puede sacar si la Cola de Mensajes está vacía
 			pthread_mutex_lock(&sem_cola_new);
 			list_remove(cola_new->suscriptores,index);
 			pthread_mutex_unlock(&sem_cola_new);
 			break;
 		}
 		case APPEARED_POKEMON:{
+			sem_wait(&mensajes_appeared);
 			pthread_mutex_lock(&sem_cola_appeared);
 			list_remove(cola_appeared->suscriptores,index);
 			pthread_mutex_unlock(&sem_cola_appeared);
 			break;
 		}
 		case CATCH_POKEMON:{
+			sem_wait(&mensajes_catch);
 			pthread_mutex_lock(&sem_cola_catch);
 			list_remove(cola_catch->suscriptores,index);
 			pthread_mutex_unlock(&sem_cola_catch);
 			break;
 		}
 		case CAUGHT_POKEMON:{
+			sem_wait(&mensajes_caught);
 			pthread_mutex_lock(&sem_cola_caught);
 			list_remove(cola_caught->suscriptores,index);
 			pthread_mutex_unlock(&sem_cola_caught);
 			break;
 		}
 		case GET_POKEMON:{
+			sem_wait(&mensajes_get);
 			pthread_mutex_lock(&sem_cola_get);
 			list_remove(cola_get->suscriptores,index);
 			pthread_mutex_unlock(&sem_cola_get);
 			break;
 		}
 		case LOCALIZED_POKEMON:{
+			sem_wait(&mensajes_localized);
 			pthread_mutex_lock(&sem_cola_localized);
 			list_remove(cola_localized->suscriptores,index);
 			pthread_mutex_unlock(&sem_cola_localized);

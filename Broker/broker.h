@@ -15,6 +15,7 @@
 #include <commons/collections/list.h>
 #include <commons/log.h>
 #include <pthread.h>
+#include <semaphore.h>
 
 /* STRUCTS */
 
@@ -117,7 +118,7 @@ typedef struct {
 
 /* VARIABLES GLOBALES */
 
-uint32_t ID_MENSAJE;
+uint32_t ID_MENSAJE = 0;
 
 t_configuracion* config_broker;
 t_config* config_ruta;
@@ -148,6 +149,13 @@ pthread_mutex_t sem_cola_catch;
 pthread_mutex_t sem_cola_caught;
 pthread_mutex_t sem_cola_get;
 pthread_mutex_t sem_cola_localized;
+
+sem_t mensajes_new;
+sem_t mensajes_appeared;
+sem_t mensajes_catch;
+sem_t mensajes_caught;
+sem_t mensajes_get;
+sem_t mensajes_localized;
 
 /* FUNCIONES */
 
