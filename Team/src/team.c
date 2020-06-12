@@ -14,9 +14,6 @@
 #include <trainers.h>
 
 
-
-
-
 /* Initializing all Team components */
 Team * Team_Init(void)
 {
@@ -160,9 +157,9 @@ void subscribe (Config *configuracion)
 
 	conexionColas *conexionAppeared = malloc (sizeof (conexionColas));
 	conexionAppeared->broker_IP=configuracion->broker_IP;
-
 	conexionAppeared->broker_port=configuracion->broker_port;
 	conexionAppeared->colaSuscripcion=APPEARED_POKEMON;
+    conexionAppeared->tiempo_reconexion= configuracion->reconnection_time;
 	pthread_t thread1; //OJO. Esta variable se está perdiendo
 	pthread_create (&thread1, NULL, listen_routine_colas , conexionAppeared);
 	pthread_detach (thread);
@@ -170,14 +167,16 @@ void subscribe (Config *configuracion)
 	conexionColas *conexionLocalized = malloc (sizeof (conexionColas));
 	conexionLocalized->broker_IP=configuracion->broker_IP;
 	conexionLocalized->broker_port=configuracion->broker_port;
+    conexionLocalized->tiempo_reconexion= configuracion->reconnection_time;
 	conexionLocalized->colaSuscripcion=LOCALIZED_POKEMON;
 	pthread_t thread2; //OJO. Esta variable se está perdiendo
 	pthread_create (&thread2, NULL, listen_routine_colas , conexionLocalized);
 	pthread_detach (thread);
-
+  
 	conexionColas *conexionCaught = malloc (sizeof (conexionColas));
 	conexionCaught->broker_IP=configuracion->broker_IP;
 	conexionCaught->broker_port=configuracion->broker_port;
+    conexionCaught->tiempo_reconexion= configuracion->reconnection_time;
 	conexionCaught->colaSuscripcion=CAUGHT_POKEMON;
 	pthread_t thread3; //OJO. Esta variable se está perdiendo
 	pthread_create (&thread3, NULL, listen_routine_colas , conexionCaught);

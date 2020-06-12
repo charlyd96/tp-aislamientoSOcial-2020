@@ -47,7 +47,9 @@ typedef struct
 {
 	char *broker_IP;
 	char *broker_port;
+    u_int32_t tiempo_reconexion;
 	op_code colaSuscripcion;
+    
 } conexionColas;
 
 /* Pokemones en el mapa interno del Team*/
@@ -59,6 +61,11 @@ typedef struct
     u_int32_t posy;
 } mapPokemons;
 
+typedef struct 
+{
+    char *name;
+    uint32_t cant;
+} global_pokemons;
 
 typedef struct
 {

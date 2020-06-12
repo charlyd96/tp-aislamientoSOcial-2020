@@ -30,14 +30,14 @@ void * listen_routine_gameboy (void *configuracion)
 
 void * get_opcode (int *socket)
 {
-	int cod_op;
+	op_code cod_op;
 	cod_op=recibirOperacion(*socket);
-	process_request_recv(cod_op, socket);
+	process_request_recv(cod_op, *socket);
 }
 
-void process_request_recv (int cod_op, int *socket)
+void process_request_recv (op_code cod_op, int socket_cliente)
 {
-	int socket_cliente= *socket;
+
     switch (cod_op)
     	{
 			case APPEARED_POKEMON:
@@ -54,8 +54,11 @@ void process_request_recv (int cod_op, int *socket)
 				sem_post(&poklist_sem2);
 				break;
 				}
-    	
-			case CAUGHT_POKEMON:{ puts ("recibi caught");}
+			case LOCALIZED_POKEMON:{ puts ("recibi localized");break;}
+
+			case CAUGHT_POKEMON:{ puts ("recibi caught");break;}
+
+			case OP_UNKNOWN: { puts ("operacion desconocida");break;}
 			/*
 			*Desarrollar
 			*/
@@ -81,15 +84,12 @@ void * send_catch_routine (void * train)
 	Trainer *trainer=train;
 	trainer->actual_status = BLOCKED_WAITING_REPLY;
 	sem_post(&using_cpu); //Disponibilizar la CPU para otro entrenador
-	puts ("hilo join");
 	
 	char *IP= trainer->config->broker_IP;
 	char *puerto= trainer->config->broker_port;
-
 	t_catch_pokemon message;
-	puts ("estoy por aqui");
+
 	int socket = crearSocketCliente (IP,puerto);
-	printf ("socket vale %d\n", socket);
 
 	if (socket != -1)
 	{
@@ -99,16 +99,16 @@ void * send_catch_routine (void * train)
 		message.pos_y=trainer->actual_objective.posy;
 		message.id_mensaje=0;
 
-		enviarCatchPokemon (socket, message);
-		sleep (5);
-
+		printf ("Enviado: %d\n",enviarCatchPokemon (socket, message));
+		puts ("catch enviado");
 		recv (socket,&(message.id_mensaje),sizeof(uint32_t),MSG_WAITALL); //Recibir ID
 		close (socket);
 
 		int retorno;
 		retorno=search_caught (message.id_mensaje, &(trainer->trainer_sem) ); //Buscar en la cola caught con el ID correlativo
-																			  //Esta función bloquea a este hilo hasta que la CPU 
-																			  //lo habilite nuevamente 
+																			  //Esta función bloquea a este hilo hasta que 
+																			  //el planificador de la CPU lo habilite nuevamente 
+																			
 		return ((int *)retorno);
 
 	} else
@@ -123,21 +123,31 @@ void* listen_routine_colas (void *con)
 
 {
 	conexionColas *conexion=con;
+	int socket;
 
-	int socket = crearSocketCliente (conexion->broker_IP,conexion->broker_port);
-	if (socket != -1)
-		{
-			switch (conexion->colaSuscripcion)
-			{	
-				case (APPEARED_POKEMON): puts ("appeared");
-				break;
-				case (LOCALIZED_POKEMON): puts ("localized");
-				break;
-				case (CAUGHT_POKEMON): puts ("caugth");
-				break;
+	socket = crearSocketCliente (conexion->broker_IP,conexion->broker_port);
+	while (socket == -1)
+	{
+		sleep (conexion->tiempo_reconexion);
+	    socket = crearSocketCliente (conexion->broker_IP,conexion->broker_port);
+	}
 
-			}
-		}
+	t_suscribe colaAppeared;
+	colaAppeared.tipo_suscripcion=SUSCRIBE_TEAM;
+	colaAppeared.cola_suscribir=conexion->colaSuscripcion;
+	colaAppeared.timeout=0;
+	
+	enviarSuscripcion (socket, colaAppeared);
+	puts ("me voy a bloqear");
+	uint32_t dato;
+	recv (socket, &dato,sizeof(uint32_t),MSG_WAITALL);
+	printf ("dato= %d\n");
+	//op_code cod_op = recibirOperacion(socket);
+	puts ("me bloqueé");
+	//process_request_recv(cod_op, socket);
+	
+
+	//Procesar espera de mensajes de cada cola
 
 }
 

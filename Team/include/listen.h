@@ -26,7 +26,7 @@ sem_t qcaught2_sem;
 
 void* get_opcode (int *socket);
 
-void process_request_recv (int cod_op, int *socket_cliente);
+void process_request_recv (op_code cod_op, int socket_cliente);
 
 int send_catch (Trainer *trainer);
 
