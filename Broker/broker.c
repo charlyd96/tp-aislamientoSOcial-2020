@@ -28,11 +28,11 @@ int crearConfigBroker(){
 	    config_broker->puerto_broker = config_get_string_value(config_ruta, "PUERTO_BROKER");
 	    config_broker->frecuencia_compatacion = config_get_int_value(config_ruta, "FRECUENCIA_COMPACTACION");
 
-	    char* algoritmo_mem = config_get_string_value(config_ruta, "ALGORITMO_MEMORIA");
+	    algoritmo_mem = config_get_string_value(config_ruta, "ALGORITMO_MEMORIA");
 		if(strcmp(algoritmo_mem,"PD") == 0) config_broker->algoritmo_memoria = PD;
 		if(strcmp(algoritmo_mem,"BS") == 0) config_broker->algoritmo_memoria = BUDDY;
 
-	    char* algoritmo_libre = config_get_string_value(config_ruta, "ALGORITMO_PARTICION_LIBRE");
+		algoritmo_libre = config_get_string_value(config_ruta, "ALGORITMO_PARTICION_LIBRE");
 	    if(strcmp(algoritmo_libre,"FF") == 0) config_broker->algoritmo_particion_libre = FF;
 	    if(strcmp(algoritmo_libre,"BF") == 0) config_broker->algoritmo_particion_libre = BF;
 	}
@@ -96,8 +96,10 @@ void inicializarMemoria(){
 
 	list_add(particiones,particionInicial);
 }
-/* FUNCIONES CACHE */
-int buscarParticionLibre(uint32_t largo_stream) {
+
+/* FUNCIONES - MEMORIA */
+
+int buscarParticionLibre(uint32_t largo_stream){
 	int i = 0;
 	int largo_list = list_size(particiones);
 	t_algoritmo_particion_libre algoritmo = config_broker->algoritmo_particion_libre;
@@ -182,7 +184,82 @@ int buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint32
 
 	return 1;
 }
-int cachearGetPokemon(t_get_pokemon* msg) {
+
+int cachearNewPokemon(t_new_pokemon* msg){
+	uint32_t largo_nombre = strlen(msg->nombre_pokemon); //Sin el \0
+	uint32_t largo_stream = sizeof(uint32_t) + largo_nombre;
+
+	void* stream = malloc(largo_stream);
+	uint32_t offset = 0;
+	memcpy(stream + offset, &largo_nombre, sizeof(uint32_t));
+	offset += sizeof(uint32_t);
+	memcpy(stream + offset, msg->nombre_pokemon, largo_nombre);	//Copio "pikachu" sin el \0
+	offset += largo_nombre;
+	memcpy(stream + offset, &(msg->pos_x), sizeof(uint32_t));
+	offset += sizeof(uint32_t);
+	memcpy(stream + offset, &(msg->pos_y), sizeof(uint32_t));
+	offset += sizeof(uint32_t);
+	memcpy(stream + offset, &(msg->cantidad), sizeof(uint32_t));
+	offset += sizeof(uint32_t);
+
+	int result = buscarParticionYAlocar(largo_stream,stream,NEW_POKEMON,msg->id_mensaje);
+
+	return result;
+}
+
+int cachearAppearedPokemon(t_appeared_pokemon* msg){
+	uint32_t largo_nombre = strlen(msg->nombre_pokemon); //Sin el \0
+	uint32_t largo_stream = sizeof(uint32_t) + largo_nombre;
+
+	void* stream = malloc(largo_stream);
+	uint32_t offset = 0;
+	memcpy(stream + offset, &largo_nombre, sizeof(uint32_t));
+	offset += sizeof(uint32_t);
+	memcpy(stream + offset, msg->nombre_pokemon, largo_nombre);	//Copio "pikachu" sin el \0
+	offset += largo_nombre;
+	memcpy(stream + offset, &(msg->pos_x), sizeof(uint32_t));
+	offset += sizeof(uint32_t);
+	memcpy(stream + offset, &(msg->pos_y), sizeof(uint32_t));
+	offset += sizeof(uint32_t);
+
+	int result = buscarParticionYAlocar(largo_stream,stream,APPEARED_POKEMON,msg->id_mensaje_correlativo);
+
+	return result;
+}
+
+int cachearCatchPokemon(t_catch_pokemon* msg){
+	uint32_t largo_nombre = strlen(msg->nombre_pokemon); //Sin el \0
+	uint32_t largo_stream = sizeof(uint32_t) + largo_nombre;
+
+	void* stream = malloc(largo_stream);
+	uint32_t offset = 0;
+	memcpy(stream + offset, &largo_nombre, sizeof(uint32_t));
+	offset += sizeof(uint32_t);
+	memcpy(stream + offset, msg->nombre_pokemon, largo_nombre);	//Copio "pikachu" sin el \0
+	offset += largo_nombre;
+	memcpy(stream + offset, &(msg->pos_x), sizeof(uint32_t));
+	offset += sizeof(uint32_t);
+	memcpy(stream + offset, &(msg->pos_y), sizeof(uint32_t));
+	offset += sizeof(uint32_t);
+
+	int result = buscarParticionYAlocar(largo_stream,stream,CATCH_POKEMON,msg->id_mensaje);
+
+	return result;
+}
+
+int cachearCaughtPokemon(t_caught_pokemon* msg){
+	uint32_t largo_stream = sizeof(uint32_t);
+
+	void* stream = malloc(largo_stream);
+
+	memcpy(stream, &largo_stream, sizeof(uint32_t));
+
+	int result = buscarParticionYAlocar(largo_stream,stream,CAUGHT_POKEMON,msg->id_mensaje_correlativo);
+
+	return result;
+}
+
+int cachearGetPokemon(t_get_pokemon* msg){
 	uint32_t largo_nombre = strlen(msg->nombre_pokemon); //Sin el \0
 	uint32_t largo_stream = sizeof(uint32_t) + largo_nombre;
 	//Serializo el msg
@@ -192,7 +269,38 @@ int cachearGetPokemon(t_get_pokemon* msg) {
 	offset += sizeof(uint32_t);
 	memcpy(stream + offset, msg->nombre_pokemon, largo_nombre);	//Copio "pikachu" sin el \0
 
-	int result = buscarParticionYAlocar(largo_stream,stream,NEW_POKEMON,msg->id_mensaje);
+	int result = buscarParticionYAlocar(largo_stream,stream,GET_POKEMON,msg->id_mensaje);
+
+	return result;
+}
+
+int cachearLocalizedPokemon(t_localized_pokemon* msg){
+	uint32_t largo_nombre = strlen(msg->nombre_pokemon); //Sin el \0
+	uint32_t largo_stream = sizeof(uint32_t) + largo_nombre;
+
+	void* stream = malloc(largo_stream);
+	uint32_t offset = 0;
+	memcpy(stream + offset, &largo_nombre, sizeof(uint32_t));
+	offset += sizeof(uint32_t);
+	memcpy(stream + offset, msg->nombre_pokemon, largo_nombre);	//Copio "pikachu" sin el \0
+	offset += largo_nombre;
+	memcpy(stream + offset, &(msg->cant_pos), sizeof(uint32_t));
+	offset += sizeof(uint32_t);
+
+	uint32_t pos_x, pos_y;
+	char** pos_list = string_get_string_as_array(msg->posiciones);
+	for(int i=0; i<(msg->cant_pos); i++){
+		char** pos_pair = string_split(pos_list[i],"|");
+		pos_x = atoi(pos_pair[0]);
+		pos_y = atoi(pos_pair[1]);
+
+		memcpy(stream + offset, &(pos_x), sizeof(uint32_t));
+		offset += sizeof(uint32_t);
+		memcpy(stream + offset, &(pos_y), sizeof(uint32_t));
+		offset += sizeof(uint32_t);
+	}
+
+	int result = buscarParticionYAlocar(largo_stream,stream,LOCALIZED_POKEMON,msg->id_mensaje_correlativo);
 
 	return result;
 }
@@ -249,59 +357,86 @@ void atenderCliente(int socket_cliente){
 void atenderMensajeNewPokemon(int socket_cliente){
 	t_new_pokemon* new_pokemon = recibirNewPokemon(socket_cliente);
 	log_info(logBroker, "Llegó el mensaje NEW_POKEMON.");
-	uint32_t id_mensaje;
-	encolarNewPokemon(new_pokemon);
-	int enviado = devolverID(socket_cliente,&id_mensaje);
 
+	uint32_t id_mensaje;
+
+	encolarNewPokemon(new_pokemon);
+
+	int enviado = devolverID(socket_cliente,&id_mensaje);
 	new_pokemon->id_mensaje = id_mensaje;
 
+	int cacheado = cachearNewPokemon(new_pokemon);
 }
 
 void atenderMensajeAppearedPokemon(int socket_cliente){
-	t_appeared_pokemon* app_pokemon = recibirAppearedPokemon(socket_cliente);
+	t_appeared_pokemon* appeared_pokemon = recibirAppearedPokemon(socket_cliente);
 	log_info(logBroker, "Llegó el mensaje APPEARED_POKEMON.");
+
 	uint32_t id_mensaje;
-	encolarAppearedPokemon(app_pokemon);
+
+	encolarAppearedPokemon(appeared_pokemon);
+
 	int enviado = devolverID(socket_cliente,&id_mensaje);
+//	appeared_pokemon->id_mensaje_correlativo = id_mensaje;
+
+	int cacheado = cachearAppearedPokemon(appeared_pokemon);
 }
 
 void atenderMensajeCatchPokemon(int socket_cliente){
-	t_catch_pokemon* mensaje = recibirCatchPokemon(socket_cliente);
+	t_catch_pokemon* catch_pokemon = recibirCatchPokemon(socket_cliente);
 	log_info(logBroker, "Llegó el mensaje CATCH_POKEMON.");
+
 	uint32_t id_mensaje;
-	encolarCatchPokemon(mensaje);
+
+	encolarCatchPokemon(catch_pokemon);
+
 	int enviado = devolverID(socket_cliente,&id_mensaje);
+	catch_pokemon->id_mensaje = id_mensaje;
+
+	int cacheado = cachearCatchPokemon(catch_pokemon);
 }
 
 void atenderMensajeCaughtPokemon(int socket_cliente){
-	t_caught_pokemon* mensaje = recibirCaughtPokemon(socket_cliente);
+	t_caught_pokemon* caught_pokemon = recibirCaughtPokemon(socket_cliente);
 	log_info(logBroker, "Llegó el mensaje CAUGHT_POKEMON.");
+
 	uint32_t id_mensaje;
-	encolarCaughtPokemon(mensaje);
+
+	encolarCaughtPokemon(caught_pokemon);
+
 	int enviado = devolverID(socket_cliente,&id_mensaje);
+//	caught_pokemon->id_mensaje_correlativo = id_mensaje;
+
+	int cacheado = cachearCaughtPokemon(caught_pokemon);
 }
 
 void atenderMensajeGetPokemon(int socket_cliente){
-	t_get_pokemon* mensaje = recibirGetPokemon(socket_cliente);
+	t_get_pokemon* get_pokemon = recibirGetPokemon(socket_cliente);
 	log_info(logBroker, "Llegó el mensaje GET_POKEMON.");
+
 	uint32_t id_mensaje;
 
-	encolarGetPokemon(mensaje);
+	encolarGetPokemon(get_pokemon);
 
 	int enviado = devolverID(socket_cliente,&id_mensaje);
-	mensaje->id_mensaje = id_mensaje;
+	get_pokemon->id_mensaje = id_mensaje;
 
-	int cacheado = cachearGetPokemon(mensaje);
+	int cacheado = cachearGetPokemon(get_pokemon);
 }
 
 void atenderMensajeLocalizedPokemon(int socket_cliente){
-	t_localized_pokemon* mensaje = recibirLocalizedPokemon(socket_cliente);
+	t_localized_pokemon* localized_pokemon = recibirLocalizedPokemon(socket_cliente);
 	log_info(logBroker, "Llegó el mensaje LOCALIZED_POKEMON.");
-	uint32_t id_mensaje;
-	encolarLocalizedPokemon(mensaje);
-	int enviado = devolverID(socket_cliente,&id_mensaje);
 
-	//chachearMensaje(mensaje);
+	uint32_t id_mensaje;
+
+	encolarLocalizedPokemon(localized_pokemon);
+
+	int enviado = devolverID(socket_cliente,&id_mensaje);
+//	localized_pokemon->id_mensaje_correlativo = id_mensaje;
+
+	int cacheado = cachearLocalizedPokemon(localized_pokemon);
+
 	//hilo-enviarMensajeASuscriptores(mensaje);
 	//hilo-recibirACK(socket_cliente);
 

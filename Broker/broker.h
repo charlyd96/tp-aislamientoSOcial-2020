@@ -18,7 +18,7 @@
 
 /* STRUCTS */
 
-typedef enum {PD,BUDDY} t_tipo_particionado;
+typedef enum {PD, BUDDY} t_tipo_particionado;
 typedef enum {FIFO, LRU} t_algoritmo_reemplazo;
 
 typedef enum {FF, BF} t_algoritmo_particion_libre;
@@ -128,8 +128,10 @@ t_log* logBroker;
 char* pathConfigBroker = "broker.config";
 int socketServidorBroker;
 int cliente;
+
 void* cache;
-char* algoritmoMemoria;
+char* algoritmo_mem;
+char* algoritmo_libre;
 
 t_cola* cola_new;
 t_cola* cola_appeared;
@@ -174,9 +176,17 @@ void encolarCaughtPokemon(t_caught_pokemon* msg);
 void encolarGetPokemon(t_get_pokemon* msg);
 void encolarLocalizedPokemon(t_localized_pokemon* msg);
 
+/// MEMORIA
 int buscarParticionLibre(uint32_t largo_stream);
+int buscarParticionYAlocar(int largo_stream, void* stream, op_code tipo_msg, uint32_t id);
+
+int cachearNewPokemon(t_new_pokemon* msg);
+int cachearAppearedPokemon(t_appeared_pokemon* msg);
+int cachearCatchPokemon(t_catch_pokemon* msg);
+int cachearCaughtPokemon(t_caught_pokemon* msg);
 int cachearGetPokemon(t_get_pokemon* msg);
-int buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint32_t id);
+int cachearLocalizedPokemon(t_localized_pokemon* msg);
+
 /// COMUNICACIÓN
 int devolverID(int socket,uint32_t*id);
 
