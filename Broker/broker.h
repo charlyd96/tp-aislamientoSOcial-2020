@@ -28,7 +28,7 @@ typedef struct {
 	int tam_memoria;
 	int tam_minimo_particion;
 	t_tipo_particionado algoritmo_memoria;
-	char* algoritmo_reemplazo;
+	t_algoritmo_reemplazo algoritmo_reemplazo;
 	t_algoritmo_particion_libre algoritmo_particion_libre;
 	char* ip_broker;
 	char* puerto_broker;
@@ -132,6 +132,7 @@ int cliente;
 
 void* cache;
 char* algoritmo_mem;
+char* algoritmo_reemplazo;
 char* algoritmo_libre;
 
 t_cola* cola_new;
@@ -195,6 +196,13 @@ void encolarLocalizedPokemon(t_localized_pokemon* msg);
 /// MEMORIA
 int buscarParticionLibre(uint32_t largo_stream);
 int buscarParticionYAlocar(int largo_stream, void* stream, op_code tipo_msg, uint32_t id);
+void eliminarParticion();
+
+void algoritmoFIFO();
+void algoritmoLRU();
+
+void compactarParticionesDinamicas();
+void compactarBuddySystem();
 
 int cachearNewPokemon(t_new_pokemon* msg);
 int cachearAppearedPokemon(t_appeared_pokemon* msg);

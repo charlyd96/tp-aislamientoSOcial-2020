@@ -23,7 +23,6 @@ int crearConfigBroker(){
 	if (config_ruta != NULL){
 	    config_broker->tam_memoria = config_get_int_value(config_ruta, "TAMANO_MEMORIA");
 		config_broker->tam_minimo_particion = config_get_int_value(config_ruta, "TAMANO_MINIMO_PARTICION");
-	    config_broker->algoritmo_reemplazo = config_get_string_value(config_ruta, "ALGORITMO_REEMPLAZO");;
 	    config_broker->ip_broker = config_get_string_value(config_ruta, "IP_BROKER");
 	    config_broker->puerto_broker = config_get_string_value(config_ruta, "PUERTO_BROKER");
 	    config_broker->frecuencia_compatacion = config_get_int_value(config_ruta, "FRECUENCIA_COMPACTACION");
@@ -31,6 +30,10 @@ int crearConfigBroker(){
 	    algoritmo_mem = config_get_string_value(config_ruta, "ALGORITMO_MEMORIA");
 		if(strcmp(algoritmo_mem,"PD") == 0) config_broker->algoritmo_memoria = PD;
 		if(strcmp(algoritmo_mem,"BS") == 0) config_broker->algoritmo_memoria = BUDDY;
+
+		algoritmo_reemplazo = config_get_string_value(config_ruta, "ALGORITMO_REEMPLAZO");
+		if(strcmp(algoritmo_mem,"FIFO") == 0) config_broker->algoritmo_reemplazo = FIFO;
+		if(strcmp(algoritmo_mem,"LRU") == 0) config_broker->algoritmo_reemplazo = LRU;
 
 		algoritmo_libre = config_get_string_value(config_ruta, "ALGORITMO_PARTICION_LIBRE");
 	    if(strcmp(algoritmo_libre,"FF") == 0) config_broker->algoritmo_particion_libre = FF;
@@ -120,6 +123,7 @@ int buscarParticionLibre(uint32_t largo_stream){
 	t_algoritmo_particion_libre algoritmo = config_broker->algoritmo_particion_libre;
 	bool encontrado = false;
 	if (algoritmo == FF) {
+		log_info(logBrokerInterno, "Algoritmo First Fit.");
 		while (encontrado == false && i < largo_list) {
 			t_particion* part = list_get(particiones, i);
 			if ((part->libre) == true && largo_stream <= (part->tamanio)) {
@@ -136,6 +140,7 @@ int buscarParticionLibre(uint32_t largo_stream){
 		return -1;
 
 	} else if (algoritmo == BF) {
+		log_info(logBrokerInterno, "Algoritmo Best Fit.");
 		//Inicializo dif en tamaño max memoria, así el primer candidato será válido
 		int diferenciaActual = config_broker->tam_memoria;
 		int indiceCandidato = -1;
@@ -201,6 +206,54 @@ int buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint32
 	//-> DESMUTEAR LISTA DE PARTICIONES
 
 	return 1;
+}
+
+void eliminarParticion(){
+	t_algoritmo_reemplazo algoritmo = config_broker->algoritmo_reemplazo;
+
+	switch(algoritmo){
+		case FIFO:{
+			algoritmoFIFO();
+			break;
+		}
+		case LRU:{
+			algoritmoLRU();
+			break;
+		}
+	}
+}
+
+void algoritmoFIFO(){
+	log_info(logBrokerInterno, "Algoritmo FIFO.");
+}
+
+// Hay que pasarle las ocupadas - las disponibles
+void algoritmoLRU(int particiones_a_librerar){
+	log_info(logBrokerInterno, "Algoritmo LRU.");
+
+	int i,j;
+	for (i = 0; i < particiones_a_librerar; i++) {
+		int cantidad_particiones = list_size(particiones);
+		for (j = 0; j < cantidad_particiones; j++) {
+			// Lo va a seguir la Rocío del futuro cercano
+		}
+	}
+}
+
+/*void compactarParticionesDinamicas(){
+	int cantidad_particiones = list_size(particiones);
+	uint32_t particion_actual = 0;
+//	uint32_t particion_actual_id = 0;
+	int cantidad_particiones_a_moverme;
+
+	for(int i=0; i < cantidad_particiones; i++){
+		uint32_t particion_actual = list_get(particiones, i);
+
+		int proxima_particion_libre = buscarParticionLibre();
+}*/
+
+void compactarBuddySystem(){
+
 }
 
 int cachearNewPokemon(t_new_pokemon* msg){
