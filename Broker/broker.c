@@ -476,27 +476,39 @@ int suscribir(int socket, op_code cola){
 	int index = 0;
 	switch(cola){
 		case NEW_POKEMON:{
+			pthread_mutex_lock(&sem_cola_new);
 			index= list_add(cola_new->suscriptores,&socket);
+			pthread_mutex_unlock(&sem_cola_new);
 			break;
 		}
 		case APPEARED_POKEMON:{
+			pthread_mutex_lock(&sem_cola_appeared);
 			index= list_add(cola_appeared->suscriptores,&socket);
+			pthread_mutex_unlock(&sem_cola_appeared);
 			break;
 		}
 		case CATCH_POKEMON:{
+			pthread_mutex_lock(&sem_cola_catch);
 			index= list_add(cola_catch->suscriptores,&socket);
+			pthread_mutex_unlock(&sem_cola_catch);
 			break;
 		}
 		case CAUGHT_POKEMON:{
+			pthread_mutex_lock(&sem_cola_caught);
 			index= list_add(cola_caught->suscriptores,&socket);
+			pthread_mutex_unlock(&sem_cola_caught);
 			break;
 		}
 		case GET_POKEMON:{
+			pthread_mutex_lock(&sem_cola_get);
 			index= list_add(cola_get->suscriptores,&socket);
+			pthread_mutex_unlock(&sem_cola_get);
 			break;
 		}
 		case LOCALIZED_POKEMON:{
+			pthread_mutex_lock(&sem_cola_localized);
 			index= list_add(cola_localized->suscriptores,&socket);
+			pthread_mutex_unlock(&sem_cola_localized);
 			break;
 		}
 		default:
@@ -510,27 +522,39 @@ void desuscribir(int index,op_code cola){
 
 	switch(cola){
 		case NEW_POKEMON:{
+			pthread_mutex_lock(&sem_cola_new);
 			list_remove(cola_new->suscriptores,index);
+			pthread_mutex_unlock(&sem_cola_new);
 			break;
 		}
 		case APPEARED_POKEMON:{
+			pthread_mutex_lock(&sem_cola_appeared);
 			list_remove(cola_appeared->suscriptores,index);
+			pthread_mutex_unlock(&sem_cola_appeared);
 			break;
 		}
 		case CATCH_POKEMON:{
+			pthread_mutex_lock(&sem_cola_catch);
 			list_remove(cola_catch->suscriptores,index);
+			pthread_mutex_unlock(&sem_cola_catch);
 			break;
 		}
 		case CAUGHT_POKEMON:{
+			pthread_mutex_lock(&sem_cola_caught);
 			list_remove(cola_caught->suscriptores,index);
+			pthread_mutex_unlock(&sem_cola_caught);
 			break;
 		}
 		case GET_POKEMON:{
+			pthread_mutex_lock(&sem_cola_get);
 			list_remove(cola_get->suscriptores,index);
+			pthread_mutex_unlock(&sem_cola_get);
 			break;
 		}
 		case LOCALIZED_POKEMON:{
+			pthread_mutex_lock(&sem_cola_localized);
 			list_remove(cola_localized->suscriptores,index);
+			pthread_mutex_unlock(&sem_cola_localized);
 			break;
 		}
 		default:
