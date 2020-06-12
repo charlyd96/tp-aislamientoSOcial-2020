@@ -194,7 +194,10 @@ int buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint32
 	}else{
 		list_replace(particiones,indice+1,part_libre);
 	}
-	log_info(logBroker,"Partición nueva: indice %d, ubicacion %d, largo %d",indice,part_nueva->base,largo_stream);
+
+	// 6. Almacenado de un mensaje dentro de la memoria (indicando posición de inicio de su partición).
+	log_info(logBroker, "Nuevo mensaje %d con posición de inicio de su partición en %d", part_nueva->tipo_mensaje, part_nueva->base);
+
 	//-> DESMUTEAR LISTA DE PARTICIONES
 
 	return 1;
@@ -327,6 +330,7 @@ void atenderCliente(int socket_cliente){
 	op_code cod_op = recibirOperacion(socket_cliente);
 	switch(cod_op){
 		case NEW_POKEMON:{
+
 			atenderMensajeNewPokemon(socket_cliente);
 			break;
 		}
@@ -371,7 +375,9 @@ void atenderCliente(int socket_cliente){
 
 void atenderMensajeNewPokemon(int socket_cliente){
 	t_new_pokemon* new_pokemon = recibirNewPokemon(socket_cliente);
-	log_info(logBroker, "Llegó el mensaje NEW_POKEMON.");
+
+	// 3. Llegada de un nuevo mensaje a una cola de mensajes.
+	log_info(logBroker, "Llegó un mensaje NEW_POKEMON.");
 
 	uint32_t id_mensaje;
 
@@ -385,7 +391,9 @@ void atenderMensajeNewPokemon(int socket_cliente){
 
 void atenderMensajeAppearedPokemon(int socket_cliente){
 	t_appeared_pokemon* appeared_pokemon = recibirAppearedPokemon(socket_cliente);
-	log_info(logBroker, "Llegó el mensaje APPEARED_POKEMON.");
+
+	// 3. Llegada de un nuevo mensaje a una cola de mensajes.
+	log_info(logBroker, "Llegó un mensaje APPEARED_POKEMON.");
 
 	uint32_t id_mensaje;
 
@@ -399,7 +407,9 @@ void atenderMensajeAppearedPokemon(int socket_cliente){
 
 void atenderMensajeCatchPokemon(int socket_cliente){
 	t_catch_pokemon* catch_pokemon = recibirCatchPokemon(socket_cliente);
-	log_info(logBroker, "Llegó el mensaje CATCH_POKEMON.");
+
+	// 3. Llegada de un nuevo mensaje a una cola de mensajes.
+	log_info(logBroker, "Llegó un mensaje CATCH_POKEMON.");
 
 	uint32_t id_mensaje;
 
@@ -413,7 +423,9 @@ void atenderMensajeCatchPokemon(int socket_cliente){
 
 void atenderMensajeCaughtPokemon(int socket_cliente){
 	t_caught_pokemon* caught_pokemon = recibirCaughtPokemon(socket_cliente);
-	log_info(logBroker, "Llegó el mensaje CAUGHT_POKEMON.");
+
+	// 3. Llegada de un nuevo mensaje a una cola de mensajes.
+	log_info(logBroker, "Llegó un mensaje CAUGHT_POKEMON.");
 
 	uint32_t id_mensaje;
 
@@ -427,7 +439,9 @@ void atenderMensajeCaughtPokemon(int socket_cliente){
 
 void atenderMensajeGetPokemon(int socket_cliente){
 	t_get_pokemon* get_pokemon = recibirGetPokemon(socket_cliente);
-	log_info(logBroker, "Llegó el mensaje GET_POKEMON.");
+
+	// 3. Llegada de un nuevo mensaje a una cola de mensajes.
+	log_info(logBroker, "Llegó un mensaje GET_POKEMON.");
 
 	uint32_t id_mensaje;
 
@@ -441,7 +455,9 @@ void atenderMensajeGetPokemon(int socket_cliente){
 
 void atenderMensajeLocalizedPokemon(int socket_cliente){
 	t_localized_pokemon* localized_pokemon = recibirLocalizedPokemon(socket_cliente);
-	log_info(logBroker, "Llegó el mensaje LOCALIZED_POKEMON.");
+
+	// 3. Llegada de un nuevo mensaje a una cola de mensajes.
+	log_info(logBroker, "Llegó un mensaje LOCALIZED_POKEMON.");
 
 	uint32_t id_mensaje;
 
@@ -463,7 +479,9 @@ void atenderSuscripcionTeam(int socket_cliente){
 	t_suscribe* suscribe_team = recibirSuscripcion(SUSCRIBE_TEAM,socket_cliente);
 
 	int index = suscribir(socket_cliente,suscribe_team->cola_suscribir);
-	log_info(logBroker, "Se suscribió al team, indice %d",index);
+
+	// 2. Suscripción de un proceso a una cola de mensajes.
+	log_info(logBroker, "Se suscribe un Team a la Cola de Mensajes %d", suscribe_team->cola_suscribir);
 
 	//enviar mensajes cacheados (recorrer la lista de particiones)
 }
@@ -472,7 +490,9 @@ void atenderSuscripcionGameBoy(int socket_cliente){
 	t_suscribe* suscribe_gameboy = recibirSuscripcion(SUSCRIBE_GAMEBOY,socket_cliente);
 
 	int index = suscribir(socket_cliente,suscribe_gameboy->cola_suscribir);
-	log_info(logBroker, "Se suscribió al Gameboy, indice %d",index);
+
+	// 2. Suscripción de un proceso a una cola de mensajes.
+	log_info(logBroker, "Se suscribe el Game Boy a la Cola de Mensajes %d", suscribe_gameboy->cola_suscribir);
 
 	sleep(suscribe_gameboy->timeout);
 	desuscribir(index,suscribe_gameboy->cola_suscribir);
@@ -482,7 +502,9 @@ void atenderSuscripcionGameCard(int socket_cliente){
 	t_suscribe* suscribe_gamecard = recibirSuscripcion(SUSCRIBE_GAMECARD,socket_cliente);
 
 	int index = suscribir(socket_cliente,suscribe_gamecard->cola_suscribir);
-	log_info(logBroker, "Se suscribió al gamecard, indice %d",index);
+
+	// 2. Suscripción de un proceso a una cola de mensajes.
+	log_info(logBroker, "Se suscribe un Game Card a la Cola de Mensajes %d", suscribe_gamecard->cola_suscribir);
 }
 
 /* FUNCIONES - PROCESAMIENTO */
@@ -494,42 +516,42 @@ int suscribir(int socket, op_code cola){
 			pthread_mutex_lock(&sem_cola_new);
 			index= list_add(cola_new->suscriptores,&socket);
 			pthread_mutex_unlock(&sem_cola_new);
-			sem_post(&sem_cola_new);
+			sem_post(&mensajes_new);
 			break;
 		}
 		case APPEARED_POKEMON:{
 			pthread_mutex_lock(&sem_cola_appeared);
 			index= list_add(cola_appeared->suscriptores,&socket);
 			pthread_mutex_unlock(&sem_cola_appeared);
-			sem_post(&sem_cola_appeared);
+			sem_post(&mensajes_appeared);
 			break;
 		}
 		case CATCH_POKEMON:{
 			pthread_mutex_lock(&sem_cola_catch);
 			index= list_add(cola_catch->suscriptores,&socket);
 			pthread_mutex_unlock(&sem_cola_catch);
-			sem_post(&sem_cola_catch);
+			sem_post(&mensajes_catch);
 			break;
 		}
 		case CAUGHT_POKEMON:{
 			pthread_mutex_lock(&sem_cola_caught);
 			index= list_add(cola_caught->suscriptores,&socket);
 			pthread_mutex_unlock(&sem_cola_caught);
-			sem_post(&sem_cola_caught);
+			sem_post(&mensajes_caught);
 			break;
 		}
 		case GET_POKEMON:{
 			pthread_mutex_lock(&sem_cola_get);
 			index= list_add(cola_get->suscriptores,&socket);
 			pthread_mutex_unlock(&sem_cola_get);
-			sem_post(&sem_cola_get);
+			sem_post(&mensajes_get);
 			break;
 		}
 		case LOCALIZED_POKEMON:{
 			pthread_mutex_lock(&sem_cola_localized);
 			index= list_add(cola_localized->suscriptores,&socket);
 			pthread_mutex_unlock(&sem_cola_localized);
-			sem_post(&sem_cola_localized);
+			sem_post(&mensajes_localized);
 			break;
 		}
 		default:
@@ -663,8 +685,8 @@ int main(void){
 	logBrokerInterno = log_create("brokerInterno.log", "Broker Interno", 0, LOG_LEVEL_INFO);
 
 	inicializarColas();
-	inicializarMemoria();
 	inicializarSemaforos();
+	inicializarMemoria();
 
 	socketServidorBroker = crearSocketServidor(config_broker->ip_broker, config_broker->puerto_broker);
 
