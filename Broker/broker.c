@@ -238,17 +238,36 @@ void algoritmoLRU(int particiones_a_librerar){
 	}
 }
 
-/*void compactarParticionesDinamicas(){
-	int cantidad_particiones = list_size(particiones);
-	uint32_t particion_actual = 0;
-//	uint32_t particion_actual_id = 0;
-	int cantidad_particiones_a_moverme;
+/*	Yo lo que me imagino es recorrer la lista "particiones" e ir pusheando las particiones
+	ocupadas en una lista auxiliar, mientas vas haciendo el memcpy para reubicar los datos,
+	acumulando el tamaño de cada una en una variable y acomodando las bases. Al final pusheas una
+	ultima partición libre de tamanio = MAX_MEMORIA - ACUMULADO_OCUPADO
+	y la lista auxiliar es tu nueva lista "particiones"
+*/
+void compactarParticionesDinamicas(){
+	sem_wait(&mx_particiones);
+	int cant_particiones = list_size(particiones);
+	t_list* lista_aux = list_duplicate(particiones);
+	list_clean(particiones);
 
-	for(int i=0; i < cantidad_particiones; i++){
-		uint32_t particion_actual = list_get(particiones, i);
+	uint32_t offset = 0;
+	for(int i=0; i < cant_particiones; i++){
+		t_particion* part = list_get(lista_aux, i);
+		if(part->libre == false){
+			memmove(cache+offset,cache+part->base,part->tamanio);
+			part->base = offset;
+			offset += part->tamanio;
+			list_add(particiones,part);
+		}
+	}
+	t_particion* espacio_libre = malloc(sizeof(t_particion));
+	espacio_libre->libre   = true;
+	espacio_libre->base    = offset;
+	espacio_libre->tamanio = config_broker->tam_memoria - offset;
+	list_add(particiones,espacio_libre);
 
-		int proxima_particion_libre = buscarParticionLibre();
-}*/
+	sem_post(&mx_particiones);
+}
 
 void compactarBuddySystem(){
 
@@ -258,6 +277,9 @@ int cachearNewPokemon(t_new_pokemon* msg){
 	uint32_t largo_nombre = strlen(msg->nombre_pokemon); //Sin el \0
 	uint32_t largo_stream = 4*sizeof(uint32_t) + largo_nombre;
 
+	if(largo_stream < config_broker->tam_minimo_particion){
+		largo_stream = config_broker->tam_minimo_particion;
+	}
 	void* stream = malloc(largo_stream);
 	uint32_t offset = 0;
 	memcpy(stream + offset, &largo_nombre, sizeof(uint32_t));
@@ -279,7 +301,9 @@ int cachearNewPokemon(t_new_pokemon* msg){
 int cachearAppearedPokemon(t_appeared_pokemon* msg){
 	uint32_t largo_nombre = strlen(msg->nombre_pokemon); //Sin el \0
 	uint32_t largo_stream = 3 * sizeof(uint32_t) + largo_nombre;
-
+	if(largo_stream < config_broker->tam_minimo_particion){
+		largo_stream = config_broker->tam_minimo_particion;
+	}
 	void* stream = malloc(largo_stream);
 	uint32_t offset = 0;
 	memcpy(stream + offset, &largo_nombre, sizeof(uint32_t));
@@ -299,7 +323,9 @@ int cachearAppearedPokemon(t_appeared_pokemon* msg){
 int cachearCatchPokemon(t_catch_pokemon* msg){
 	uint32_t largo_nombre = strlen(msg->nombre_pokemon); //Sin el \0
 	uint32_t largo_stream = 3 * sizeof(uint32_t) + largo_nombre;
-
+	if(largo_stream < config_broker->tam_minimo_particion){
+		largo_stream = config_broker->tam_minimo_particion;
+	}
 	void* stream = malloc(largo_stream);
 	uint32_t offset = 0;
 	memcpy(stream + offset, &largo_nombre, sizeof(uint32_t));
@@ -318,7 +344,9 @@ int cachearCatchPokemon(t_catch_pokemon* msg){
 
 int cachearCaughtPokemon(t_caught_pokemon* msg){
 	uint32_t largo_stream = sizeof(uint32_t);
-
+	if(largo_stream < config_broker->tam_minimo_particion){
+		largo_stream = config_broker->tam_minimo_particion;
+	}
 	void* stream = malloc(largo_stream);
 
 	memcpy(stream, &largo_stream, sizeof(uint32_t));
@@ -331,6 +359,9 @@ int cachearCaughtPokemon(t_caught_pokemon* msg){
 int cachearGetPokemon(t_get_pokemon* msg){
 	uint32_t largo_nombre = strlen(msg->nombre_pokemon); //Sin el \0
 	uint32_t largo_stream = sizeof(uint32_t) + largo_nombre;
+	if(largo_stream < config_broker->tam_minimo_particion){
+		largo_stream = config_broker->tam_minimo_particion;
+	}
 	//Serializo el msg
 	void* stream = malloc(largo_stream);
 	uint32_t offset = 0;
@@ -347,6 +378,9 @@ int cachearLocalizedPokemon(t_localized_pokemon* msg){
 	uint32_t largo_nombre = strlen(msg->nombre_pokemon); //Sin el \0
 	uint32_t largo_stream = 2 * sizeof(uint32_t) + largo_nombre + 2* sizeof(uint32_t) * msg->cant_pos;
 
+	if(largo_stream < config_broker->tam_minimo_particion){
+		largo_stream = config_broker->tam_minimo_particion;
+	}
 	void* stream = malloc(largo_stream);
 	uint32_t offset = 0;
 	memcpy(stream + offset, &largo_nombre, sizeof(uint32_t));
