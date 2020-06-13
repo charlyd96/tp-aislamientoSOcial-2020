@@ -12,7 +12,7 @@ int crearConfigBroker(){
 	log_info(logBrokerInterno, "Se inicializó el Log.");
 
     if (!existeArchivoConfig(pathConfigBroker)) {
-		log_error(logBrokerInterno, "ERROR: Verificar path del archivo.\n");
+		log_error(logBrokerInterno, "ERROR: Verificar path del archivo.");
 	    return -1;
 	}
 
@@ -31,8 +31,8 @@ int crearConfigBroker(){
 		if(strcmp(algoritmo_mem,"BS") == 0) config_broker->algoritmo_memoria = BUDDY;
 
 		algoritmo_reemplazo = config_get_string_value(config_ruta, "ALGORITMO_REEMPLAZO");
-		if(strcmp(algoritmo_mem,"FIFO") == 0) config_broker->algoritmo_reemplazo = FIFO;
-		if(strcmp(algoritmo_mem,"LRU") == 0) config_broker->algoritmo_reemplazo = LRU;
+		if(strcmp(algoritmo_reemplazo,"FIFO") == 0) config_broker->algoritmo_reemplazo = FIFO;
+		if(strcmp(algoritmo_reemplazo,"LRU") == 0) config_broker->algoritmo_reemplazo = LRU;
 
 		algoritmo_libre = config_get_string_value(config_ruta, "ALGORITMO_PARTICION_LIBRE");
 	    if(strcmp(algoritmo_libre,"FF") == 0) config_broker->algoritmo_particion_libre = FF;
@@ -40,7 +40,7 @@ int crearConfigBroker(){
 	}
 
 	if(config_broker == NULL){
-	    log_error(logBrokerInterno, "ERROR: No se pudo levantar el archivo de configuración.\n");
+	    log_error(logBrokerInterno, "ERROR: No se pudo levantar el archivo de configuración.");
 	    return -1;
 	}
 	return 0;
@@ -122,6 +122,7 @@ int buscarParticionLibre(uint32_t largo_stream){
 	t_algoritmo_particion_libre algoritmo = config_broker->algoritmo_particion_libre;
 	bool encontrado = false;
 	if (algoritmo == FF) {
+		log_info(logBrokerInterno,"Buscar partición libre FF");
 		while (encontrado == false && i < largo_list) {
 			t_particion* part = list_get(particiones, i);
 			if ((part->libre) == true && largo_stream <= (part->tamanio)) {
@@ -165,8 +166,18 @@ int buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint32
 	sem_wait(&mx_particiones);
 	//buscarParticionLibre(largo_stream) devuelve el índice de la particion libre o -1 si no encuentra
 	int indice = buscarParticionLibre(largo_stream);
+	int cant_intentos_fallidos = 0;
+	log_info(logBrokerInterno,"indice %d",indice);
 	while (indice < 0) {
-		//-> Aplicar algoritmo para hacer espacio
+		cant_intentos_fallidos++;
+		if(cant_intentos_fallidos < config_broker->frecuencia_compatacion){
+			log_info(logBrokerInterno,"Entro a eliminar particion");
+			eliminarParticion();
+		}else{
+			log_info(logBrokerInterno,"Compactar");
+			compactarParticiones();
+			cant_intentos_fallidos = 0;
+		}
 		//Buscar de nuevo
 		indice = buscarParticionLibre(largo_stream);
 	}
@@ -184,6 +195,8 @@ int buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint32
 	part_nueva->base = part_libre->base;
 	part_nueva->tamanio = largo_stream;
 	part_nueva->id = id;
+	part_nueva->time_creacion = time(0); //Hora actual del sistema
+	part_nueva->time_ultima_ref = time(0); //Hora actual del sistema
 
 	part_libre->base = part_libre->base + largo_stream;
 	part_libre->tamanio = part_libre->tamanio - largo_stream;
@@ -208,17 +221,39 @@ int buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint32
 
 void eliminarParticion(){
 	t_algoritmo_reemplazo algoritmo = config_broker->algoritmo_reemplazo;
-
+	int indice_victima = 0;
+	int cant_particiones = list_size(particiones);
+	time_t time_aux = time(0);
 	switch(algoritmo){
 		case FIFO:{
-			algoritmoFIFO();
-			break;
+			log_info(logBrokerInterno,"Reemplazo con fifo");
+			//Eliminar la partición con con time_creación más viejo (el long int menor)
+			for(int i=0; i<cant_particiones; i++){
+				t_particion* part = list_get(particiones,i);
+				//Si se creó antes que time_aux
+				if(part->time_creacion < time_aux && part->libre == false){
+					time_aux = part->time_creacion;
+					indice_victima = i;
+				}
+			}
 		}
+		break;
 		case LRU:{
+			log_info(logBrokerInterno,"Reemplazo con LRU");
 			algoritmoLRU();
-			break;
 		}
+		break;
+		default:
+			log_info(logBrokerInterno,"No matcheo reemplazo");
+		break;
 	}
+	//Liberar la partición víctima
+	log_info(logBrokerInterno,"Se elimina la particion con indice %d",indice_victima);
+	t_particion* part_liberar = list_get(particiones,indice_victima);
+	part_liberar->libre = true;
+	list_add_in_index(particiones,indice_victima,part_liberar);
+	list_remove(particiones,indice_victima+1);
+
 }
 
 void algoritmoFIFO(){
@@ -244,8 +279,7 @@ void algoritmoLRU(int particiones_a_librerar){
 	ultima partición libre de tamanio = MAX_MEMORIA - ACUMULADO_OCUPADO
 	y la lista auxiliar es tu nueva lista "particiones"
 */
-void compactarParticionesDinamicas(){
-	sem_wait(&mx_particiones);
+void compactarParticiones(){
 	int cant_particiones = list_size(particiones);
 	t_list* lista_aux = list_duplicate(particiones);
 	list_clean(particiones);
@@ -265,12 +299,6 @@ void compactarParticionesDinamicas(){
 	espacio_libre->base    = offset;
 	espacio_libre->tamanio = config_broker->tam_memoria - offset;
 	list_add(particiones,espacio_libre);
-
-	sem_post(&mx_particiones);
-}
-
-void compactarBuddySystem(){
-
 }
 
 int cachearNewPokemon(t_new_pokemon* msg){
@@ -412,7 +440,7 @@ int cachearLocalizedPokemon(t_localized_pokemon* msg){
 
 void atenderCliente(int* socket){
 	int socket_cliente = *socket;
-	printf("Atender Cliente %d: \n", socket_cliente);
+	log_info(logBrokerInterno,"Atender Cliente %d: ", socket_cliente);
 	op_code cod_op = recibirOperacion(socket_cliente);
 	switch(cod_op){
 		case NEW_POKEMON:{
@@ -761,7 +789,7 @@ int devolverID(int socket,uint32_t* id_mensaje){
 
 	int enviado = send(socket, stream, sizeof(uint32_t), 0);
 
-	printf("ID %d\n", id);
+	log_info(logBrokerInterno,"ID %d", id);
 	return enviado;
 }
 
@@ -778,8 +806,9 @@ int main(void){
 
 
 	if(socketServidorBroker != -1){
-		log_info(logBrokerInterno,"Socket Servidor %d.\n", socketServidorBroker);
+		log_info(logBrokerInterno,"Socket Servidor %d.", socketServidorBroker);
 		while(1){
+			log_info(logBrokerInterno,"While de aceptar cliente");
 			cliente = aceptarCliente(socketServidorBroker);
 
 			pthread_t hiloCliente;
