@@ -6,14 +6,13 @@
  */
 
 #include "broker.h"
-
 /* FUNCIONES - INICIALIZACIÓN */
 
 int crearConfigBroker(){
 	log_info(logBrokerInterno, "Se inicializó el Log.");
 
     if (!existeArchivoConfig(pathConfigBroker)) {
-		log_error(logBrokerInterno, "ERROR: Verificar path del archivo.\n");
+		log_error(logBrokerInterno, "ERROR: Verificar path del archivo.");
 	    return -1;
 	}
 
@@ -23,16 +22,25 @@ int crearConfigBroker(){
 	if (config_ruta != NULL){
 	    config_broker->tam_memoria = config_get_int_value(config_ruta, "TAMANO_MEMORIA");
 		config_broker->tam_minimo_particion = config_get_int_value(config_ruta, "TAMANO_MINIMO_PARTICION");
-	    config_broker->algoritmo_memoria = config_get_string_value(config_ruta, "ALGORITMO_MEMORIA");
-	    config_broker->algoritmo_reemplazo = config_get_string_value(config_ruta, "ALGORITMO_REEMPLAZO");
-	    config_broker->algoritmo_particion_libre = config_get_string_value(config_ruta, "ALGORITMO_PARTICION_LIBRE");
 	    config_broker->ip_broker = config_get_string_value(config_ruta, "IP_BROKER");
 	    config_broker->puerto_broker = config_get_string_value(config_ruta, "PUERTO_BROKER");
 	    config_broker->frecuencia_compatacion = config_get_int_value(config_ruta, "FRECUENCIA_COMPACTACION");
+
+	    algoritmo_mem = config_get_string_value(config_ruta, "ALGORITMO_MEMORIA");
+		if(strcmp(algoritmo_mem,"PD") == 0) config_broker->algoritmo_memoria = PD;
+		if(strcmp(algoritmo_mem,"BS") == 0) config_broker->algoritmo_memoria = BUDDY;
+
+		algoritmo_reemplazo = config_get_string_value(config_ruta, "ALGORITMO_REEMPLAZO");
+		if(strcmp(algoritmo_reemplazo,"FIFO") == 0) config_broker->algoritmo_reemplazo = FIFO;
+		if(strcmp(algoritmo_reemplazo,"LRU") == 0) config_broker->algoritmo_reemplazo = LRU;
+
+		algoritmo_libre = config_get_string_value(config_ruta, "ALGORITMO_PARTICION_LIBRE");
+	    if(strcmp(algoritmo_libre,"FF") == 0) config_broker->algoritmo_particion_libre = FF;
+	    if(strcmp(algoritmo_libre,"BF") == 0) config_broker->algoritmo_particion_libre = BF;
 	}
 
 	if(config_broker == NULL){
-	    log_error(logBrokerInterno, "ERROR: No se pudo levantar el archivo de configuración.\n");
+	    log_error(logBrokerInterno, "ERROR: No se pudo levantar el archivo de configuración.");
 	    return -1;
 	}
 	return 0;
@@ -77,16 +85,362 @@ void inicializarColas(){
 	cola_caught->suscriptores = list_create();
 }
 
-void inicializarMemoria(){
-	punteroMemoria = malloc(config_broker->tam_memoria);
+void inicializarSemaforos(){
+	pthread_mutex_init(&sem_cola_new, NULL);
+	pthread_mutex_init(&sem_cola_appeared, NULL);
+	pthread_mutex_init(&sem_cola_catch, NULL);
+	pthread_mutex_init(&sem_cola_caught, NULL);
+	pthread_mutex_init(&sem_cola_get, NULL);
+	pthread_mutex_init(&sem_cola_localized, NULL);
 
-	algoritmoMemoria = config_broker->algoritmo_memoria;
+	sem_init(&mensajes_new, 0, 0);
+	sem_init(&mensajes_appeared, 0, 0);
+	sem_init(&mensajes_catch, 0, 0);
+	sem_init(&mensajes_caught, 0, 0);
+	sem_init(&mensajes_get, 0, 0);
+	sem_init(&mensajes_localized, 0, 0);
+}
+
+void inicializarMemoria(){
+	cache = malloc(config_broker->tam_memoria);
+	particiones = list_create();
+
+	//Partición libre inicial
+	t_particion* particionInicial = malloc(sizeof(t_particion));
+	particionInicial->libre = true;
+	particionInicial->base = 0;
+	particionInicial->tamanio = config_broker->tam_memoria;
+
+	list_add(particiones,particionInicial);
+}
+
+/* FUNCIONES - MEMORIA */
+
+int buscarParticionLibre(uint32_t largo_stream){
+	int i = 0;
+	int largo_list = list_size(particiones);
+	t_algoritmo_particion_libre algoritmo = config_broker->algoritmo_particion_libre;
+	bool encontrado = false;
+	if (algoritmo == FF) {
+		log_info(logBrokerInterno,"Buscar partición libre FF");
+		while (encontrado == false && i < largo_list) {
+			t_particion* part = list_get(particiones, i);
+			if ((part->libre) == true && largo_stream <= (part->tamanio)) {
+				encontrado = true;
+			} else {
+				i++;
+			}
+		}
+		//Si salió por encontrado
+		if (encontrado) {
+			return i;
+		}
+		//Si salió por i, no encontró ninguna que pueda contener el largo_stream
+		return -1;
+
+	} else if (algoritmo == BF) {
+		log_info(logBrokerInterno, "Algoritmo Best Fit.");
+		//Inicializo dif en tamaño max memoria, así el primer candidato será válido
+		int diferenciaActual = config_broker->tam_memoria;
+		int indiceCandidato = -1;
+		for (i = 0; i < largo_list; i++) {
+			t_particion* part = list_get(particiones, i);
+			if ((part->libre) == true && (part->tamanio) >= largo_stream) {
+				//Candidato, si es mejor que el anterior lo reservo
+				if (diferenciaActual > (part->tamanio) - largo_stream) {
+					diferenciaActual = (part->tamanio) - largo_stream;
+					indiceCandidato = i;
+				}
+			}
+		}
+		return indiceCandidato;
+	}
+	//Si no matcheo ningun algoritmo
+	return -1;
+}
+/**
+ * el campo "id" de la partición depende del tipo de mensaje puede referirse al id_mensaje o id_mensaje_correlativo
+ * Esta funcion es para reutilizar en cada cachearTalMensaje()
+ */
+int buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint32_t id){
+	sem_wait(&mx_particiones);
+	//buscarParticionLibre(largo_stream) devuelve el índice de la particion libre o -1 si no encuentra
+	int indice = buscarParticionLibre(largo_stream);
+	int cant_intentos_fallidos = 0;
+	log_info(logBrokerInterno,"indice %d",indice);
+	while (indice < 0) {
+		cant_intentos_fallidos++;
+		if(cant_intentos_fallidos < config_broker->frecuencia_compatacion){
+			log_info(logBrokerInterno,"Entro a eliminar particion");
+			eliminarParticion();
+		}else{
+			log_info(logBrokerInterno,"Compactar");
+			compactarParticiones();
+			cant_intentos_fallidos = 0;
+		}
+		//Buscar de nuevo
+		indice = buscarParticionLibre(largo_stream);
+	}
+	//Copiar estr. admin. de la particion
+	t_particion* part_libre = list_get(particiones, indice);
+
+	//alocar: (cache es un puntero void* al inicio de la caché)
+	//cache + base de la part_libre es el puntero al inicio de la partición libre
+	memcpy(cache + (part_libre->base), stream, largo_stream);
+
+	//actualizar estructura administrativa (lista de particiones)
+	t_particion* part_nueva = malloc(sizeof(t_particion));
+	part_nueva->libre = false;
+	part_nueva->tipo_mensaje = tipo_msg;
+	part_nueva->base = part_libre->base;
+	part_nueva->tamanio = largo_stream;
+	part_nueva->id = id;
+	part_nueva->time_creacion = time(0); //Hora actual del sistema
+	part_nueva->time_ultima_ref = time(0); //Hora actual del sistema
+
+	part_libre->base = part_libre->base + largo_stream;
+	part_libre->tamanio = part_libre->tamanio - largo_stream;
+
+	//Y acá cambiar [{...part_libre...}] por [{nueva},{libre_mas_chica}]
+	//Pasos: Insertar la nueva -> [{nueva},{...part_libre...}]
+	list_add_in_index(particiones,indice,part_nueva);
+	//y luego eliminar/reemplazar la part_libre original
+	if(part_libre->tamanio == 0){
+		list_remove(particiones,indice+1);
+	}else{
+		list_replace(particiones,indice+1,part_libre);
+	}
+
+	// 6. Almacenado de un mensaje dentro de la memoria (indicando posición de inicio de su partición).
+	log_info(logBroker, "Nuevo mensaje %d con inicio de su partición en %d y tamanio %d", part_nueva->tipo_mensaje, part_nueva->base,part_nueva->tamanio);
+
+	//-> DESMUTEAR LISTA DE PARTICIONES
+	sem_post(&mx_particiones);
+	return 1;
+}
+
+void eliminarParticion(){
+	t_algoritmo_reemplazo algoritmo = config_broker->algoritmo_reemplazo;
+	int indice_victima = 0;
+	int cant_particiones = list_size(particiones);
+	time_t time_aux = time(0);
+	switch(algoritmo){
+		case FIFO:{
+			log_info(logBrokerInterno,"Reemplazo con fifo");
+			//Eliminar la partición con con time_creación más viejo (el long int menor)
+			for(int i=0; i<cant_particiones; i++){
+				t_particion* part = list_get(particiones,i);
+				//Si se creó antes que time_aux
+				if(part->time_creacion < time_aux && part->libre == false){
+					time_aux = part->time_creacion;
+					indice_victima = i;
+				}
+			}
+		}
+		break;
+		case LRU:{
+			log_info(logBrokerInterno,"Reemplazo con LRU");
+			algoritmoLRU();
+		}
+		break;
+		default:
+			log_info(logBrokerInterno,"No matcheo reemplazo");
+		break;
+	}
+	//Liberar la partición víctima
+	log_info(logBrokerInterno,"Se elimina la particion con indice %d",indice_victima);
+	t_particion* part_liberar = list_get(particiones,indice_victima);
+	part_liberar->libre = true;
+	list_add_in_index(particiones,indice_victima,part_liberar);
+	list_remove(particiones,indice_victima+1);
+
+}
+
+void algoritmoFIFO(){
+	log_info(logBrokerInterno, "Algoritmo FIFO.");
+}
+
+// Hay que pasarle las ocupadas - las disponibles
+void algoritmoLRU(int particiones_a_librerar){
+	log_info(logBrokerInterno, "Algoritmo LRU.");
+
+	int i,j;
+	for (i = 0; i < particiones_a_librerar; i++) {
+		int cantidad_particiones = list_size(particiones);
+		for (j = 0; j < cantidad_particiones; j++) {
+			// Lo va a seguir la Rocío del futuro cercano
+		}
+	}
+}
+
+/*	Yo lo que me imagino es recorrer la lista "particiones" e ir pusheando las particiones
+	ocupadas en una lista auxiliar, mientas vas haciendo el memcpy para reubicar los datos,
+	acumulando el tamaño de cada una en una variable y acomodando las bases. Al final pusheas una
+	ultima partición libre de tamanio = MAX_MEMORIA - ACUMULADO_OCUPADO
+	y la lista auxiliar es tu nueva lista "particiones"
+*/
+void compactarParticiones(){
+	int cant_particiones = list_size(particiones);
+	t_list* lista_aux = list_duplicate(particiones);
+	list_clean(particiones);
+
+	uint32_t offset = 0;
+	for(int i=0; i < cant_particiones; i++){
+		t_particion* part = list_get(lista_aux, i);
+		if(part->libre == false){
+			memmove(cache+offset,cache+part->base,part->tamanio);
+			part->base = offset;
+			offset += part->tamanio;
+			list_add(particiones,part);
+		}
+	}
+	t_particion* espacio_libre = malloc(sizeof(t_particion));
+	espacio_libre->libre   = true;
+	espacio_libre->base    = offset;
+	espacio_libre->tamanio = config_broker->tam_memoria - offset;
+	list_add(particiones,espacio_libre);
+}
+
+int cachearNewPokemon(t_new_pokemon* msg){
+	uint32_t largo_nombre = strlen(msg->nombre_pokemon); //Sin el \0
+	uint32_t largo_stream = 4*sizeof(uint32_t) + largo_nombre;
+
+	if(largo_stream < config_broker->tam_minimo_particion){
+		largo_stream = config_broker->tam_minimo_particion;
+	}
+	void* stream = malloc(largo_stream);
+	uint32_t offset = 0;
+	memcpy(stream + offset, &largo_nombre, sizeof(uint32_t));
+	offset += sizeof(uint32_t);
+	memcpy(stream + offset, msg->nombre_pokemon, largo_nombre);	//Copio "pikachu" sin el \0
+	offset += largo_nombre;
+	memcpy(stream + offset, &(msg->pos_x), sizeof(uint32_t));
+	offset += sizeof(uint32_t);
+	memcpy(stream + offset, &(msg->pos_y), sizeof(uint32_t));
+	offset += sizeof(uint32_t);
+	memcpy(stream + offset, &(msg->cantidad), sizeof(uint32_t));
+	offset += sizeof(uint32_t);
+
+	int result = buscarParticionYAlocar(largo_stream,stream,NEW_POKEMON,msg->id_mensaje);
+
+	return result;
+}
+
+int cachearAppearedPokemon(t_appeared_pokemon* msg){
+	uint32_t largo_nombre = strlen(msg->nombre_pokemon); //Sin el \0
+	uint32_t largo_stream = 3 * sizeof(uint32_t) + largo_nombre;
+	if(largo_stream < config_broker->tam_minimo_particion){
+		largo_stream = config_broker->tam_minimo_particion;
+	}
+	void* stream = malloc(largo_stream);
+	uint32_t offset = 0;
+	memcpy(stream + offset, &largo_nombre, sizeof(uint32_t));
+	offset += sizeof(uint32_t);
+	memcpy(stream + offset, msg->nombre_pokemon, largo_nombre);	//Copio "pikachu" sin el \0
+	offset += largo_nombre;
+	memcpy(stream + offset, &(msg->pos_x), sizeof(uint32_t));
+	offset += sizeof(uint32_t);
+	memcpy(stream + offset, &(msg->pos_y), sizeof(uint32_t));
+	offset += sizeof(uint32_t);
+
+	int result = buscarParticionYAlocar(largo_stream,stream,APPEARED_POKEMON,msg->id_mensaje_correlativo);
+
+	return result;
+}
+
+int cachearCatchPokemon(t_catch_pokemon* msg){
+	uint32_t largo_nombre = strlen(msg->nombre_pokemon); //Sin el \0
+	uint32_t largo_stream = 3 * sizeof(uint32_t) + largo_nombre;
+	if(largo_stream < config_broker->tam_minimo_particion){
+		largo_stream = config_broker->tam_minimo_particion;
+	}
+	void* stream = malloc(largo_stream);
+	uint32_t offset = 0;
+	memcpy(stream + offset, &largo_nombre, sizeof(uint32_t));
+	offset += sizeof(uint32_t);
+	memcpy(stream + offset, msg->nombre_pokemon, largo_nombre);	//Copio "pikachu" sin el \0
+	offset += largo_nombre;
+	memcpy(stream + offset, &(msg->pos_x), sizeof(uint32_t));
+	offset += sizeof(uint32_t);
+	memcpy(stream + offset, &(msg->pos_y), sizeof(uint32_t));
+	offset += sizeof(uint32_t);
+
+	int result = buscarParticionYAlocar(largo_stream,stream,CATCH_POKEMON,msg->id_mensaje);
+
+	return result;
+}
+
+int cachearCaughtPokemon(t_caught_pokemon* msg){
+	uint32_t largo_stream = sizeof(uint32_t);
+	if(largo_stream < config_broker->tam_minimo_particion){
+		largo_stream = config_broker->tam_minimo_particion;
+	}
+	void* stream = malloc(largo_stream);
+
+	memcpy(stream, &largo_stream, sizeof(uint32_t));
+
+	int result = buscarParticionYAlocar(largo_stream,stream,CAUGHT_POKEMON,msg->id_mensaje_correlativo);
+
+	return result;
+}
+
+int cachearGetPokemon(t_get_pokemon* msg){
+	uint32_t largo_nombre = strlen(msg->nombre_pokemon); //Sin el \0
+	uint32_t largo_stream = sizeof(uint32_t) + largo_nombre;
+	if(largo_stream < config_broker->tam_minimo_particion){
+		largo_stream = config_broker->tam_minimo_particion;
+	}
+	//Serializo el msg
+	void* stream = malloc(largo_stream);
+	uint32_t offset = 0;
+	memcpy(stream + offset, &largo_nombre, sizeof(uint32_t));
+	offset += sizeof(uint32_t);
+	memcpy(stream + offset, msg->nombre_pokemon, largo_nombre);	//Copio "pikachu" sin el \0
+
+	int result = buscarParticionYAlocar(largo_stream,stream,GET_POKEMON,msg->id_mensaje);
+
+	return result;
+}
+
+int cachearLocalizedPokemon(t_localized_pokemon* msg){
+	uint32_t largo_nombre = strlen(msg->nombre_pokemon); //Sin el \0
+	uint32_t largo_stream = 2 * sizeof(uint32_t) + largo_nombre + 2* sizeof(uint32_t) * msg->cant_pos;
+
+	if(largo_stream < config_broker->tam_minimo_particion){
+		largo_stream = config_broker->tam_minimo_particion;
+	}
+	void* stream = malloc(largo_stream);
+	uint32_t offset = 0;
+	memcpy(stream + offset, &largo_nombre, sizeof(uint32_t));
+	offset += sizeof(uint32_t);
+	memcpy(stream + offset, msg->nombre_pokemon, largo_nombre);	//Copio "pikachu" sin el \0
+	offset += largo_nombre;
+	memcpy(stream + offset, &(msg->cant_pos), sizeof(uint32_t));
+	offset += sizeof(uint32_t);
+
+	uint32_t pos_x, pos_y;
+	char** pos_list = string_get_string_as_array(msg->posiciones);
+	for(int i=0; i<(msg->cant_pos); i++){
+		char** pos_pair = string_split(pos_list[i],"|");
+		pos_x = atoi(pos_pair[0]);
+		pos_y = atoi(pos_pair[1]);
+
+		memcpy(stream + offset, &(pos_x), sizeof(uint32_t));
+		offset += sizeof(uint32_t);
+		memcpy(stream + offset, &(pos_y), sizeof(uint32_t));
+		offset += sizeof(uint32_t);
+	}
+
+	int result = buscarParticionYAlocar(largo_stream,stream,LOCALIZED_POKEMON,msg->id_mensaje_correlativo);
+
+	return result;
 }
 
 /* FUNCIONES - CONEXIÓN */
 
-void atenderCliente(int socket_cliente){
-	printf("Atender Cliente %d: \n", socket_cliente);
+void atenderCliente(int* socket){
+	int socket_cliente = *socket;
+	log_info(logBrokerInterno,"Atender Cliente %d: ", socket_cliente);
 	op_code cod_op = recibirOperacion(socket_cliente);
 	switch(cod_op){
 		case NEW_POKEMON:{
@@ -134,52 +488,99 @@ void atenderCliente(int socket_cliente){
 
 void atenderMensajeNewPokemon(int socket_cliente){
 	t_new_pokemon* new_pokemon = recibirNewPokemon(socket_cliente);
-	log_info(logBroker, "Llegó el mensaje NEW_POKEMON.");
+
+	// 3. Llegada de un nuevo mensaje a una cola de mensajes.
+	log_info(logBroker, "Llegó un mensaje NEW_POKEMON %s %d %d %d.",new_pokemon->nombre_pokemon,new_pokemon->pos_x,new_pokemon->pos_y,new_pokemon->cantidad);
+
+	uint32_t id_mensaje;
 
 	encolarNewPokemon(new_pokemon);
-	int enviado = devolverID(socket_cliente);
+
+	int enviado = devolverID(socket_cliente,&id_mensaje);
+	new_pokemon->id_mensaje = id_mensaje;
+
+	int cacheado = cachearNewPokemon(new_pokemon);
 }
 
 void atenderMensajeAppearedPokemon(int socket_cliente){
-	t_appeared_pokemon* app_pokemon = recibirAppearedPokemon(socket_cliente);
-	log_info(logBroker, "Llegó el mensaje APPEARED_POKEMON.");
+	t_appeared_pokemon* appeared_pokemon = recibirAppearedPokemon(socket_cliente);
 
-	encolarAppearedPokemon(app_pokemon);
-	int enviado = devolverID(socket_cliente);
+	// 3. Llegada de un nuevo mensaje a una cola de mensajes.
+	log_info(logBroker, "Llegó un mensaje APPEARED_POKEMON %s %d %d.",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y);
+
+	uint32_t id_mensaje;
+
+	encolarAppearedPokemon(appeared_pokemon);
+
+	int enviado = devolverID(socket_cliente,&id_mensaje);
+//	appeared_pokemon->id_mensaje_correlativo = id_mensaje;
+
+	int cacheado = cachearAppearedPokemon(appeared_pokemon);
 }
 
 void atenderMensajeCatchPokemon(int socket_cliente){
-	t_catch_pokemon* mensaje = recibirCatchPokemon(socket_cliente);
-	log_info(logBroker, "Llegó el mensaje CATCH_POKEMON.");
+	t_catch_pokemon* catch_pokemon = recibirCatchPokemon(socket_cliente);
 
-	encolarCatchPokemon(mensaje);
-	int enviado = devolverID(socket_cliente);
+	// 3. Llegada de un nuevo mensaje a una cola de mensajes.
+	log_info(logBroker, "Llegó un mensaje CATCH_POKEMON %s %d %d.",catch_pokemon->nombre_pokemon,catch_pokemon->pos_x,catch_pokemon->pos_y);
+
+	uint32_t id_mensaje;
+
+	encolarCatchPokemon(catch_pokemon);
+
+	int enviado = devolverID(socket_cliente,&id_mensaje);
+	catch_pokemon->id_mensaje = id_mensaje;
+
+	int cacheado = cachearCatchPokemon(catch_pokemon);
 }
 
 void atenderMensajeCaughtPokemon(int socket_cliente){
-	t_caught_pokemon* mensaje = recibirCaughtPokemon(socket_cliente);
-	log_info(logBroker, "Llegó el mensaje CAUGHT_POKEMON.");
+	t_caught_pokemon* caught_pokemon = recibirCaughtPokemon(socket_cliente);
 
-	encolarCaughtPokemon(mensaje);
-	int enviado = devolverID(socket_cliente);
+	// 3. Llegada de un nuevo mensaje a una cola de mensajes.
+	log_info(logBroker, "Llegó un mensaje CAUGHT_POKEMON %d %d.",caught_pokemon->atrapo_pokemon,caught_pokemon->id_mensaje_correlativo);
+
+	uint32_t id_mensaje;
+
+	encolarCaughtPokemon(caught_pokemon);
+
+	int enviado = devolverID(socket_cliente,&id_mensaje);
+//	caught_pokemon->id_mensaje_correlativo = id_mensaje;
+
+	int cacheado = cachearCaughtPokemon(caught_pokemon);
 }
 
 void atenderMensajeGetPokemon(int socket_cliente){
-	t_get_pokemon* mensaje = recibirGetPokemon(socket_cliente);
-	log_info(logBroker, "Llegó el mensaje GET_POKEMON.");
+	t_get_pokemon* get_pokemon = recibirGetPokemon(socket_cliente);
 
-	encolarGetPokemon(mensaje);
-	int enviado = devolverID(socket_cliente);
+	// 3. Llegada de un nuevo mensaje a una cola de mensajes.
+	log_info(logBroker, "Llegó un mensaje GET_POKEMON %s.",get_pokemon->nombre_pokemon);
+
+	uint32_t id_mensaje;
+
+	encolarGetPokemon(get_pokemon);
+
+	int enviado = devolverID(socket_cliente,&id_mensaje);
+	get_pokemon->id_mensaje = id_mensaje;
+
+	int cacheado = cachearGetPokemon(get_pokemon);
 }
 
 void atenderMensajeLocalizedPokemon(int socket_cliente){
-	t_localized_pokemon* mensaje = recibirLocalizedPokemon(socket_cliente);
-	log_info(logBroker, "Llegó el mensaje LOCALIZED_POKEMON.");
+	t_localized_pokemon* localized_pokemon = recibirLocalizedPokemon(socket_cliente);
 
-	encolarLocalizedPokemon(mensaje);
-	int enviado = devolverID(socket_cliente);
+	// 3. Llegada de un nuevo mensaje a una cola de mensajes.
+	log_info(logBroker, "Llegó un mensaje LOCALIZED_POKEMON.");
 
-	//chachearMensaje(mensaje);
+	uint32_t id_mensaje;
+
+	encolarLocalizedPokemon(localized_pokemon);
+
+	int enviado = devolverID(socket_cliente,&id_mensaje);
+//	localized_pokemon->id_mensaje_correlativo = id_mensaje;
+
+	int cacheado = cachearLocalizedPokemon(localized_pokemon);
+
 	//hilo-enviarMensajeASuscriptores(mensaje);
 	//hilo-recibirACK(socket_cliente);
 
@@ -191,7 +592,9 @@ void atenderSuscripcionTeam(int socket_cliente){
 	t_suscribe* suscribe_team = recibirSuscripcion(SUSCRIBE_TEAM,socket_cliente);
 
 	int index = suscribir(socket_cliente,suscribe_team->cola_suscribir);
-	log_info(logBroker, "Se suscribió al team, indice %d",index);
+
+	// 2. Suscripción de un proceso a una cola de mensajes.
+	log_info(logBroker, "Se suscribe un Team a la Cola de Mensajes %d", suscribe_team->cola_suscribir);
 
 	//enviar mensajes cacheados (recorrer la lista de particiones)
 }
@@ -200,7 +603,9 @@ void atenderSuscripcionGameBoy(int socket_cliente){
 	t_suscribe* suscribe_gameboy = recibirSuscripcion(SUSCRIBE_GAMEBOY,socket_cliente);
 
 	int index = suscribir(socket_cliente,suscribe_gameboy->cola_suscribir);
-	log_info(logBroker, "Se suscribió al Gameboy, indice %d",index);
+
+	// 2. Suscripción de un proceso a una cola de mensajes.
+	log_info(logBroker, "Se suscribe el Game Boy a la Cola de Mensajes %d", suscribe_gameboy->cola_suscribir);
 
 	sleep(suscribe_gameboy->timeout);
 	desuscribir(index,suscribe_gameboy->cola_suscribir);
@@ -210,7 +615,9 @@ void atenderSuscripcionGameCard(int socket_cliente){
 	t_suscribe* suscribe_gamecard = recibirSuscripcion(SUSCRIBE_GAMECARD,socket_cliente);
 
 	int index = suscribir(socket_cliente,suscribe_gamecard->cola_suscribir);
-	log_info(logBroker, "Se suscribió al gamecard, indice %d",index);
+
+	// 2. Suscripción de un proceso a una cola de mensajes.
+	log_info(logBroker, "Se suscribe un Game Card a la Cola de Mensajes %d", suscribe_gamecard->cola_suscribir);
 }
 
 /* FUNCIONES - PROCESAMIENTO */
@@ -219,27 +626,45 @@ int suscribir(int socket, op_code cola){
 	int index = 0;
 	switch(cola){
 		case NEW_POKEMON:{
+			pthread_mutex_lock(&sem_cola_new);
 			index= list_add(cola_new->suscriptores,&socket);
+			pthread_mutex_unlock(&sem_cola_new);
+			sem_post(&mensajes_new);
 			break;
 		}
 		case APPEARED_POKEMON:{
+			pthread_mutex_lock(&sem_cola_appeared);
 			index= list_add(cola_appeared->suscriptores,&socket);
+			pthread_mutex_unlock(&sem_cola_appeared);
+			sem_post(&mensajes_appeared);
 			break;
 		}
 		case CATCH_POKEMON:{
+			pthread_mutex_lock(&sem_cola_catch);
 			index= list_add(cola_catch->suscriptores,&socket);
+			pthread_mutex_unlock(&sem_cola_catch);
+			sem_post(&mensajes_catch);
 			break;
 		}
 		case CAUGHT_POKEMON:{
+			pthread_mutex_lock(&sem_cola_caught);
 			index= list_add(cola_caught->suscriptores,&socket);
+			pthread_mutex_unlock(&sem_cola_caught);
+			sem_post(&mensajes_caught);
 			break;
 		}
 		case GET_POKEMON:{
+			pthread_mutex_lock(&sem_cola_get);
 			index= list_add(cola_get->suscriptores,&socket);
+			pthread_mutex_unlock(&sem_cola_get);
+			sem_post(&mensajes_get);
 			break;
 		}
 		case LOCALIZED_POKEMON:{
+			pthread_mutex_lock(&sem_cola_localized);
 			index= list_add(cola_localized->suscriptores,&socket);
+			pthread_mutex_unlock(&sem_cola_localized);
+			sem_post(&mensajes_localized);
 			break;
 		}
 		default:
@@ -253,27 +678,45 @@ void desuscribir(int index,op_code cola){
 
 	switch(cola){
 		case NEW_POKEMON:{
+			sem_wait(&mensajes_new); // No se puede sacar si la Cola de Mensajes está vacía
+			pthread_mutex_lock(&sem_cola_new);
 			list_remove(cola_new->suscriptores,index);
+			pthread_mutex_unlock(&sem_cola_new);
 			break;
 		}
 		case APPEARED_POKEMON:{
+			sem_wait(&mensajes_appeared);
+			pthread_mutex_lock(&sem_cola_appeared);
 			list_remove(cola_appeared->suscriptores,index);
+			pthread_mutex_unlock(&sem_cola_appeared);
 			break;
 		}
 		case CATCH_POKEMON:{
+			sem_wait(&mensajes_catch);
+			pthread_mutex_lock(&sem_cola_catch);
 			list_remove(cola_catch->suscriptores,index);
+			pthread_mutex_unlock(&sem_cola_catch);
 			break;
 		}
 		case CAUGHT_POKEMON:{
+			sem_wait(&mensajes_caught);
+			pthread_mutex_lock(&sem_cola_caught);
 			list_remove(cola_caught->suscriptores,index);
+			pthread_mutex_unlock(&sem_cola_caught);
 			break;
 		}
 		case GET_POKEMON:{
+			sem_wait(&mensajes_get);
+			pthread_mutex_lock(&sem_cola_get);
 			list_remove(cola_get->suscriptores,index);
+			pthread_mutex_unlock(&sem_cola_get);
 			break;
 		}
 		case LOCALIZED_POKEMON:{
+			sem_wait(&mensajes_localized);
+			pthread_mutex_lock(&sem_cola_localized);
 			list_remove(cola_localized->suscriptores,index);
+			pthread_mutex_unlock(&sem_cola_localized);
 			break;
 		}
 		default:
@@ -337,44 +780,50 @@ void encolarLocalizedPokemon(t_localized_pokemon* mensaje){
 
 /* FUNCIONES - COMUNICACIÓN */
 
-int devolverID(int socket){
+int devolverID(int socket,uint32_t* id_mensaje){
 	uint32_t id = ID_MENSAJE ++; //Sincronizar obviously
+	(*id_mensaje) = ID_MENSAJE;
 	void*stream = malloc(sizeof(uint32_t));
 
 	memcpy(stream, &(id), sizeof(uint32_t));
 
 	int enviado = send(socket, stream, sizeof(uint32_t), 0);
 
-	printf("ID %d\n", id);
+	log_info(logBrokerInterno,"ID %d", id);
 	return enviado;
 }
 
 int main(void){
-	logBroker = log_create("broker.log", "Broker", 0, LOG_LEVEL_INFO);
-	logBrokerInterno = log_create("brokerInterno.log", "Broker Interno", 0, LOG_LEVEL_INFO);
+	logBroker = log_create("broker.log", "Broker", 1, LOG_LEVEL_INFO);
+	logBrokerInterno = log_create("brokerInterno.log", "Broker Interno", 1, LOG_LEVEL_INFO);
 
 	inicializarColas();
+	inicializarSemaforos();
 	inicializarMemoria();
+	sem_init(&mx_particiones,0,(unsigned int) 1);
 
 	socketServidorBroker = crearSocketServidor(config_broker->ip_broker, config_broker->puerto_broker);
 
-	if(socketServidorBroker == -1){
-		printf("No se pudo crear el Servidor Broker.");
-		return -1;
-	}else{
-		printf("Socket Servidor %d.\n", socketServidorBroker);
-	}
-
-	//while(1){
-		cliente = aceptarCliente(socketServidorBroker);
-		atenderCliente(cliente);
-	//}
 
 	if(socketServidorBroker != -1){
+		log_info(logBrokerInterno,"Socket Servidor %d.", socketServidorBroker);
+		while(1){
+			log_info(logBrokerInterno,"While de aceptar cliente");
+			cliente = aceptarCliente(socketServidorBroker);
+
+			pthread_t hiloCliente;
+			pthread_create(&hiloCliente, NULL, (void*)atenderCliente, &cliente);
+
+			pthread_detach(hiloCliente);
+		}
 		close(socketServidorBroker);
-		log_info(logBrokerInterno, "Se cerró el Socket %d.", socketServidorBroker);
+		log_info(logBrokerInterno, "Se cerró el Socket Servidor %d.", socketServidorBroker);
+	}else{
+		log_info(logBrokerInterno,"No se pudo crear el Servidor Broker.");
 	}
 
+	sem_destroy(&mx_particiones);
 	log_destroy(logBrokerInterno);
 	log_destroy(logBroker);
+	return 0;
 }

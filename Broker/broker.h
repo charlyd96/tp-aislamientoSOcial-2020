@@ -15,15 +15,21 @@
 #include <commons/collections/list.h>
 #include <commons/log.h>
 #include <pthread.h>
-
+#include <semaphore.h>
+#include <time.h>
 /* STRUCTS */
+
+typedef enum {PD, BUDDY} t_tipo_particionado;
+typedef enum {FIFO, LRU} t_algoritmo_reemplazo;
+
+typedef enum {FF, BF} t_algoritmo_particion_libre;
 
 typedef struct {
 	int tam_memoria;
 	int tam_minimo_particion;
-	char* algoritmo_memoria;
-	char* algoritmo_reemplazo;
-	char* algoritmo_particion_libre;
+	t_tipo_particionado algoritmo_memoria;
+	t_algoritmo_reemplazo algoritmo_reemplazo;
+	t_algoritmo_particion_libre algoritmo_particion_libre;
 	char* ip_broker;
 	char* puerto_broker;
 	int frecuencia_compatacion;
@@ -103,19 +109,14 @@ typedef struct {
 } t_localized_pokemon_memoria;
 
 typedef struct {
-	uint32_t tam_minimo;
 	bool libre;
-	int id;
 	op_code tipo_mensaje;
-} t_particion_memoria;
-
-typedef struct {
-	void* mensaje_cacheado;
-} t_memoria;
-
-typedef enum {FIFO, LRU} t_algoritmo_reemplazo;
-
-typedef enum {FF, BF} t_algoritmo_particion_libre;
+	uint32_t id;
+	uint32_t base;
+	uint32_t tamanio;
+	time_t time_creacion;
+	time_t time_ultima_ref;
+} t_particion;
 
 /* VARIABLES GLOBALES */
 
@@ -127,11 +128,14 @@ t_config* config_ruta;
 t_log* logBrokerInterno;
 t_log* logBroker;
 
-char* pathConfigBroker = "broker.config";
+char* pathConfigBroker = "../broker.config";
 int socketServidorBroker;
 int cliente;
-void* punteroMemoria;
-char* algoritmoMemoria;
+
+void* cache;
+char* algoritmo_mem;
+char* algoritmo_reemplazo;
+char* algoritmo_libre;
 
 t_cola* cola_new;
 t_cola* cola_appeared;
@@ -140,7 +144,25 @@ t_cola* cola_localized;
 t_cola* cola_catch;
 t_cola* cola_caught;
 
-t_memoria* particiones;
+t_list* particiones;
+
+
+pthread_mutex_t sem_cola_new;
+pthread_mutex_t sem_cola_appeared;
+pthread_mutex_t sem_cola_catch;
+pthread_mutex_t sem_cola_caught;
+pthread_mutex_t sem_cola_get;
+pthread_mutex_t sem_cola_localized;
+
+sem_t mensajes_new;
+sem_t mensajes_appeared;
+sem_t mensajes_catch;
+sem_t mensajes_caught;
+sem_t mensajes_get;
+sem_t mensajes_localized;
+
+sem_t mx_particiones;
+
 
 /* FUNCIONES */
 
@@ -150,9 +172,10 @@ bool existeArchivoConfig(char* path);
 
 void inicializarColas();
 void inicializarMemoria();
+void inicializatSemaforos();
 
 /// CONEXIÓN
-void atenderCliente(int socket_cliente);
+void atenderCliente(int* socket_cliente);
 
 void atenderMensajeNewPokemon(int socket);
 void atenderMensajeAppearedPokemon(int socket);
@@ -176,7 +199,24 @@ void encolarCaughtPokemon(t_caught_pokemon* msg);
 void encolarGetPokemon(t_get_pokemon* msg);
 void encolarLocalizedPokemon(t_localized_pokemon* msg);
 
+/// MEMORIA
+int buscarParticionLibre(uint32_t largo_stream);
+int buscarParticionYAlocar(int largo_stream, void* stream, op_code tipo_msg, uint32_t id);
+void eliminarParticion();
+
+void algoritmoFIFO();
+void algoritmoLRU();
+
+void compactarParticiones();
+
+int cachearNewPokemon(t_new_pokemon* msg);
+int cachearAppearedPokemon(t_appeared_pokemon* msg);
+int cachearCatchPokemon(t_catch_pokemon* msg);
+int cachearCaughtPokemon(t_caught_pokemon* msg);
+int cachearGetPokemon(t_get_pokemon* msg);
+int cachearLocalizedPokemon(t_localized_pokemon* msg);
+
 /// COMUNICACIÓN
-int devolverID(int socket);
+int devolverID(int socket,uint32_t*id);
 
 #endif /* BROKER_H_ */
