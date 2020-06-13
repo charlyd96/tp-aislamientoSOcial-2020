@@ -200,7 +200,7 @@ int buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint32
 	}
 
 	// 6. Almacenado de un mensaje dentro de la memoria (indicando posición de inicio de su partición).
-	log_info(logBroker, "Nuevo mensaje %d con posición de inicio de su partición en %d", part_nueva->tipo_mensaje, part_nueva->base);
+	log_info(logBroker, "Nuevo mensaje %d con inicio de su partición en %d y tamanio %d", part_nueva->tipo_mensaje, part_nueva->base,part_nueva->tamanio);
 
 	//-> DESMUTEAR LISTA DE PARTICIONES
 	sem_post(&mx_particiones);
@@ -299,7 +299,7 @@ int cachearAppearedPokemon(t_appeared_pokemon* msg){
 
 int cachearCatchPokemon(t_catch_pokemon* msg){
 	uint32_t largo_nombre = strlen(msg->nombre_pokemon); //Sin el \0
-	uint32_t largo_stream = sizeof(uint32_t) + largo_nombre;
+	uint32_t largo_stream = 3 * sizeof(uint32_t) + largo_nombre;
 
 	void* stream = malloc(largo_stream);
 	uint32_t offset = 0;
@@ -377,7 +377,8 @@ int cachearLocalizedPokemon(t_localized_pokemon* msg){
 
 /* FUNCIONES - CONEXIÓN */
 
-void atenderCliente(int socket_cliente){
+void atenderCliente(int* socket){
+	int socket_cliente = *socket;
 	printf("Atender Cliente %d: \n", socket_cliente);
 	op_code cod_op = recibirOperacion(socket_cliente);
 	switch(cod_op){
@@ -428,7 +429,7 @@ void atenderMensajeNewPokemon(int socket_cliente){
 	t_new_pokemon* new_pokemon = recibirNewPokemon(socket_cliente);
 
 	// 3. Llegada de un nuevo mensaje a una cola de mensajes.
-	log_info(logBroker, "Llegó un mensaje NEW_POKEMON.");
+	log_info(logBroker, "Llegó un mensaje NEW_POKEMON %s %d %d %d.",new_pokemon->nombre_pokemon,new_pokemon->pos_x,new_pokemon->pos_y,new_pokemon->cantidad);
 
 	uint32_t id_mensaje;
 
@@ -444,7 +445,7 @@ void atenderMensajeAppearedPokemon(int socket_cliente){
 	t_appeared_pokemon* appeared_pokemon = recibirAppearedPokemon(socket_cliente);
 
 	// 3. Llegada de un nuevo mensaje a una cola de mensajes.
-	log_info(logBroker, "Llegó un mensaje APPEARED_POKEMON.");
+	log_info(logBroker, "Llegó un mensaje APPEARED_POKEMON %s %d %d.",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y);
 
 	uint32_t id_mensaje;
 
@@ -460,7 +461,7 @@ void atenderMensajeCatchPokemon(int socket_cliente){
 	t_catch_pokemon* catch_pokemon = recibirCatchPokemon(socket_cliente);
 
 	// 3. Llegada de un nuevo mensaje a una cola de mensajes.
-	log_info(logBroker, "Llegó un mensaje CATCH_POKEMON.");
+	log_info(logBroker, "Llegó un mensaje CATCH_POKEMON %s %d %d.",catch_pokemon->nombre_pokemon,catch_pokemon->pos_x,catch_pokemon->pos_y);
 
 	uint32_t id_mensaje;
 
@@ -476,7 +477,7 @@ void atenderMensajeCaughtPokemon(int socket_cliente){
 	t_caught_pokemon* caught_pokemon = recibirCaughtPokemon(socket_cliente);
 
 	// 3. Llegada de un nuevo mensaje a una cola de mensajes.
-	log_info(logBroker, "Llegó un mensaje CAUGHT_POKEMON.");
+	log_info(logBroker, "Llegó un mensaje CAUGHT_POKEMON %d %d.",caught_pokemon->atrapo_pokemon,caught_pokemon->id_mensaje_correlativo);
 
 	uint32_t id_mensaje;
 
@@ -492,7 +493,7 @@ void atenderMensajeGetPokemon(int socket_cliente){
 	t_get_pokemon* get_pokemon = recibirGetPokemon(socket_cliente);
 
 	// 3. Llegada de un nuevo mensaje a una cola de mensajes.
-	log_info(logBroker, "Llegó un mensaje GET_POKEMON.");
+	log_info(logBroker, "Llegó un mensaje GET_POKEMON %s.",get_pokemon->nombre_pokemon);
 
 	uint32_t id_mensaje;
 
