@@ -23,7 +23,7 @@ void liberar_listas (Team *this_team);
 
 t_config* get_config()
 {
-    t_config* ret =  config_create("team.config");
+    t_config* ret =  config_create("../team.config");
     if (ret == NULL)
     log_info (internalLogTeam, "No se pudieron leer las configuraciones");
     else log_info (internalLogTeam, "Configuraciones leidas correctamente");

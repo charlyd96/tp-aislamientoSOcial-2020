@@ -128,7 +128,7 @@ t_config* config_ruta;
 t_log* logBrokerInterno;
 t_log* logBroker;
 
-char* pathConfigBroker = "broker.config";
+char* pathConfigBroker = "../broker.config";
 int socketServidorBroker;
 int cliente;
 
