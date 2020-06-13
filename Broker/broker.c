@@ -122,7 +122,6 @@ int buscarParticionLibre(uint32_t largo_stream){
 	t_algoritmo_particion_libre algoritmo = config_broker->algoritmo_particion_libre;
 	bool encontrado = false;
 	if (algoritmo == FF) {
-		log_info(logBrokerInterno, "Algoritmo First Fit.");
 		while (encontrado == false && i < largo_list) {
 			t_particion* part = list_get(particiones, i);
 			if ((part->libre) == true && largo_stream <= (part->tamanio)) {
@@ -257,7 +256,7 @@ void compactarBuddySystem(){
 
 int cachearNewPokemon(t_new_pokemon* msg){
 	uint32_t largo_nombre = strlen(msg->nombre_pokemon); //Sin el \0
-	uint32_t largo_stream = sizeof(uint32_t) + largo_nombre;
+	uint32_t largo_stream = 4*sizeof(uint32_t) + largo_nombre;
 
 	void* stream = malloc(largo_stream);
 	uint32_t offset = 0;
