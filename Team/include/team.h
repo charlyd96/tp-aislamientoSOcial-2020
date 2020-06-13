@@ -14,7 +14,8 @@
 #include <unistd.h>
 #include "teamConfig.h"
 #include <protocolo.h>
-#define WORLD_POSITION db_world_pos
+#include <commons/log.h>
+
 #define PRINT_TEST 0
 #define LIBERAR 0
 
@@ -31,12 +32,18 @@ extern t_list *cola_caught;
 extern sem_t qcaught1_sem;
 extern sem_t qcaught2_sem;
 
+t_list *global_objective;
+
 sem_t poklist_sem;
 sem_t poklist_sem2;
 t_list *mapped_pokemons;
 
-/* Errores para identificar estado en la ejecución de los hilos */
-typedef enum{
+extern t_log *internalLogTeam;
+extern t_log *logTeam;
+
+/* Errores para identificar estado en la ejecución de los hilos - para RR y SJF */
+typedef enum
+{
     FINISHED,       //Finalizo su ráfaga de ejecución correctamente
     PENDING,        //Fue desalojado por el planificador y aún tiene instrucciones por ejecutar
 } exec_error;
@@ -48,9 +55,9 @@ typedef struct
 	char *broker_IP;
 	char *broker_port;
     u_int32_t tiempo_reconexion;
-	op_code colaSuscripcion;
-    
+	op_code colaSuscripcion;   
 } conexionColas;
+
 
 /* Pokemones en el mapa interno del Team*/
 typedef struct
@@ -74,7 +81,7 @@ typedef struct
 
     /* Sobre el Team */
     u_int32_t team_size;
-    t_list *global_objective;
+
     t_list *trainers;
     t_list *ReadyQueue;
     sem_t qr_sem1;
@@ -85,7 +92,7 @@ typedef struct
 } Team;
 
 /*Genera lista con strings de pokemones que conforman el objetivo global*/
-t_list* Team_GET_generate (t_list *global_objective);
+t_list* Team_GET_generate (void);
 
 u_int32_t Trainer_handler_create(Team *this_team);
 
@@ -106,7 +113,10 @@ void subscribe (Config *config) ;
 void listen_new_pokemons (Config *config);
 
 void liberar_listas(Team *this_team);
+
 void imprimir_lista (t_list *get_list);
+
+void enviar_mensajes_get (Config *config, t_list *get_list);
 
 void* listen_routine_colas (void *conexion);
 #endif /* TEAM_H_ */

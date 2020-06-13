@@ -12,9 +12,15 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <semaphore.h>
+#include <commons/log.h>
+#include <commons/collections/list.h>
 
 extern sem_t trainer_count;
 
+extern t_list *global_objective;
+
+t_log *internalLogTeam;
+t_log *logTeam;
 
 typedef struct {
     t_config* team_config;

@@ -19,6 +19,10 @@ extern t_list *mapped_pokemons;
 extern sem_t poklist_sem;
 extern sem_t poklist_sem2;
 
+extern t_log *internalLogTeam;
+extern t_log *logTeam;
+
+
 typedef enum {
     OP_EXECUTING_CATCH=0,        //Ejecutando: desplazándose al pokemon a atrapar
     EXECUTING_DEADLOCK=1     //Ejecutando: desplazándose hacia otro entrenador para solucionar un deadlock
@@ -56,6 +60,9 @@ typedef struct
     /* Objetivo actual a ser capturado*/
     mapPokemons actual_objective;
 
+    /*Identificador del entrenador*/
+    uint32_t index;
+
     u_int32_t catch_result;
     Config *config;
 
@@ -90,7 +97,11 @@ void move_trainer_to_pokemon (Trainer *train);
 
 u_int32_t calculate_distance (u_int32_t Tx, u_int32_t Ty, u_int32_t Px, u_int32_t Py );
 
+void remover_objetivo_global(char *name_pokemon);
 
 int send_catch (Trainer *trainer);
 
+bool comparar_listas (t_list *lista1, t_list *lista2);
+
+t_list* duplicar_lista (t_list *lista);
 #endif /* INCLUDE_TRAINERS_H_ */

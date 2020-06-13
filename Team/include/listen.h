@@ -22,6 +22,9 @@ t_list *cola_caught;
 sem_t qcaught1_sem;
 sem_t qcaught2_sem;
 
+extern t_log *internalLogTeam;
+extern t_log *logTeam;
+
 
 
 void* get_opcode (int *socket);

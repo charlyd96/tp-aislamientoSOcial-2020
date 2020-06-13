@@ -25,8 +25,8 @@ t_config* get_config()
 {
     t_config* ret =  config_create("team.config");
     if (ret == NULL)
-    puts("[ERROR] CONFIG: FILE NOT OPENED");
-    else puts("[DEBUG] Config loaded");
+    log_info (internalLogTeam, "No se pudieron leer las configuraciones");
+    else log_info (internalLogTeam, "Configuraciones leidas correctamente");
     return ret;
 }
 
@@ -51,12 +51,12 @@ void Team_load_trainers_config(Team *this_team)
     this_team->trainers = list_create();
 
     /*  Creo la lista de objetivos globales que va a manejar el Team */
-    this_team->global_objective = list_create();
+   global_objective = list_create();
 
     /*  Creo un puntero a estructura del tipo Trainer para ir creando cada entrenador leído por archivo de configuración.
         Estas estructuras se van apuntando en nodos de una lista definida en la estructura del Team como t_list *trainers     */
     Trainer *entrenadores;
-
+    uint32_t index=0;
 
     /* -------------- Del archivo de configuración hacia lista de entrenadores --------------------- */
 
@@ -71,10 +71,15 @@ void Team_load_trainers_config(Team *this_team)
         free (*(posicion));
         free (*(posicion+1));
 
-        char **mochila = string_split(*(pok_in_bag_to_array + i), "|");
         entrenadores->bag = list_create();
-        for (int j=0; *(mochila + j) != NULL ; j++)
-        list_add(entrenadores->bag, *(mochila+j) );
+        
+        if (i ==0)
+        {//puts ("if");
+        //printf ("%s\n",*(pok_in_bag_to_array + i ));
+           // puts (*(pok_in_bag_to_array + i ));
+              list_add(entrenadores->bag, *(pok_in_bag_to_array ));
+        }
+      
 
 
         char **objetivos = string_split(*(trainers_obj_to_array + i), "|" );
@@ -86,24 +91,25 @@ void Team_load_trainers_config(Team *this_team)
         sem_post (&trainer_count);
 
         entrenadores->config = this_team->config;
-
+        entrenadores->index= index;
+        index++;
         /*  Añado el entrenador creado, ya cada uno con su lista bag y lista de objetivos, a la lista de entrenadores */
         list_add(this_team->trainers, entrenadores);
 
         /*  Añado los objetivos de cada entrenador a la lista de objetivos globales */
-        list_add_all (this_team->global_objective, entrenadores->personal_objective);
-
+        list_add_all (global_objective, duplicar_lista(entrenadores->personal_objective));
+        
         /*  Libero memoria innecesaria generada por la función string_split de las commons  */
         free (posicion);
-        free (mochila);
+        //free (mochila);
         free (objetivos);
     }
 
     /*  Libero memoria innecesaria generada por la función string_split de las commons  */
-    free_split (pos_trainers_to_array);
+   /* free_split (pos_trainers_to_array);
     free_split (pok_in_bag_to_array);
     free_split (trainers_obj_to_array);
-
+*/
     /* Sólo para testear la correcta elctura desde el archivo de configuraci{on hacia las listas */
     if (PRINT_TEST == 1) //Ver DEFINE en archivo team.h
     list_iterate(this_team->trainers, _imprimir_lista);
@@ -156,7 +162,7 @@ void Team_load_global_config(Config *config)
 void liberar_listas (Team *this_team)
 {
     list_destroy_and_destroy_elements (this_team->trainers, _free_sub_list);
-    list_destroy (this_team->global_objective);
+    list_destroy (global_objective);
     free (this_team);
 }
 

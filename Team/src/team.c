@@ -8,8 +8,10 @@
 #include "../include/team.h"
 
 #include <string.h>
-#include <readline/readline.h>
-#include <readline/history.h>
+#include <conexion.h>
+
+#include <protocolo.h>
+#include <serializacion.h>
 
 #include <trainers.h>
 
@@ -52,7 +54,7 @@ Team * Team_Init(void)
 //              *****Toma la lista de objetivos globales y elimina los pokemones repetidos*****
 // ============================================================================================================
 
-t_list*  Team_GET_generate (t_list *global_objective)
+t_list*  Team_GET_generate ()
 {
     t_list* list_get = list_create();
 
@@ -71,6 +73,22 @@ t_list*  Team_GET_generate (t_list *global_objective)
 
     list_iterate (global_objective, get_pokemons);
     return (list_get);
+}
+
+void enviar_mensajes_get (Config *config, t_list* GET_list)
+{
+	
+    void get_send (void *element)
+    {
+        t_get_pokemon mensaje_get;
+        mensaje_get.nombre_pokemon=(char *)element;
+        mensaje_get.id_mensaje=0;
+        int socket = crearSocketCliente (config->broker_IP,config->broker_port); 
+        enviarGetPokemon (socket, mensaje_get);
+    }
+
+	list_iterate(GET_list,get_send );
+    list_destroy_and_destroy_elements (GET_list, free);
 }
 
 
@@ -154,7 +172,7 @@ void listen_new_pokemons (Config *config)
 
 void subscribe (Config *configuracion)
 {
-
+/* --------Ver de sacar estos mallocs y mandar la estructura como parámetro-----------------*/
 	conexionColas *conexionAppeared = malloc (sizeof (conexionColas));
 	conexionAppeared->broker_IP=configuracion->broker_IP;
 	conexionAppeared->broker_port=configuracion->broker_port;
