@@ -216,7 +216,7 @@ int cachearCaughtPokemon(t_caught_pokemon* msg);
 int cachearGetPokemon(t_get_pokemon* msg);
 int cachearLocalizedPokemon(t_localized_pokemon* msg);
 
-t_new_pokemon* descachearNewPokemon(void* stream);
+t_new_pokemon* descachearNewPokemon(void* stream, uint32_t id);
 t_appeared_pokemon* descachearAppearedPokemon(void* stream);
 t_catch_pokemon* descachearCatchPokemon(void* stream);
 t_caught_pokemon* descachearCaughtPokemon(void* stream);
@@ -225,5 +225,11 @@ t_localized_pokemon* descachearLocalizedPokemon(void* stream);
 
 /// COMUNICACIÓN
 int devolverID(int socket,uint32_t*id);
+void enviarNewPokemonCacheados(int socket, op_code tipo_mensaje);
+void enviarAppearedPokemonCacheados(int socket, op_code tipo_mensaje);
+void enviarCatchPokemonCacheados(int socket, op_code tipo_mensaje);
+void enviarCaughtPokemonCacheados(int socket, op_code tipo_mensaje);
+void enviarGetPokemonCacheados(int socket, op_code tipo_mensaje);
+void enviarLocalizedPokemonCacheados(int socket, op_code tipo_mensaje);
 
 #endif /* BROKER_H_ */
