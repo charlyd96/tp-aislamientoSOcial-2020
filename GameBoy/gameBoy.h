@@ -23,6 +23,8 @@
 #define COUNT_ARGS_GAMECARD_CATCH_POKEMON     7
 #define COUNT_ARGS_GAMECARD_GET_POKEMON       4
 
+#define COUNT_ARGS_SUSCRIBE      4
+
 typedef enum{
     PARSE_SUCCESS,
     ERROR_BAD_ARGUMENTS_QUANTITY,
@@ -31,5 +33,7 @@ typedef enum{
 	ERROR_CONFIG_FILE,
 	ERROR_SEND
 }t_error_codes;
+
+char* getNombreCola(op_code cola);
 
 #endif /* GAMEBOY_H_ */

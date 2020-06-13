@@ -52,6 +52,11 @@ int crearSocketServidor(char* ip, char* puerto){
 	for (p=servinfo; p != NULL; p = p->ai_next){
 		if ((socket_servidor = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1)
 			continue;
+			
+			/*Hackeada rara para que los puertos no se "rompan" al cerrar mal los sockets*/
+		int activado=1;
+		setsockopt (socket_servidor, SOL_SOCKET, SO_REUSEADDR, &activado, sizeof (activado));
+
 
 		if((intentar_bindeo = bind(socket_servidor, p->ai_addr, p->ai_addrlen)) == -1){
 			close(socket_servidor);
@@ -81,13 +86,13 @@ int crearSocketServidor(char* ip, char* puerto){
 
 int aceptarCliente(int socket_servidor){
 	struct sockaddr_in cliente;
-	int size_cliente = sizeof(struct sockaddr_in);
+	uint32_t size_cliente = sizeof(struct sockaddr_in);
 
 	int socket_cliente = accept(socket_servidor, (void*) &cliente, &size_cliente);
 
 	if(socket_cliente != -1){
 		t_log* logger = log_create("conexion.log", "CONEXION", 0, LOG_LEVEL_INFO);
-		log_info(logger, "Se acepta la conexión de un cliente");
+		log_info(logger, "Se acepta la conexión de un Cliente.");
 		log_destroy(logger);
 	}
 
@@ -117,12 +122,6 @@ int enviarMensaje(int nroSocket,op_code operacion,t_buffer* buffer){
 	void* mensajeSerializado = serializarPaquete(paquete, &tamanio_a_enviar);
 	int enviado = send(nroSocket, mensajeSerializado, tamanio_a_enviar, 0);
 
-	if(enviado == -1){
-		printf("No se envió el mensaje serializado\n");
-	}else{
-		printf("Se conectó y se enviaron %d bytes\n",enviado);
-	}
-
 	free(mensajeSerializado);
 	eliminarPaquete(paquete);
 	return enviado;
@@ -133,6 +132,28 @@ int enviarNewPokemon(int socket_cliente, t_new_pokemon mensaje){
 
 	return enviarMensaje(socket_cliente,NEW_POKEMON,buffer);
 }
+int enviarSuscripcion(int nro_socket,t_suscribe suscripcion){
+
+	uint32_t bytes_enviar = sizeof(op_code) + sizeof(op_code);
+	if(suscripcion.tipo_suscripcion == SUSCRIBE_GAMEBOY) bytes_enviar += sizeof(uint32_t);
+	uint32_t offset = 0;
+	void* stream = malloc(bytes_enviar);
+
+	memcpy(stream + offset, &(suscripcion.tipo_suscripcion), sizeof(op_code));
+	offset += sizeof(op_code);
+	memcpy(stream + offset, &(suscripcion.cola_suscribir), sizeof(op_code));
+	offset += sizeof(op_code);
+	if(suscripcion.tipo_suscripcion == SUSCRIBE_GAMEBOY){
+		memcpy(stream + offset, &(suscripcion.timeout), sizeof(uint32_t));
+		offset += sizeof(uint32_t);
+	}
+
+	int enviado = send(nro_socket, stream, bytes_enviar, 0);
+
+	free(stream);
+	return enviado;
+}
+
 /*
  * el campo id_mensaje_correlativo debe iniciarse en 0 en caso de no querer serializarlo
  *
@@ -277,7 +298,7 @@ t_localized_pokemon* recibirLocalizedPokemon(int socket_cliente){
 
 	strcat(posicionesString,"[");
 	//Por cada cant_pos, recibir un par de enteros (armo el formato "[1|2,2|2]")
-	for(int i = 1; i<=cant_pos; i++){
+	for(uint32_t i = 1; i<=cant_pos; i++){
 		recv(socket_cliente, &pos_x, sizeof(uint32_t), MSG_WAITALL);
 		bytes_recibidos += sizeof(uint32_t);
 
@@ -358,4 +379,20 @@ t_caught_pokemon* recibirCaughtPokemon(int socket_cliente){
 	caught_pokemon->id_mensaje_correlativo = id_mensaje_correlativo;
 
 	return caught_pokemon;
+}
+t_suscribe* recibirSuscripcion(op_code tipo_suscripcion,int socket_cliente){
+	op_code cola_suscribir;
+	uint32_t timeout = 0;
+
+	recv(socket_cliente, &cola_suscribir, sizeof(op_code), MSG_WAITALL);
+	if(tipo_suscripcion == SUSCRIBE_GAMEBOY){
+		recv(socket_cliente, &timeout, sizeof(uint32_t), MSG_WAITALL);
+	}
+
+	t_suscribe* suscripcion = malloc(sizeof(t_suscribe));
+	suscripcion->tipo_suscripcion = tipo_suscripcion;
+	suscripcion->cola_suscribir = cola_suscribir;
+	suscripcion->timeout = timeout;
+
+	return suscripcion;
 }
