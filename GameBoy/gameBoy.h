@@ -34,4 +34,6 @@ typedef enum{
 	ERROR_SEND
 }t_error_codes;
 
+char* getNombreCola(op_code cola);
+
 #endif /* GAMEBOY_H_ */
