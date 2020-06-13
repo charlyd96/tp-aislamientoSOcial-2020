@@ -52,6 +52,11 @@ int crearSocketServidor(char* ip, char* puerto){
 	for (p=servinfo; p != NULL; p = p->ai_next){
 		if ((socket_servidor = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1)
 			continue;
+			
+			/*Hackeada rara para que los puertos no se "rompan" al cerrar mal los sockets*/
+		int activado=1;
+		setsockopt (socket_servidor, SOL_SOCKET, SO_REUSEADDR, &activado, sizeof (activado));
+
 
 		if((intentar_bindeo = bind(socket_servidor, p->ai_addr, p->ai_addrlen)) == -1){
 			close(socket_servidor);
@@ -81,7 +86,7 @@ int crearSocketServidor(char* ip, char* puerto){
 
 int aceptarCliente(int socket_servidor){
 	struct sockaddr_in cliente;
-	int size_cliente = sizeof(struct sockaddr_in);
+	uint32_t size_cliente = sizeof(struct sockaddr_in);
 
 	int socket_cliente = accept(socket_servidor, (void*) &cliente, &size_cliente);
 
@@ -293,7 +298,7 @@ t_localized_pokemon* recibirLocalizedPokemon(int socket_cliente){
 
 	strcat(posicionesString,"[");
 	//Por cada cant_pos, recibir un par de enteros (armo el formato "[1|2,2|2]")
-	for(int i = 1; i<=cant_pos; i++){
+	for(uint32_t i = 1; i<=cant_pos; i++){
 		recv(socket_cliente, &pos_x, sizeof(uint32_t), MSG_WAITALL);
 		bytes_recibidos += sizeof(uint32_t);
 

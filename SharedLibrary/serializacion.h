@@ -24,6 +24,7 @@ t_buffer* serializarAppearedPokemon(t_appeared_pokemon pokemon);
 t_buffer* serializarCatchPokemon(t_catch_pokemon pokemon);
 t_buffer* serializarCaughtPokemon(t_caught_pokemon pokemon);
 t_buffer* serializarGetPokemon(t_get_pokemon pokemon);
+t_buffer* serializarLocalizedPokemon(t_localized_pokemon pokemon);
 void eliminarPaquete(t_paquete* paquete);
 
 #endif /* SERIALIZACION_H_ */
