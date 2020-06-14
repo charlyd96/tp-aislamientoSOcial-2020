@@ -10,7 +10,7 @@
 
 #include "team.h"
 
-extern t_list *BlockedQueue;
+
 extern sem_t qb_sem1;
 extern sem_t qb_sem2;
 sem_t trainer_count;
@@ -19,13 +19,17 @@ extern t_list *mapped_pokemons;
 extern sem_t poklist_sem;
 extern sem_t poklist_sem2;
 
+t_list *deadlock_list;
+sem_t deadlock_sem1;
+sem_t deadlock_sem2;
+
 extern t_log *internalLogTeam;
 extern t_log *logTeam;
 
 
 typedef enum {
     OP_EXECUTING_CATCH=0,        //Ejecutando: desplazándose al pokemon a atrapar
-    EXECUTING_DEADLOCK=1     //Ejecutando: desplazándose hacia otro entrenador para solucionar un deadlock
+    OP_EXECUTING_DEADLOCK=1     //Ejecutando: desplazándose hacia otro entrenador para solucionar un deadlock
 } Operation;
 
 /* Diagrama de estado de los entrenadores */
@@ -60,13 +64,21 @@ typedef struct
     /* Objetivo actual a ser capturado*/
     mapPokemons actual_objective;
 
+
+
     /*Identificador del entrenador*/
-    uint32_t index;
+    int index;
 
     u_int32_t catch_result;
     Config *config;
 
 } Trainer;
+
+
+typedef struct
+{
+    Trainer *trainer;
+} deadlock;
 
 
 /* Error list for debugging */
@@ -93,7 +105,7 @@ void * Trainer_to_plan_ready (void *this_team);
 
 void send_trainer_to_ready (Team *this_team, u_int32_t index);
 
-void move_trainer_to_pokemon (Trainer *train);
+void move_trainer_to_objective (Trainer *train, Operation operacion);
 
 u_int32_t calculate_distance (u_int32_t Tx, u_int32_t Ty, u_int32_t Px, u_int32_t Py );
 
@@ -101,7 +113,15 @@ void remover_objetivo_global(char *name_pokemon);
 
 int send_catch (Trainer *trainer);
 
-bool comparar_listas (t_list *lista1, t_list *lista2);
+bool comparar_listas (t_list *lista1, t_list *lista2); //Algoritmo de detección de deadlock
 
 t_list* duplicar_lista (t_list *lista);
+
+void split_objetivos_capturados (Trainer *trainer, t_list *lista_sobrantes, t_list *lista_faltantes);
+
+void trainer_to_deadlock(Trainer *trainer);
+
+
+void deadlock_recovery (void) //Algoritmo de recuperación de dadlock 
+
 #endif /* INCLUDE_TRAINERS_H_ */

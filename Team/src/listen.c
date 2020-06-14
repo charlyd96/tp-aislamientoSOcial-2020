@@ -88,10 +88,11 @@ void * send_catch_routine (void * train)
 	t_catch_pokemon message;
 
 
-	/*int socket = crearSocketCliente (IP,puerto);
+	int socket = crearSocketCliente (IP,puerto);
+	printf ("Socket: %d\n", socket);
 	log_info (logTeam,"Se enviará un mensaje CATCH %s %d %d", trainer->actual_objective.name, 
 	trainer->actual_objective.posx, trainer->actual_objective.posy);
-	puts ("holaaa");
+	
 	
 
 	if (socket != -1)
@@ -103,7 +104,7 @@ void * send_catch_routine (void * train)
 		message.id_mensaje=0;
 
 		enviarCatchPokemon (socket, message);
-		
+	
 
 		recv (socket,&(message.id_mensaje),sizeof(uint32_t),MSG_WAITALL); //Recibir ID
 		close (socket);
@@ -115,7 +116,7 @@ void * send_catch_routine (void * train)
 															
 		return (retorno);
 
-	} else*/
+	} else
 		 
 			log_info (logTeam,"Fallo en la conexion al Broker. Se efectuará acción por defecto");
 			int *retorno=malloc (sizeof (int));

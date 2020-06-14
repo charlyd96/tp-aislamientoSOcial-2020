@@ -23,7 +23,7 @@
 
 
 /* Recursos compartidos */
-t_list *BlockedQueue;
+
 sem_t qb_sem1;
 sem_t qb_sem2;
 sem_t using_cpu;
@@ -31,6 +31,10 @@ extern sem_t trainer_count;
 extern t_list *cola_caught;
 extern sem_t qcaught1_sem;
 extern sem_t qcaught2_sem;
+
+extern t_list *deadlock_list;
+extern sem_t deadlock_sem1;
+extern sem_t deadlock_sem2;
 
 t_list *global_objective;
 

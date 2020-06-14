@@ -35,9 +35,13 @@ Team * Team_Init(void)
     this_team->ReadyQueue= list_create  ();                 //*********Mejorar la ubicación de esta instrucción***************//
     mapped_pokemons = list_create();             //*********Mejorar la ubicación de esta instrucción***************//
     cola_caught = list_create();
-    BlockedQueue = list_create();
+    
+    /*Lista de entrenadores en deadlock*/
+    deadlock_list = list_create();
     sem_init (&qb_sem1, 0, 0);
     sem_init (&qb_sem2, 0, 1);
+    sem_init (&deadlock_sem1, 0, 0);
+    sem_init (&deadlock_sem2, 0, 1);
 
     sem_init (&poklist_sem, 0, 0);           //*********Mejorar la ubicación de esta instrucción***************//
     sem_init (&poklist_sem2, 0, 1);          //*********Mejorar la ubicación de esta instrucción***************//
@@ -88,7 +92,7 @@ void enviar_mensajes_get (Config *config, t_list* GET_list)
     }
 
 	list_iterate(GET_list,get_send );
-    list_destroy_and_destroy_elements (GET_list, free);
+   // list_destroy_and_destroy_elements (GET_list, free); //OJO. Me destruye los elementos de la lista. Pierdo global_objective
 }
 
 
