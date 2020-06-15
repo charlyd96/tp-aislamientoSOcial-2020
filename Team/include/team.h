@@ -45,6 +45,11 @@ t_list *mapped_pokemons;
 extern t_log *internalLogTeam;
 extern t_log *logTeam;
 
+
+t_list *ReadyQueue;
+sem_t qr_sem1;
+sem_t qr_sem2;
+
 /* Errores para identificar estado en la ejecución de los hilos - para RR y SJF */
 typedef enum
 {
@@ -87,9 +92,7 @@ typedef struct
     u_int32_t team_size;
 
     t_list *trainers;
-    t_list *ReadyQueue;
-    sem_t qr_sem1;
-    sem_t qr_sem2;
+
 
     pthread_t trhandler_id;
 

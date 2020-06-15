@@ -26,6 +26,10 @@ sem_t deadlock_sem2;
 extern t_log *internalLogTeam;
 extern t_log *logTeam;
 
+extern t_list *ReadyQueue;
+extern sem_t qr_sem1;
+extern sem_t qr_sem2;
+
 
 typedef enum {
     OP_EXECUTING_CATCH=0,        //Ejecutando: desplazándose al pokemon a atrapar
@@ -92,7 +96,9 @@ typedef enum{
     TRAINER_DELETED,
     TRAINER_DELETION_FAILED,
     TRAINER_OBJECTIVES,
-    TRAINER_NO_OBJECTIVES
+    TRAINER_NO_OBJECTIVES,
+    RECOVERY_DEADLOCK_ERROR,
+    RECURSIVE_RECOVERY_SUCESS
 } trainer_error;
 
 typedef struct
@@ -107,7 +113,7 @@ void * trainer_routine (void *trainer);
 
 void * Trainer_to_plan_ready (void *this_team);
 
-void send_trainer_to_ready (Team *this_team, u_int32_t index);
+void send_trainer_to_ready (t_list *lista, int index, Operation op);
 
 void move_trainer_to_objective (Trainer *train, Operation operacion);
 
@@ -125,7 +131,6 @@ void split_objetivos_capturados (Trainer *trainer, t_list *lista_sobrantes, t_li
 
 void trainer_to_deadlock(Trainer *trainer);
 
-
-void deadlock_recovery (void); //Algoritmo de recuperación de dadlock 
+int deadlock_recovery (void); //Algoritmo de recuperación de dadlock 
 
 #endif /* INCLUDE_TRAINERS_H_ */

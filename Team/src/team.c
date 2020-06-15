@@ -32,7 +32,7 @@ Team * Team_Init(void)
 
 
 
-    this_team->ReadyQueue= list_create  ();                 //*********Mejorar la ubicación de esta instrucción***************//
+    ReadyQueue= list_create  ();                 //*********Mejorar la ubicación de esta instrucción***************//
     mapped_pokemons = list_create();             //*********Mejorar la ubicación de esta instrucción***************//
     cola_caught = list_create();
     
@@ -45,8 +45,8 @@ Team * Team_Init(void)
 
     sem_init (&poklist_sem, 0, 0);           //*********Mejorar la ubicación de esta instrucción***************//
     sem_init (&poklist_sem2, 0, 1);          //*********Mejorar la ubicación de esta instrucción***************//
-    sem_init (&((this_team)->qr_sem1), 0, 0);               //*********Mejorar la ubicación de esta instrucción***************//
-    sem_init (&((this_team)->qr_sem2), 0, 1);
+    sem_init (&qr_sem1, 0, 0);               //*********Mejorar la ubicación de esta instrucción***************//
+    sem_init (&qr_sem2, 0, 1);
     sem_init (&qcaught1_sem,0,0);
     sem_init (&qcaught1_sem,0,1);
 
@@ -117,12 +117,12 @@ exec_error fifo_exec (Team* this_team)
 {
        Team *team= this_team;
        sem_wait (&using_cpu);
-       sem_wait ( &(this_team->qr_sem1) );
-       sem_wait ( &(this_team->qr_sem2) );
+       sem_wait ( &qr_sem1 );
+       sem_wait ( &qr_sem2 );
 
-       Trainer* trainer= list_remove (team->ReadyQueue, 0);
+       Trainer* trainer= list_remove (ReadyQueue, 0);
        trainer->actual_status= EXEC;
-       sem_post ( &(this_team->qr_sem2) );
+       sem_post ( &qr_sem2 );
        sem_post ( &(trainer->trainer_sem) );
 
 
