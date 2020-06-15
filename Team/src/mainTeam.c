@@ -22,7 +22,7 @@ int main(void)
     
     //enviar_mensajes_get(squad->config, GET_list); //Envía los mensajes GET al Broker y libera la lista
 
-    listen_new_pokemons (squad->config); //Crea hilo para socke de escucha del GameBoy
+    listen_new_pokemons (squad->config); //Crea hilo para socket de escucha del GameBoy
     //imprimir_lista (GET_list); //Imprime objetivos globales
     
 

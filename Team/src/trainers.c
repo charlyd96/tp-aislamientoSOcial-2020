@@ -151,8 +151,7 @@ void* trainer_routine (void *train)
                     remover_objetivo_global(trainer->actual_objective.name); //Elimino el objetivo glboal
                     list_add(trainer->bag,trainer->actual_objective.name); //Agrego al inventario del entrenador
 
-                    if ( list_size (trainer->bag) >= list_size (trainer->personal_objective)  && //Verifico deadlock. Sacar ese mayor igual
-                        !comparar_listas(trainer->bag,trainer->personal_objective))
+                    if (detectar_deadlock (trainer))     
                     {
                         log_error (logTeam, "Ha ocurrido un DEADLOCK en el entrenador %d", trainer->index);
                         trainer->actual_status = BLOCKED_DEADLOCK; 
@@ -182,8 +181,16 @@ void* trainer_routine (void *train)
 				case OP_EXECUTING_DEADLOCK:
                 {
                     move_trainer_to_objective (trainer, OP_EXECUTING_DEADLOCK);
-                    puts ("solucionando deadlock");
-                    sleep (10);
+                    intercambiar(trainer, list_get(deadlock_list, trainer->objetivo.index_objective));
+                    if (detectar_deadlock(trainer))
+                    {
+                    trainer_to_deadlock (trainer);
+                    trainer->actual_status = BLOCKED_DEADLOCK; 
+                    }
+                    else 
+                    {
+                    trainer->actual_status = EXIT;   
+                    }
                     break;
                 }
 				
@@ -481,11 +488,55 @@ int deadlock_recovery (void)
 }
 
 
+int intercambiar(Trainer *trainer1, Trainer *trainer2)
+{
+
+     void imprimir (void *element)
+    {
+        puts ((char*)element);
+    }
+    puts ("Antes del intercambio");
+    puts ("Bag entrenador 1:");
+    list_iterate (trainer1->bag,imprimir);
+    puts ("");
+    puts ("Bag entrenador 2:");
+    list_iterate (trainer2->bag,imprimir);
+    char *recibir=trainer1->objetivo.recibir;
+    char *entregar=trainer1->objetivo.entregar;
+
+    bool comparar_strcmp_recibir (void *element)
+    {
+        if (!strcmp( (char *)element, recibir) )
+        return true; else return false;
+    }
+
+    bool comparar_strcmp_entregar (void *element)
+    {
+        if (!strcmp( (char *)element, entregar) )
+        return true; else return false;
+    }
+    char *aux_recibir=list_remove_by_condition(trainer2->bag,comparar_strcmp_recibir);
+    char *aux_entregar=list_remove_by_condition(trainer1->bag,comparar_strcmp_entregar);
+   
+    list_add(trainer1->bag,aux_recibir);
+    list_add(trainer2->bag,aux_entregar);
+
+    puts ("Después del intercambio");
+    puts ("Bag entrenador 1:");
+    list_iterate (trainer1->bag,imprimir);
+    puts ("");
+    puts ("Bag entrenador 2:");
+    list_iterate (trainer2->bag,imprimir);
+}
 
 
-
-
-
+bool detectar_deadlock (Trainer *trainer)
+{
+ if (list_size (trainer->bag) >= list_size (trainer->personal_objective)  && !comparar_listas(trainer->bag,trainer->personal_objective))
+ return true; 
+ else return false;
+//Verifico deadlock. Sacar ese mayor igual
+}
 
 
 
@@ -563,3 +614,5 @@ u_int32_t calculate_distance (u_int32_t Tx, u_int32_t Ty, u_int32_t Px, u_int32_
 {
     return (abs (Tx - Px) + abs (Ty - Py));
 }
+
+

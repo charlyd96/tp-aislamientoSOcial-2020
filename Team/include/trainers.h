@@ -133,4 +133,8 @@ void trainer_to_deadlock(Trainer *trainer);
 
 int deadlock_recovery (void); //Algoritmo de recuperación de dadlock 
 
+int intercambiar(Trainer *trainer1, Trainer *trainer2);
+
+bool detectar_deadlock (Trainer* trainer);
+
 #endif /* INCLUDE_TRAINERS_H_ */
