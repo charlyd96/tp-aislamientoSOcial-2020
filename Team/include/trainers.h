@@ -43,6 +43,17 @@ typedef enum{
     EXIT                    //Objetivos personales cumplidos
 } Status;
 
+
+typedef struct
+{
+    char *recibir;
+    char *entregar;
+    int index_objective;
+    uint32_t posx;
+    uint32_t posy;
+} Deadlock;
+
+
 typedef struct
 {
     /*  Inventario del entrenador - Son los pokemones que ya trae por archivo de configuración */
@@ -64,7 +75,7 @@ typedef struct
     /* Objetivo actual a ser capturado*/
     mapPokemons actual_objective;
 
-
+    Deadlock objetivo;
 
     /*Identificador del entrenador*/
     int index;
@@ -73,13 +84,6 @@ typedef struct
     Config *config;
 
 } Trainer;
-
-
-typedef struct
-{
-    Trainer *trainer;
-} deadlock;
-
 
 /* Error list for debugging */
 typedef enum{
@@ -122,6 +126,6 @@ void split_objetivos_capturados (Trainer *trainer, t_list *lista_sobrantes, t_li
 void trainer_to_deadlock(Trainer *trainer);
 
 
-void deadlock_recovery (void) //Algoritmo de recuperación de dadlock 
+void deadlock_recovery (void); //Algoritmo de recuperación de dadlock 
 
 #endif /* INCLUDE_TRAINERS_H_ */

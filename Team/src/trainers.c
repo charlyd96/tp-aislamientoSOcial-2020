@@ -44,16 +44,16 @@ void* Trainer_to_plan_ready (void *this_team)
         }
     }
 
-    while (list_is_empty (global_objective) == 0)
-    {
+    while (list_size (global_objective) >1 )
+    {   
+        
         sem_wait(&poklist_sem); //Para evitar espera activa si no hay pokemones en el mapa
         sem_wait(&poklist_sem2); //Para evitar espera activa si no hay pokemones en el mapa
-        actual_pokemon =  list_remove (mapped_pokemons, 0)  ;
+        actual_pokemon =  list_remove (mapped_pokemons, 0);
         sem_post(&poklist_sem2);
-        sem_wait (&trainer_count); // Este semáforo bloquea el proceso de planificación si no hay entrenadores para mandar a ready
-        						   // Se le deberá hacer el post una vez que el entrenador reciba el caught y pueda volver a ser
-                                   // planificado
+
         list_iterate (team->trainers,calculate_distance);
+        printf ("target= %d\n",target);
         if (target ==1) //Si se pudo encontrar un entrenador libre y más cercano que vaya a cazar al pokemon, avanzo y lo mando
         {
 			( (Trainer*) list_get (team->trainers, index))->actual_objective.posx = actual_pokemon->posx;
@@ -69,8 +69,14 @@ void* Trainer_to_plan_ready (void *this_team)
 			distance_min= 100000  ; //Arreglar esta hardcodeada trucha
 			target=-1;
         }
-    } //else: se cumplio el objetivo global -> verificar deadlocks
+        
+        sem_wait (&trainer_count); // Este semáforo bloquea el proceso de planificación si no hay entrenadores para mandar a ready
+        						     // Se le deberá hacer el post una vez que el entrenador reciba el caught y pueda volver a ser
+                                     // planificado
+        if (list_size (global_objective) <1) break;
 
+    } //else: se cumplio el objetivo global -> verificar deadlocks
+    deadlock_recovery();
     //***********LIBERAR MEMORIA Y TERMINAR EL HILO **************//
 }
 
@@ -122,6 +128,8 @@ void* trainer_routine (void *train)
 				int result= send_catch (trainer);
 				if (result == 1 )
 				{
+                    log_info (internalLogTeam, "El entrenador %d cazó a %s en (%d,%d)"  
+                             , trainer->index ,trainer->actual_objective.name,trainer->actual_objective.posx, trainer->actual_objective.posy);
 
                     remover_objetivo_global(trainer->actual_objective.name); //Elimino el objetivo glboal
                     list_add(trainer->bag,trainer->actual_objective.name); //Agrego al inventario del entrenador
@@ -140,8 +148,6 @@ void* trainer_routine (void *train)
                          } 
                           else if (list_size (trainer->bag) < list_size (trainer->personal_objective))
                               {
-                                log_info (internalLogTeam, "El entrenador %d cazó a %s en (%d,%d). Se bloquerá a la espera de un nuevo pokemon"  
-                                , trainer->index ,trainer->actual_objective.name,trainer->actual_objective.posx, trainer->actual_objective.posy);
                                 trainer->actual_status = BLOCKED_NOTHING_TO_DO;
                                 sem_post (&trainer_count); //Incremento contador de entrenadores disponibles para atrapar
                                 sem_wait(&trainer->trainer_sem);
@@ -184,7 +190,7 @@ void trainer_to_deadlock(Trainer *trainer)
     sem_post (&deadlock_sem2);
     sem_post (&deadlock_sem1);
     log_info (internalLogTeam, "Se agregó al entrenador %d a la cola de bloqueados por Deadlock", trainer->index);
-
+    sem_post (&trainer_count); //Revisar esto
     sem_wait (&trainer->trainer_sem); //Bloqueo al entrenador hasta ejecutar el algoritmo de recuperación de deadlock
 }
 
@@ -312,21 +318,21 @@ void split_objetivos_capturados (Trainer *trainer, t_list *lista_pok_sobrantes, 
     list_iterate(lista_capturados, buscar_objetivos_faltantes);
     list_iterate(lista_objetivos, buscar_capturados_sobrantes );
 
-
+/*
     puts ("Objetivos:");
     list_iterate(lista_objetivos,imprimir2);
+    puts ("");
     puts ("Capturados:");
     list_iterate(lista_capturados,imprimir2);
-
+    puts ("");
     puts ("Los que le faltan:");
     list_iterate(lista_objetivos_duplicados ,imprimir2);
     puts ("");
-
     puts ("Los que le sobran:");
     list_iterate(lista_capturados_duplicados,imprimir2);
-
-    list_add_all (lista_pok_sobrantes, lista_objetivos_duplicados);
-    list_add_all (lista_pok_faltantes, lista_capturados_duplicados );
+    puts ("");*/
+    list_add_all (lista_pok_faltantes, lista_objetivos_duplicados);
+    list_add_all (lista_pok_sobrantes, lista_capturados_duplicados );
 
 }
 
@@ -337,31 +343,111 @@ void deadlock_recovery (void)
     //Correr algoritmo de detección (menos la primera vez)
    // for (int i=0; i<deadlock_list->elements_count; i++)
     //{
-   
+    static int index=0; //Variable estática que mantiene su valor cada vez que se llama a la función
+    index++;
     Trainer *trainer1 = list_get (deadlock_list, 0);
-    Trainer *trainer2 = list_get (deadlock_list, 1);
+    Trainer *trainer2 = list_get (deadlock_list, index);
 
     t_list *trainer1_sobrantes=list_create ();
     t_list *trainer1_faltantes=list_create (); 
 
     t_list *trainer2_sobrantes=list_create ();
-    t_list *traienr2_faltantes=list_create ();
+    t_list *trainer2_faltantes=list_create ();
 
     split_objetivos_capturados(trainer1, trainer1_sobrantes, trainer1_faltantes);
     split_objetivos_capturados(trainer2, trainer2_sobrantes, trainer2_faltantes);
 
+    char *entregar_trainer1; //recibir_trainer2
+    char *recibir_trainer1; //entregar_trainer2
+    int flag_encontrado=0;
+
+    for (int j=0; j<trainer2_faltantes->elements_count; j++)
+    {
+        bool comparar_strcmp (void *element_trainer1_sobrantes)
+            {
+                if (!strcmp( (char *)element_trainer1_sobrantes , list_get(trainer2_faltantes, j) ) )
+                {
+                    flag_encontrado=1;
+                    return true;
+                }
+                else return false;
+            }       
+        //Busco el pokemon que le sobra a trainer1, para entregarlo a trainer2
+        entregar_trainer1=list_find (trainer1_sobrantes, comparar_strcmp);
+        if (flag_encontrado == 1) break;
+    }
+
+    flag_encontrado=0;
+
+    for (int k=0; k<trainer1_faltantes->elements_count; k++)
+    {
+        bool comparar_strcmp (void *element_trainer2_sobrantes)
+            {
+                if (!strcmp( (char *)element_trainer2_sobrantes , list_get(trainer1_faltantes, k) ) )
+                {
+                    flag_encontrado=1;
+                    return true;
+                }
+                else return false;
+            }       
+        
+        recibir_trainer1=list_find (trainer2_sobrantes, comparar_strcmp);
+        if (flag_encontrado == 1) break;
+    }  
+    
+    // Si ambos son NULL, no puedo hacer intercambio. Correr algoritmo con otro entrenador 
+    if (entregar_trainer1 == NULL && recibir_trainer1== NULL)
+    {
+    //Ejectur el algoritmo de recuperación nuevamente con otro entrenador
+        puts ("primer if");
+
+        deadlock_recovery();
+    } else 
+
+        //Si trainer1 le puede dar un pokemon a trainer2, pero trainer2 no tiene ninguno que le sirva a trainer1, le saco el primero
+        // que no le sirva a trainer2 y se lo paso a trainer1
+        if (entregar_trainer1 != NULL && recibir_trainer1 == NULL)
+        {
+        puts ("segundo if");
+        recibir_trainer1 = list_get(trainer2_sobrantes, 0);
+        } else
+        
+            //Si trainer2 le puede dar un pokemon a trainer1, pero trainer1 no tiene ninguno que le sirva a trainer2, le saco el primero
+            // que no le sirva a trainer1 y se lo paso a trainer2
+            if (entregar_trainer1 == NULL && recibir_trainer1 != NULL)
+            {
+            puts ("tercer if");
+            entregar_trainer1 = list_get(trainer1_sobrantes, 0);
+            } //Si no se cumple ninguna, se realiza efectivo para ambos entrenadores
+
+    trainer1->objetivo.recibir=recibir_trainer1;
+    trainer1->objetivo.entregar=entregar_trainer1;
+    trainer1->objetivo.posx=trainer2->posx;
+    trainer1->objetivo.posy=trainer2->posy;
+    trainer1->objetivo.index_objective=index;
+
+    move_trainer_to_objective(trainer1, OP_EXECUTING_DEADLOCK);
+
+    //realizar_intercambio()
+
+    
+    
+    
+    printf ("Trainer %d entregará %s\n", trainer1->index, entregar_trainer1);
+    printf ("Trainer %d recibirá %s\n",  trainer1->index, recibir_trainer1);
+    puts ("");
     //}
     void imprimir3 (void *element)
     {
-        puts (elemento);
+        puts (element);
     }
-    puts ("Sobrantes entrenador 1: ");
+    printf ("Sobrantes entrenador %d:\n",trainer1->index);
     list_iterate(trainer1_sobrantes, imprimir3);
-    puts ("Faltantes entrenador 1: ");
+    printf ("Faltantes entrenador %d:\n",trainer1->index);
     list_iterate(trainer1_faltantes, imprimir3);
-    puts ("Sobrantes entrenador 2: ");
+    printf ("Sobrantes entrenador %d:\n",trainer2->index);
     list_iterate(trainer2_sobrantes, imprimir3);
-    puts ("Faltantes entrenador 1: ");
+    printf ("Faltantes entrenador %d:\n",trainer2->index);
     list_iterate(trainer2_faltantes, imprimir3);
 
 
