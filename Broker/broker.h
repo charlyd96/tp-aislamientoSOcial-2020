@@ -16,7 +16,7 @@
 #include <commons/log.h>
 #include <pthread.h>
 #include <semaphore.h>
-
+#include <time.h>
 /* STRUCTS */
 
 typedef enum {PD, BUDDY} t_tipo_particionado;
@@ -114,6 +114,8 @@ typedef struct {
 	uint32_t id;
 	uint32_t base;
 	uint32_t tamanio;
+	time_t time_creacion;
+	time_t time_ultima_ref;
 } t_particion;
 
 /* VARIABLES GLOBALES */
@@ -126,7 +128,7 @@ t_config* config_ruta;
 t_log* logBrokerInterno;
 t_log* logBroker;
 
-char* pathConfigBroker = "broker.config";
+char* pathConfigBroker = "../broker.config";
 int socketServidorBroker;
 int cliente;
 
@@ -206,8 +208,7 @@ void eliminarParticion();
 void algoritmoFIFO();
 void algoritmoLRU();
 
-void compactarParticionesDinamicas();
-void compactarBuddySystem();
+void compactarParticiones();
 
 int cachearNewPokemon(t_new_pokemon* msg);
 int cachearAppearedPokemon(t_appeared_pokemon* msg);

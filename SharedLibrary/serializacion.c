@@ -178,7 +178,7 @@ t_buffer* serializarGetPokemon(t_get_pokemon mensaje){
 t_buffer* serializarLocalizedPokemon(t_localized_pokemon mensaje){
 	t_buffer* buffer = malloc(sizeof(t_buffer));
 	uint32_t largo_nombre  = strlen(mensaje.nombre_pokemon) + 1;
-	int i = 0;
+	uint32_t i = 0;
 	uint32_t pos_x, pos_y;
 	buffer->size = 2* sizeof(uint32_t) + largo_nombre + 2*(sizeof(uint32_t) * mensaje.cant_pos);
 
