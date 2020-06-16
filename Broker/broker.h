@@ -146,7 +146,6 @@ t_cola* cola_caught;
 
 t_list* particiones;
 
-
 pthread_mutex_t sem_cola_new;
 pthread_mutex_t sem_cola_appeared;
 pthread_mutex_t sem_cola_catch;
@@ -162,6 +161,8 @@ sem_t mensajes_get;
 sem_t mensajes_localized;
 
 sem_t mx_particiones;
+
+sem_t identificador;
 
 
 /* FUNCIONES */
@@ -216,7 +217,20 @@ int cachearCaughtPokemon(t_caught_pokemon* msg);
 int cachearGetPokemon(t_get_pokemon* msg);
 int cachearLocalizedPokemon(t_localized_pokemon* msg);
 
+t_new_pokemon* descachearNewPokemon(void* stream, uint32_t id);
+t_appeared_pokemon* descachearAppearedPokemon(void* stream);
+t_catch_pokemon* descachearCatchPokemon(void* stream);
+t_caught_pokemon* descachearCaughtPokemon(void* stream);
+t_get_pokemon* descachearGetPokemon(void* stream);
+t_localized_pokemon* descachearLocalizedPokemon(void* stream);
+
 /// COMUNICACIÓN
 int devolverID(int socket,uint32_t*id);
+void enviarNewPokemonCacheados(int socket, op_code tipo_mensaje);
+void enviarAppearedPokemonCacheados(int socket, op_code tipo_mensaje);
+void enviarCatchPokemonCacheados(int socket, op_code tipo_mensaje);
+void enviarCaughtPokemonCacheados(int socket, op_code tipo_mensaje);
+void enviarGetPokemonCacheados(int socket, op_code tipo_mensaje);
+void enviarLocalizedPokemonCacheados(int socket, op_code tipo_mensaje);
 
 #endif /* BROKER_H_ */
