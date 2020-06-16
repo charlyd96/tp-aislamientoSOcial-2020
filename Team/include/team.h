@@ -24,10 +24,10 @@
 
 /* Recursos compartidos */
 
-sem_t qb_sem1;
-sem_t qb_sem2;
 sem_t using_cpu;
 extern sem_t trainer_count;
+extern sem_t trainer_deadlock_count;
+
 extern t_list *cola_caught;
 extern sem_t qcaught1_sem;
 extern sem_t qcaught2_sem;
@@ -37,10 +37,19 @@ extern sem_t deadlock_sem1;
 extern sem_t deadlock_sem2;
 
 t_list *global_objective;
+//sem_t global_sem1;
+//sem_t global_sem2;
+pthread_mutex_t global_sem;
 
+t_list *aux_global_objective;
+//sem_t auxglobal_sem1;
+//sem_t auxglobal_sem2;
+pthread_mutex_t auxglobal_sem;
+
+t_list *mapped_pokemons;
 sem_t poklist_sem;
 sem_t poklist_sem2;
-t_list *mapped_pokemons;
+
 
 extern t_log *internalLogTeam;
 extern t_log *logTeam;

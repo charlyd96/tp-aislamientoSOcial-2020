@@ -11,13 +11,13 @@ int main(void)
 {
     internalLogTeam= log_create ("internalLogTeam.log", "Team", 1,LOG_LEVEL_INFO);
     logTeam= log_create ("logTeam.log", "Team", 1,LOG_LEVEL_INFO);
-    Team* squad = Team_Init (); //Obtiene confiugraciones y entrenadores, los localiza y define el objetivo global
+    Team* squad = Team_Init (); //Obtiene configuraciones y entrenadores, los localiza y define el objetivo global
 
     t_list *GET_list = Team_GET_generate(); //Obtiene lista de objetivos globales para enviar mensajes GET
     
     //subscribe (squad->config); //Crea tres hilos para suscribirse a las tres colas de mensajes
 
-    Trainer_handler_create(squad); //Crea hilo de manejo y planificación de entrenadores (Trainer_to_plan_ready) y
+    Trainer_handler_create(squad); //Crea hilo de manejo y planificación de entrenadores (trainer_to_catch) y
     							   //crea el hilo de cada entrenador
     
     //enviar_mensajes_get(squad->config, GET_list); //Envía los mensajes GET al Broker y libera la lista
@@ -29,6 +29,9 @@ int main(void)
 
 
     send_trainer_to_exec(squad, squad->config->planning_algorithm);
+
+
+    //liberar semaforos
 
     /* Solo para probar la correcta liberación de las listas*/
     if (LIBERAR ==1)

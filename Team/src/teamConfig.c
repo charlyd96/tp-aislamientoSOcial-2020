@@ -52,6 +52,7 @@ void Team_load_trainers_config(Team *this_team)
 
     /*  Creo la lista de objetivos globales que va a manejar el Team */
    global_objective = list_create();
+   aux_global_objective= list_create();
 
     /*  Creo un puntero a estructura del tipo Trainer para ir creando cada entrenador leído por archivo de configuración.
         Estas estructuras se van apuntando en nodos de una lista definida en la estructura del Team como t_list *trainers     */

@@ -11,13 +11,14 @@
 #include "team.h"
 
 
-extern sem_t qb_sem1;
-extern sem_t qb_sem2;
 sem_t trainer_count;
+sem_t trainer_deadlock_count;
 extern sem_t using_cpu;
 extern t_list *mapped_pokemons;
 extern sem_t poklist_sem;
 extern sem_t poklist_sem2;
+
+sem_t bloquear_busqueda;
 
 t_list *deadlock_list;
 sem_t deadlock_sem1;
@@ -111,15 +112,17 @@ typedef struct
 
 void * trainer_routine (void *trainer);
 
-void * Trainer_to_plan_ready (void *this_team);
+void * trainer_to_catch (void *this_team);
 
 void send_trainer_to_ready (t_list *lista, int index, Operation op);
+
+void mover_objetivo_a_lista_auxiliar (mapPokemons *actual_pokemon);
 
 void move_trainer_to_objective (Trainer *train, Operation operacion);
 
 u_int32_t calculate_distance (u_int32_t Tx, u_int32_t Ty, u_int32_t Px, u_int32_t Py );
 
-void remover_objetivo_global(char *name_pokemon);
+void remover_objetivo_global_auxiliar(char *name_pokemon);
 
 int send_catch (Trainer *trainer);
 

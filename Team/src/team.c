@@ -38,11 +38,12 @@ Team * Team_Init(void)
     
     /*Lista de entrenadores en deadlock*/
     deadlock_list = list_create();
-    sem_init (&qb_sem1, 0, 0);
-    sem_init (&qb_sem2, 0, 1);
     sem_init (&deadlock_sem1, 0, 0);
     sem_init (&deadlock_sem2, 0, 1);
+    pthread_mutex_init(&global_sem, NULL);
+    pthread_mutex_init (&auxglobal_sem, NULL);
 
+    sem_init (&bloquear_busqueda, 0, 0);
     sem_init (&poklist_sem, 0, 0);           //*********Mejorar la ubicación de esta instrucción***************//
     sem_init (&poklist_sem2, 0, 1);          //*********Mejorar la ubicación de esta instrucción***************//
     sem_init (&qr_sem1, 0, 0);               //*********Mejorar la ubicación de esta instrucción***************//
@@ -124,8 +125,6 @@ exec_error fifo_exec (Team* this_team)
        trainer->actual_status= EXEC;
        sem_post ( &qr_sem2 );
        sem_post ( &(trainer->trainer_sem) );
-
-
 }
 
 
@@ -151,9 +150,10 @@ u_int32_t Trainer_handler_create (Team *this_team)
         exit (TRAINER_CREATION_FAILED);
     }
 
-    pthread_create ( &(this_team->trhandler_id), NULL, Trainer_to_plan_ready, this_team );
-    pthread_detach (this_team->trhandler_id);
+    pthread_create ( &(this_team->trhandler_id), NULL, trainer_to_catch, this_team );
+    pthread_detach (this_team->trhandler_id); //hacerlo join y llamar a un nuevo hilo 
     return (error);
+    
 
 }
 
