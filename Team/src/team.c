@@ -43,7 +43,7 @@ Team * Team_Init(void)
     pthread_mutex_init(&global_sem, NULL);
     pthread_mutex_init (&auxglobal_sem, NULL);
 
-    sem_init (&bloquear_busqueda, 0, 0);
+    sem_init (&resolviendo_deadlock, 0, 0);
     sem_init (&poklist_sem, 0, 0);           //*********Mejorar la ubicación de esta instrucción***************//
     sem_init (&poklist_sem2, 0, 1);          //*********Mejorar la ubicación de esta instrucción***************//
     sem_init (&qr_sem1, 0, 0);               //*********Mejorar la ubicación de esta instrucción***************//
@@ -114,9 +114,9 @@ void imprimir_lista (t_list *lista)
 }
 
 /* Consumidor de cola Ready */
-exec_error fifo_exec (Team* this_team)
+exec_error fifo_exec ()
 {
-       Team *team= this_team;
+
        sem_wait (&using_cpu);
        sem_wait ( &qr_sem1 );
        sem_wait ( &qr_sem2 );
@@ -150,8 +150,54 @@ u_int32_t Trainer_handler_create (Team *this_team)
         exit (TRAINER_CREATION_FAILED);
     }
 
+    void *resultado;
     pthread_create ( &(this_team->trhandler_id), NULL, trainer_to_catch, this_team );
-    pthread_detach (this_team->trhandler_id); //hacerlo join y llamar a un nuevo hilo 
+    pthread_join (this_team->trhandler_id, &resultado); //hacerlo join y llamar a un nuevo hilo 
+
+    while (list_size (deadlock_list)>0)
+    {
+    int value;
+
+    sem_getvalue(&resolviendo_deadlock, &value);
+    printf ("Resolviendo deadlock antes del recovery vale %d\n", value);
+    printf ("Resultado de la recuperación: %d\n",deadlock_recovery());
+    printf ("En lista Deadlock: %d\n", list_size (deadlock_list));
+    
+    sem_getvalue(&resolviendo_deadlock, &value);
+    printf ("Resolviendo deadlock vale %d\n", value);
+    sem_wait (&resolviendo_deadlock);
+    puts ("pase");
+    //sleep (4);
+    }
+
+    void imprimir_estados (void *trainer)
+    {
+        printf ("Estado: %d\n",((Trainer*)trainer)->actual_status);
+    }
+
+    list_iterate (this_team->trainers,imprimir_estados);
+
+    void imprimir_entrenadores (void *entrenador)
+    {
+        void imprimir_objetivos (void *objetivo)
+        {
+        printf ("%s\n",(char*)objetivo);
+        }
+
+        void imprimir_bag (void *capturado)
+        {
+        printf ("%s\n",(char*)capturado);
+        }
+
+        printf ("Lista objetivos entrenador %d\n",((Trainer*)entrenador)->index);
+        list_iterate (((Trainer*)entrenador)->bag,imprimir_bag);
+
+        printf ("Lista capturados entrenador %d\n",((Trainer*)entrenador)->index);
+        list_iterate(((Trainer*)entrenador)->personal_objective,imprimir_objetivos);
+    }
+
+    
+    list_iterate (this_team->trainers, imprimir_entrenadores);
     return (error);
     
 

@@ -16,23 +16,18 @@ int main(void)
     t_list *GET_list = Team_GET_generate(); //Obtiene lista de objetivos globales para enviar mensajes GET
     
     //subscribe (squad->config); //Crea tres hilos para suscribirse a las tres colas de mensajes
+    send_trainer_to_exec(squad->config);
 
-    Trainer_handler_create(squad); //Crea hilo de manejo y planificación de entrenadores (trainer_to_catch) y
-    							   //crea el hilo de cada entrenador
-    
     //enviar_mensajes_get(squad->config, GET_list); //Envía los mensajes GET al Broker y libera la lista
 
     listen_new_pokemons (squad->config); //Crea hilo para socket de escucha del GameBoy
     //imprimir_lista (GET_list); //Imprime objetivos globales
+
+    Trainer_handler_create(squad); //Crea hilo de manejo y planificación de entrenadores (trainer_to_catch) y
+    							   //crea el hilo de cada entrenador
     
-
-
-
-    send_trainer_to_exec(squad, squad->config->planning_algorithm);
-
-
     //liberar semaforos
-
+    sleep (1);
     /* Solo para probar la correcta liberación de las listas*/
     if (LIBERAR ==1)
     liberar_listas(squad);

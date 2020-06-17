@@ -120,9 +120,9 @@ Team* Team_Init(void);
 
 void* listen_routine_gameboy (void *config);
 
-void send_trainer_to_exec (Team* this_team, char *planning_algorithm);
+void send_trainer_to_exec (Config *config);
 
-exec_error fifo_exec (Team* this_team);
+exec_error fifo_exec ();
 
 void subscribe (Config *config) ;
 

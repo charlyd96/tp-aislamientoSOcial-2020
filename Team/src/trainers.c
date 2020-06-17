@@ -49,14 +49,11 @@ void* trainer_to_catch(void *this_team)
          // Este semáforo bloquea el proceso de planificación si no hay entrenadores para mandar a ready
                         // Se le deberá hacer el post una vez que el entrenador reciba el caught y pueda volver a ser  planificado
         pthread_mutex_lock (&global_sem);
-        printf ("List_size antes de if= %d\n", list_size (global_objective));
         if (list_size (global_objective) > 1 )
         {
             pthread_mutex_unlock (&global_sem);
-            puts ("me voy a bloquear");
-            printf ("List_size= %d\n", list_size (global_objective));
+
             sem_wait (&trainer_count);
-            puts ("pase el bloqueo");
             sem_wait(&poklist_sem); //Para evitar espera activa si no hay pokemones en el mapa. Revisar este comentario.
             sem_wait(&poklist_sem2); //Para evitar espera activa si no hay pokemones en el mapa. En realidad es por productor consumidor
             actual_pokemon =  list_remove (mapped_pokemons, 0);
@@ -99,12 +96,8 @@ void* trainer_to_catch(void *this_team)
                 } 
             }
     }
-    while (list_size(deadlock_list)>0)
-    {
-    printf ("Resultado de la recuperación: %d\n",deadlock_recovery());
-    }
-    puts ("Terminó la recuperación");
 
+    puts ("Terminó la búsqueda de pokemones");
     //***********LIBERAR MEMORIA Y TERMINAR EL HILO **************//
 }
 
@@ -130,7 +123,8 @@ void send_trainer_to_ready (t_list *lista, int index, Operation op)
             list_add (ReadyQueue , list_get (lista, index) );
             sem_post (&qr_sem2);
             sem_post (&qr_sem1);
-            log_info (internalLogTeam, "Se planificó a Ready al entrenador %d para resolver un DEADLOCK", index);
+            log_info (internalLogTeam, "Se planificó a Ready al entrenador %d para resolver un DEADLOCK", 
+            ( (Trainer*) list_get(deadlock_list, index) )->index);
             break;
         }
     }
@@ -149,19 +143,27 @@ void mover_objetivo_a_lista_auxiliar (mapPokemons *actual_pokemon)
     }
 
     pthread_mutex_lock (&global_sem);
-    list_remove_by_condition (global_objective,comparar); //Verificar que devuelva != NULL
+    list_remove_by_condition (global_objective,comparar); 
     pthread_mutex_unlock (&global_sem);     
 }
 
-void send_trainer_to_exec (Team* this_team, char* planning_algorithm)
+void send_trainer_to_exec (Config *config)
+{
+    pthread_t thread;
+    pthread_create(&thread, NULL, trainer_exec,config);
+    pthread_detach(thread);
+}
+
+void *trainer_exec (void *configuracion)
 {
     exec_error error;
+    Config *config=configuracion;
     while (1) //Este while debería ser "mientras team no haya ganado"
     {
 
-    if (!strcmp(planning_algorithm, "FIFO"))
+    if (!strcmp(config->planning_algorithm, "FIFO"))
     {
-       error= fifo_exec (this_team);
+       error= fifo_exec ();
     }
     /*
     *TO DO: sjfcd_exec()
@@ -170,6 +172,7 @@ void send_trainer_to_exec (Team* this_team, char* planning_algorithm)
     */
 
     }
+
 }
 
 
@@ -200,6 +203,7 @@ void* trainer_routine (void *train)
                         log_error (logTeam, "Ha ocurrido un DEADLOCK en el entrenador %d", trainer->index);
                         trainer->actual_status = BLOCKED_DEADLOCK; 
                         trainer_to_deadlock (trainer);
+                        sem_wait (&trainer->trainer_sem); //Bloqueo al entrenador hasta ejecutar el algoritmo de recuperación de deadlock
                     }  
                         else if (comparar_listas(trainer->bag,trainer->personal_objective))//Verifico si cumplió sus objetivos
                             {
@@ -220,7 +224,6 @@ void* trainer_routine (void *train)
 					//Enviar al entrenador a estado BLOCKED_NOTHING_TO_DO
                     //list_add (global_objective, aux_global_objective) //Esto está escrito así nomás
                     sem_post (&trainer_count);
-                    sem_post (&bloquear_busqueda); //Reanudo búsqueda
                     sem_wait(&trainer->trainer_sem);
 					}
 				break;
@@ -231,15 +234,18 @@ void* trainer_routine (void *train)
                 {
                     move_trainer_to_objective (trainer, OP_EXECUTING_DEADLOCK);
                     intercambiar(trainer, list_get(deadlock_list, trainer->objetivo.index_objective));
+                    list_remove (deadlock_list,0);
                     if (detectar_deadlock(trainer))
                     {
+                    trainer->actual_status = BLOCKED_DEADLOCK;
                     trainer_to_deadlock (trainer);
-                    trainer->actual_status = BLOCKED_DEADLOCK; 
+                    sem_post (&resolviendo_deadlock);
+                    sem_wait (&trainer->trainer_sem); //Bloqueo al entrenador hasta ejecutar el algoritmo de recuperación de deadlock
                     }
                     else 
                     {
-                    
-                    trainer->actual_status = EXIT;   
+                    trainer->actual_status = EXIT; 
+                    sem_post (&resolviendo_deadlock);  
                     }
                     break;
                 }
@@ -257,15 +263,14 @@ void* trainer_routine (void *train)
 /*Productor hacia cola de bloqueados por deadlock*/
 void trainer_to_deadlock(Trainer *trainer)
 {
-    sem_wait (&deadlock_sem2);
+    sem_wait (&deadlock_sem2); //Verificar si se requiere sincronización
     list_add (deadlock_list, trainer); 
     sem_post (&deadlock_sem2);
     sem_post (&deadlock_sem1);
     log_info (internalLogTeam, "Se agregó al entrenador %d a la cola de bloqueados por Deadlock", trainer->index);
-    sem_post(&using_cpu); //Disponibilizar la CPU para otro entrenador
     sem_post (&trainer_count); //Revisar esto. Se lo disponibiliza para ser planificado, pero sólo para solucionar deadlock
-    sem_wait (&trainer->trainer_sem); //Bloqueo al entrenador hasta ejecutar el algoritmo de recuperación de deadlock
-}
+    sem_post(&using_cpu); //Disponibilizar la CPU para otro entrenador
+}   
 
 void remover_objetivo_global_auxiliar(char *name_pokemon)
 
@@ -415,6 +420,19 @@ void split_objetivos_capturados (Trainer *trainer, t_list *lista_pok_sobrantes, 
 
 int deadlock_recovery (void)
 {
+    
+    printf ("Size lista de deadlock: %d\n", list_size (deadlock_list));
+    if (!detectar_deadlock (list_get(deadlock_list, 0)))
+    {
+        puts ("voy a romper");
+        Trainer *trainer = list_remove (deadlock_list,0);
+        puts ("pase");
+        trainer->actual_status=EXIT;
+        sem_post(&trainer->trainer_sem);
+        sem_post(&resolviendo_deadlock);
+        puts ("rrompi");
+        return 0;
+    }
     log_info (logTeam,"Se comenzó a ejecutar el algoritmo de recuperación de DEADLOCK");
     //Correr algoritmo de detección (menos la primera vez)
    // for (int i=0; i<deadlock_list->elements_count; i++)
@@ -479,9 +497,11 @@ int deadlock_recovery (void)
         puts ("primer if");
         if (index+1 >=deadlock_list->elements_count)// Si index es mayor que la cantidad de bloquedaos en DL, abortar el programa.
             {                                       // No se pudo resolver el deadlock.
+            puts ("No se pudo resolver el deadlock. Abortando programa");
             exit (RECOVERY_DEADLOCK_ERROR);
             }
         printf ("Resultado interno:%d\n",deadlock_recovery()); //Llamado recursivo. Liberar recursos del primer llamado al regresar del llamado recursivo.
+        index=0;
         return (RECURSIVE_RECOVERY_SUCESS); //Retornar el éxito dando aviso de que fue recursivo
     } else 
 
@@ -508,7 +528,10 @@ int deadlock_recovery (void)
     trainer1->objetivo.index_objective=index;
     puts ("SEND TRAINER TO READY");
     trainer1->actual_operation = OP_EXECUTING_DEADLOCK;
+    trainer2->actual_operation = OP_EXECUTING_DEADLOCK; //Mejorar esto ya que puede ser confuso. Agregar un estado "waiting for deadlock"
     send_trainer_to_ready(deadlock_list, 0, OP_EXECUTING_DEADLOCK);
+    
+    
 
 
     //realizar_intercambio()
@@ -516,7 +539,7 @@ int deadlock_recovery (void)
     
     
     
-    printf ("Trainer %d entregará %s\n", trainer1->index, entregar_trainer1);
+   /* printf ("Trainer %d entregará %s\n", trainer1->index, entregar_trainer1);
     printf ("Trainer %d recibirá %s\n",  trainer1->index, recibir_trainer1);
     puts ("");
 
@@ -533,7 +556,7 @@ int deadlock_recovery (void)
     printf ("Sobrantes entrenador %d:\n",trainer2->index);
     list_iterate(trainer2_sobrantes, imprimir3);
     printf ("Faltantes entrenador %d:\n",trainer2->index);
-    list_iterate(trainer2_faltantes, imprimir3);
+    list_iterate(trainer2_faltantes, imprimir3);*/
     index=0; //Reiniciar el index para ejecutar nuevamente el algoritmo con otros entrenadores luego del intercambio
     return (0);
 
@@ -548,10 +571,10 @@ int intercambiar(Trainer *trainer1, Trainer *trainer2)
         puts ((char*)element);
     }
     puts ("Antes del intercambio");
-    puts ("Bag entrenador 1:");
+    printf ("Bag entrenador %d:\n", trainer1->index);
     list_iterate (trainer1->bag,imprimir);
     puts ("");
-    puts ("Bag entrenador 2:");
+    printf ("Bag entrenador %d:\n", trainer2->index);
     list_iterate (trainer2->bag,imprimir);
     char *recibir=trainer1->objetivo.recibir;
     char *entregar=trainer1->objetivo.entregar;
@@ -574,10 +597,10 @@ int intercambiar(Trainer *trainer1, Trainer *trainer2)
     list_add(trainer2->bag,aux_entregar);
 
     puts ("Después del intercambio");
-    puts ("Bag entrenador 1:");
+     printf ("Bag entrenador %d:\n", trainer1->index);
     list_iterate (trainer1->bag,imprimir);
     puts ("");
-    puts ("Bag entrenador 2:");
+     printf ("Bag entrenador %d:\n", trainer2->index);
     list_iterate (trainer2->bag,imprimir);
 }
 
@@ -612,7 +635,7 @@ void move_trainer_to_objective (Trainer *trainer, Operation op)
     u_int32_t *Ty;
     u_int32_t *Px;
     u_int32_t *Py;
-
+    printf ("Operacion: %d\n", op);
     switch (op)
     {
         case OP_EXECUTING_CATCH:

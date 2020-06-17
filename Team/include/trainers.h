@@ -18,7 +18,7 @@ extern t_list *mapped_pokemons;
 extern sem_t poklist_sem;
 extern sem_t poklist_sem2;
 
-sem_t bloquear_busqueda;
+sem_t resolviendo_deadlock;
 
 t_list *deadlock_list;
 sem_t deadlock_sem1;
@@ -139,5 +139,7 @@ int deadlock_recovery (void); //Algoritmo de recuperación de dadlock
 int intercambiar(Trainer *trainer1, Trainer *trainer2);
 
 bool detectar_deadlock (Trainer* trainer);
+
+void *trainer_exec (void *config);
 
 #endif /* INCLUDE_TRAINERS_H_ */
