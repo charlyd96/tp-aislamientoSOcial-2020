@@ -210,6 +210,7 @@ void algoritmoFIFO();
 void algoritmoLRU();
 
 void compactarParticiones();
+void liberarParticion(int indice);
 
 int cachearNewPokemon(t_new_pokemon* msg);
 int cachearAppearedPokemon(t_appeared_pokemon* msg);

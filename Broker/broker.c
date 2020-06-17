@@ -222,6 +222,35 @@ int buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint32
 	return 1;
 }
 
+void liberarParticion(indice_victima){
+	log_info(logBrokerInterno,"Se elimina la particion con indice %d",indice_victima);
+
+	t_particion* part_liberar = list_get(particiones,indice_victima);
+	part_liberar->libre = true;
+	list_replace(particiones, indice_victima, part_liberar);
+
+	//Consolidar
+
+	//Si no es la última partición
+	if(indice_victima + 1 < list_size(particiones)){
+		t_particion* part_der = list_get(particiones,indice_victima+1);
+		if(part_der->libre == true){
+			//Fusionar
+			part_liberar->tamanio = part_liberar->tamanio + part_der->tamanio;
+			list_remove(particiones,indice_victima + 1);
+		}
+	}
+	//Si no es la primera partición
+	if(indice_victima > 0){
+		t_particion* part_izq = list_get(particiones,indice_victima-1);
+		if(part_izq->libre == true){
+			//Fusionar
+			part_liberar->base = part_izq->base;
+			part_liberar->tamanio = part_liberar->tamanio + part_izq->tamanio;
+			list_remove(particiones,indice_victima -1);
+		}
+	}
+}
 void eliminarParticion(){
 	t_algoritmo_reemplazo algoritmo = config_broker->algoritmo_reemplazo;
 	int indice_victima = 0;
@@ -251,12 +280,7 @@ void eliminarParticion(){
 		break;
 	}
 	//Liberar la partición víctima
-	log_info(logBrokerInterno,"Se elimina la particion con indice %d",indice_victima);
-	t_particion* part_liberar = list_get(particiones,indice_victima);
-	part_liberar->libre = true;
-	list_add_in_index(particiones,indice_victima,part_liberar);
-	list_remove(particiones,indice_victima+1);
-
+	liberarParticion(indice_victima);
 }
 
 void algoritmoFIFO(){
