@@ -17,6 +17,7 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <time.h>
+
 /* STRUCTS */
 
 typedef enum {PD, BUDDY} t_tipo_particionado;
@@ -186,8 +187,8 @@ void atenderMensajeGetPokemon(int socket);
 void atenderMensajeLocalizedPokemon(int socket);
 
 void atenderSuscripcionTeam(int socket);
-void atenderSuscripcionGameBoy(int socket);
 void atenderSuscripcionGameCard(int socket);
+void atenderSuscripcionGameBoy(int socket);
 
 /// PROCESAMIENTO
 int suscribir(int socket, op_code cola);
@@ -226,6 +227,7 @@ t_localized_pokemon descachearLocalizedPokemon(void* stream, uint32_t id);
 
 /// COMUNICACIÓN
 int devolverID(int socket,uint32_t*id);
+
 void enviarNewPokemonCacheados(int socket, op_code tipo_mensaje);
 void enviarAppearedPokemonCacheados(int socket, op_code tipo_mensaje);
 void enviarCatchPokemonCacheados(int socket, op_code tipo_mensaje);
