@@ -174,7 +174,6 @@ int buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint32
 	while (indice < 0) {
 		cant_intentos_fallidos++;
 		if(cant_intentos_fallidos < config_broker->frecuencia_compatacion){
-			log_info(logBrokerInterno,"Entro a eliminar particion");
 			eliminarParticion();
 		}else{
 			log_info(logBrokerInterno,"Compactar");
@@ -198,8 +197,10 @@ int buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint32
 	part_nueva->base = part_libre->base;
 	part_nueva->tamanio = largo_stream;
 	part_nueva->id = id;
-	part_nueva->time_creacion = time(0); //Hora actual del sistema
-	part_nueva->time_ultima_ref = time(0); //Hora actual del sistema
+	struct timeval current_time;
+	gettimeofday(&current_time, NULL);
+	part_nueva->time_creacion = current_time; //Hora actual del sistema
+	part_nueva->time_ultima_ref = current_time; //Hora actual del sistema
 
 	part_libre->base = part_libre->base + largo_stream;
 	part_libre->tamanio = part_libre->tamanio - largo_stream;
@@ -222,7 +223,7 @@ int buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint32
 	return 1;
 }
 
-void liberarParticion(indice_victima){
+void liberarParticion(int indice_victima){
 	log_info(logBrokerInterno,"Se elimina la particion con indice %d",indice_victima);
 
 	t_particion* part_liberar = list_get(particiones,indice_victima);
@@ -238,6 +239,7 @@ void liberarParticion(indice_victima){
 			//Fusionar
 			part_liberar->tamanio = part_liberar->tamanio + part_der->tamanio;
 			list_remove(particiones,indice_victima + 1);
+			log_info(logBrokerInterno,"Se consolida con particion indice %d",indice_victima+1);
 		}
 	}
 	//Si no es la primera partición
@@ -248,6 +250,7 @@ void liberarParticion(indice_victima){
 			part_liberar->base = part_izq->base;
 			part_liberar->tamanio = part_liberar->tamanio + part_izq->tamanio;
 			list_remove(particiones,indice_victima -1);
+			log_info(logBrokerInterno,"Se consolida con particion indice %d",indice_victima-1);
 		}
 	}
 }
@@ -255,17 +258,20 @@ void eliminarParticion(){
 	t_algoritmo_reemplazo algoritmo = config_broker->algoritmo_reemplazo;
 	int indice_victima = 0;
 	int cant_particiones = list_size(particiones);
-	time_t time_aux = time(0);
+	struct timeval time_aux;
+	gettimeofday(&time_aux, NULL);
 	switch(algoritmo){
 		case FIFO:{
 			log_info(logBrokerInterno,"Reemplazo con fifo");
-			//Eliminar la partición con con time_creación más viejo (el long int menor)
+			//Eliminar la partición con con time_creación más viejo
 			for(int i=0; i<cant_particiones; i++){
 				t_particion* part = list_get(particiones,i);
-				//Si se creó antes que time_aux
-				if(part->time_creacion < time_aux && part->libre == false){
-					time_aux = part->time_creacion;
-					indice_victima = i;
+				if(part->libre == false){
+					//Si los segundos son menores ó los segundos son iguales y los microsegundos menores
+					if(part->time_creacion.tv_sec < time_aux.tv_sec || (part->time_creacion.tv_sec == time_aux.tv_sec && part->time_creacion.tv_usec < time_aux.tv_usec)){
+						time_aux = part->time_creacion;
+						indice_victima = i;
+					}
 				}
 			}
 		}

@@ -16,7 +16,8 @@
 #include <commons/log.h>
 #include <pthread.h>
 #include <semaphore.h>
-#include <time.h>
+//#include <time.h>
+#include <sys/time.h>
 
 /* STRUCTS */
 
@@ -115,8 +116,8 @@ typedef struct {
 	uint32_t id;
 	uint32_t base;
 	uint32_t tamanio;
-	time_t time_creacion;
-	time_t time_ultima_ref;
+	struct timeval time_creacion;
+	struct timeval time_ultima_ref;
 } t_particion;
 
 /* VARIABLES GLOBALES */
