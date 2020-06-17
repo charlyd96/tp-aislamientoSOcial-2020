@@ -178,6 +178,7 @@ int buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint32
 		}else{
 			log_info(logBrokerInterno,"Compactar");
 			compactarParticiones();
+			eliminarParticion();
 			cant_intentos_fallidos = 0;
 		}
 		//Buscar de nuevo
@@ -216,7 +217,8 @@ int buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint32
 	}
 
 	// 6. Almacenado de un mensaje dentro de la memoria (indicando posición de inicio de su partición).
-	log_info(logBroker, "Nuevo mensaje %d con inicio de su partición en %d y tamanio %d", part_nueva->tipo_mensaje, part_nueva->base,part_nueva->tamanio);
+	log_info(logBroker, "ID_MENSAJE %d, asigno partición base %d y tamanio %d",id, part_nueva->base,part_nueva->tamanio);
+	log_info(logBrokerInterno, "ID_MENSAJE %d, asigno partición base %d y tamanio %d",id, part_nueva->base,part_nueva->tamanio);
 
 	//-> DESMUTEAR LISTA DE PARTICIONES
 	sem_post(&mx_particiones);
@@ -224,12 +226,12 @@ int buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint32
 }
 
 void liberarParticion(int indice_victima){
-	log_info(logBrokerInterno,"Se elimina la particion con indice %d",indice_victima);
 
 	t_particion* part_liberar = list_get(particiones,indice_victima);
 	part_liberar->libre = true;
 	list_replace(particiones, indice_victima, part_liberar);
 
+	log_info(logBrokerInterno,"Se elimina particion base %d, tamanio %d, indice %d",part_liberar->base,part_liberar->tamanio,indice_victima);
 	//Consolidar
 
 	//Si no es la última partición
@@ -262,7 +264,6 @@ void eliminarParticion(){
 	gettimeofday(&time_aux, NULL);
 	switch(algoritmo){
 		case FIFO:{
-			log_info(logBrokerInterno,"Reemplazo con fifo");
 			//Eliminar la partición con con time_creación más viejo
 			for(int i=0; i<cant_particiones; i++){
 				t_particion* part = list_get(particiones,i);
@@ -277,7 +278,6 @@ void eliminarParticion(){
 		}
 		break;
 		case LRU:{
-			log_info(logBrokerInterno,"Reemplazo con LRU");
 			algoritmoLRU();
 		}
 		break;
@@ -611,7 +611,7 @@ t_localized_pokemon descachearLocalizedPokemon(void* stream, uint32_t id){
 
 void atenderCliente(int* socket){
 	int socket_cliente = *socket;
-	log_info(logBrokerInterno,"Atender Cliente %d: ", socket_cliente);
+	log_info(logBrokerInterno,"Atender Cliente socket %d: ", socket_cliente);
 	op_code cod_op = recibirOperacion(socket_cliente);
 	switch(cod_op){
 		case NEW_POKEMON:{
@@ -662,6 +662,7 @@ void atenderMensajeNewPokemon(int socket_cliente){
 
 	// 3. Llegada de un nuevo mensaje a una cola de mensajes.
 	log_info(logBroker, "Llegó un mensaje NEW_POKEMON %s %d %d %d.",new_pokemon->nombre_pokemon,new_pokemon->pos_x,new_pokemon->pos_y,new_pokemon->cantidad);
+	log_info(logBrokerInterno, "Llegó un mensaje NEW_POKEMON %s %d %d %d.",new_pokemon->nombre_pokemon,new_pokemon->pos_x,new_pokemon->pos_y,new_pokemon->cantidad);
 
 	uint32_t id_mensaje;
 
@@ -678,7 +679,7 @@ void atenderMensajeAppearedPokemon(int socket_cliente){
 
 	// 3. Llegada de un nuevo mensaje a una cola de mensajes.
 	log_info(logBroker, "Llegó un mensaje APPEARED_POKEMON %s %d %d.",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y);
-
+	log_info(logBrokerInterno, "Llegó un mensaje APPEARED_POKEMON %s %d %d.",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y);
 	uint32_t id_mensaje;
 
 	encolarAppearedPokemon(appeared_pokemon);
@@ -694,6 +695,7 @@ void atenderMensajeCatchPokemon(int socket_cliente){
 
 	// 3. Llegada de un nuevo mensaje a una cola de mensajes.
 	log_info(logBroker, "Llegó un mensaje CATCH_POKEMON %s %d %d.",catch_pokemon->nombre_pokemon,catch_pokemon->pos_x,catch_pokemon->pos_y);
+	log_info(logBrokerInterno, "Llegó un mensaje CATCH_POKEMON %s %d %d.",catch_pokemon->nombre_pokemon,catch_pokemon->pos_x,catch_pokemon->pos_y);
 
 	uint32_t id_mensaje;
 
@@ -710,6 +712,7 @@ void atenderMensajeCaughtPokemon(int socket_cliente){
 
 	// 3. Llegada de un nuevo mensaje a una cola de mensajes.
 	log_info(logBroker, "Llegó un mensaje CAUGHT_POKEMON %d %d.",caught_pokemon->atrapo_pokemon,caught_pokemon->id_mensaje_correlativo);
+	log_info(logBrokerInterno, "Llegó un mensaje CAUGHT_POKEMON %d %d.",caught_pokemon->atrapo_pokemon,caught_pokemon->id_mensaje_correlativo);
 
 	uint32_t id_mensaje;
 
@@ -726,7 +729,7 @@ void atenderMensajeGetPokemon(int socket_cliente){
 
 	// 3. Llegada de un nuevo mensaje a una cola de mensajes.
 	log_info(logBroker, "Llegó un mensaje GET_POKEMON %s.",get_pokemon->nombre_pokemon);
-
+	log_info(logBrokerInterno, "Llegó un mensaje GET_POKEMON %s.",get_pokemon->nombre_pokemon);
 	uint32_t id_mensaje;
 
 	encolarGetPokemon(get_pokemon);
@@ -742,6 +745,7 @@ void atenderMensajeLocalizedPokemon(int socket_cliente){
 
 	// 3. Llegada de un nuevo mensaje a una cola de mensajes.
 	log_info(logBroker, "Llegó un mensaje LOCALIZED_POKEMON.");
+	log_info(logBrokerInterno, "Llegó un mensaje LOCALIZED_POKEMON.");
 
 	uint32_t id_mensaje;
 
@@ -760,7 +764,7 @@ void atenderSuscripcionTeam(int socket_cliente){
 
 	// 2. Suscripción de un proceso a una cola de mensajes.
 	log_info(logBroker, "Se suscribe un Team a la Cola de Mensajes %d", suscribe_team->cola_suscribir);
-
+	log_info(logBrokerInterno, "Se suscribe un Team a la Cola de Mensajes %d", suscribe_team->cola_suscribir);
 	switch(suscribe_team->cola_suscribir){
 		case APPEARED_POKEMON:{
 			enviarAppearedPokemonCacheados(index, suscribe_team->cola_suscribir);
@@ -788,7 +792,7 @@ void atenderSuscripcionGameCard(int socket_cliente){
 
 	// 2. Suscripción de un proceso a una cola de mensajes.
 	log_info(logBroker, "Se suscribe un Game Card a la Cola de Mensajes %d", suscribe_gamecard->cola_suscribir);
-
+	log_info(logBrokerInterno, "Se suscribe un Game Card a la Cola de Mensajes %d", suscribe_gamecard->cola_suscribir);
 	switch(suscribe_gamecard->cola_suscribir){
 		case NEW_POKEMON:{
 			enviarNewPokemonCacheados(socket_cliente, suscribe_gamecard->cola_suscribir);
@@ -816,6 +820,7 @@ void atenderSuscripcionGameBoy(int socket_cliente){
 
 	// 2. Suscripción de un proceso a una cola de mensajes.
 	log_info(logBroker, "Se suscribe el Game Boy a la Cola de Mensajes %d", suscribe_gameboy->cola_suscribir);
+	log_info(logBrokerInterno, "Se suscribe el Game Boy a la Cola de Mensajes %d", suscribe_gameboy->cola_suscribir);
 
 	switch(suscribe_gameboy->cola_suscribir){
 		case NEW_POKEMON:{
@@ -1012,9 +1017,12 @@ void encolarLocalizedPokemon(t_localized_pokemon* mensaje){
 /* FUNCIONES - COMUNICACIÓN */
 
 int devolverID(int socket,uint32_t* id_mensaje){
-	uint32_t id = ID_MENSAJE ++;
+	sem_wait(&identificador);
+	ID_MENSAJE ++;
+	uint32_t id = ID_MENSAJE;
+	sem_post(&identificador);
 
-	(*id_mensaje) = ID_MENSAJE;
+	(*id_mensaje) = id;
 
 	void*stream = malloc(sizeof(uint32_t));
 
@@ -1022,7 +1030,7 @@ int devolverID(int socket,uint32_t* id_mensaje){
 
 	int enviado = send(socket, stream, sizeof(uint32_t), 0);
 
-	log_info(logBrokerInterno,"ID %d", id);
+	log_info(logBrokerInterno,"ID mensaje asignado %d", id);
 	return enviado;
 }
 
