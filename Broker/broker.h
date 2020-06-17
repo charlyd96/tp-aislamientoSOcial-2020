@@ -128,7 +128,7 @@ t_config* config_ruta;
 t_log* logBrokerInterno;
 t_log* logBroker;
 
-char* pathConfigBroker = "../broker.config";
+char* pathConfigBroker = "broker.config";
 int socketServidorBroker;
 int cliente;
 
@@ -217,12 +217,12 @@ int cachearCaughtPokemon(t_caught_pokemon* msg);
 int cachearGetPokemon(t_get_pokemon* msg);
 int cachearLocalizedPokemon(t_localized_pokemon* msg);
 
-t_new_pokemon* descachearNewPokemon(void* stream, uint32_t id);
-t_appeared_pokemon* descachearAppearedPokemon(void* stream);
-t_catch_pokemon* descachearCatchPokemon(void* stream);
-t_caught_pokemon* descachearCaughtPokemon(void* stream);
-t_get_pokemon* descachearGetPokemon(void* stream);
-t_localized_pokemon* descachearLocalizedPokemon(void* stream);
+t_new_pokemon descachearNewPokemon(void* stream, uint32_t id);
+t_appeared_pokemon descachearAppearedPokemon(void* stream, uint32_t id);
+t_catch_pokemon descachearCatchPokemon(void* stream, uint32_t id);
+t_caught_pokemon descachearCaughtPokemon(void* stream, uint32_t id);
+t_get_pokemon descachearGetPokemon(void* stream, uint32_t id);
+t_localized_pokemon descachearLocalizedPokemon(void* stream, uint32_t id);
 
 /// COMUNICACIÓN
 int devolverID(int socket,uint32_t*id);
