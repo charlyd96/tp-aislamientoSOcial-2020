@@ -178,8 +178,13 @@ int buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint32
 		}else{
 			log_info(logBrokerInterno,"Compactar");
 			compactarParticiones();
-			eliminarParticion();
 			cant_intentos_fallidos = 0;
+
+			indice = buscarParticionLibre(largo_stream);
+			if(indice < 0){
+				cant_intentos_fallidos++;
+				eliminarParticion();
+			}
 		}
 		//Buscar de nuevo
 		indice = buscarParticionLibre(largo_stream);
