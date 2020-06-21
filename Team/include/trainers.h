@@ -58,6 +58,7 @@ typedef struct
     uint32_t posy;
 } Deadlock;
 
+extern t_list *trainers;
 
 typedef struct
 {
@@ -112,7 +113,7 @@ typedef struct
 
 void * trainer_routine (void *trainer);
 
-void * trainer_to_catch (void *this_team);
+void * trainer_to_catch (void *dato);
 
 void send_trainer_to_ready (t_list *lista, int index, Operation op);
 

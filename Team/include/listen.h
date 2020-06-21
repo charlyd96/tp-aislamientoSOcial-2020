@@ -25,7 +25,7 @@ sem_t qcaught2_sem;
 extern t_log *internalLogTeam;
 extern t_log *logTeam;
 
-
+extern Config *config;
 
 void* get_opcode (int *socket);
 

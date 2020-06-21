@@ -17,19 +17,16 @@
 
 
 /* Initializing all Team components */
-Team * Team_Init(void)
+void Team_Init(void)
 {
 
-    Team *this_team =malloc (sizeof(Team)) ;
-
-    this_team->config = malloc (sizeof (Config));
-    this_team->config->team_config = get_config();
-
+    config= malloc (sizeof (Config));
+    config->team_config = get_config();
     sem_init (&trainer_count, 0, 0);					//*********Mejorar la ubicación de esta instrucción***************//
     sem_init (&using_cpu, 0,1);
-    Team_load_global_config(this_team->config);
-    Team_load_trainers_config(this_team);
-
+    Team_load_global_config();
+    
+    Team_load_trainers_config();
 
 
     ReadyQueue= list_create  ();                 //*********Mejorar la ubicación de esta instrucción***************//
@@ -51,7 +48,6 @@ Team * Team_Init(void)
     sem_init (&qcaught1_sem,0,0);
     sem_init (&qcaught1_sem,0,1);
 
-    return (this_team);
 }
 
 // ============================================================================================================
@@ -118,6 +114,7 @@ exec_error fifo_exec ()
 {
 
        sem_wait (&using_cpu);
+       // if (team ganó) entonces return;
        sem_wait ( &qr_sem1 );
        sem_wait ( &qr_sem2 );
 
@@ -133,26 +130,26 @@ exec_error fifo_exec ()
 //                  ***** Recibe una estructura Team y devuelve un código de error *****
 // ============================================================================================================
 
-u_int32_t Trainer_handler_create (Team *this_team)
+int Trainer_handler_create ()
 {
     u_int32_t error;
     void  create_thread (void *train)
-    {
-        Trainer* trainer= train;
+    { 
+        Trainer* trainer= train;      
         error = pthread_create( &(trainer->thread_id), NULL, trainer_routine, trainer);
         pthread_detach (trainer->thread_id);
-
     }
 
-    list_iterate (this_team->trainers, create_thread);
+    list_iterate (trainers, create_thread);
     if (error != 0)
     {
         exit (TRAINER_CREATION_FAILED);
     }
 
     void *resultado;
-    pthread_create ( &(this_team->trhandler_id), NULL, trainer_to_catch, this_team );
-    pthread_join (this_team->trhandler_id, &resultado); //hacerlo join y llamar a un nuevo hilo 
+    pthread_t thread;
+    pthread_create ( &thread, NULL, trainer_to_catch, resultado); 
+    pthread_join (thread, &resultado); //hacerlo join y llamar a un nuevo hilo 
 
     while (list_size (deadlock_list)>0)
     {
@@ -175,7 +172,7 @@ u_int32_t Trainer_handler_create (Team *this_team)
         printf ("Estado: %d\n",((Trainer*)trainer)->actual_status);
     }
 
-    list_iterate (this_team->trainers,imprimir_estados);
+    list_iterate (trainers,imprimir_estados);
 
     void imprimir_entrenadores (void *entrenador)
     {
@@ -197,7 +194,7 @@ u_int32_t Trainer_handler_create (Team *this_team)
     }
 
     
-    list_iterate (this_team->trainers, imprimir_entrenadores);
+    list_iterate (trainers, imprimir_entrenadores);
     return (error);
     
 
@@ -212,10 +209,10 @@ u_int32_t Trainer_handler_create (Team *this_team)
 
 
 
-void listen_new_pokemons (Config *config)
+void listen_new_pokemons ()
 {
     pthread_t thread; //OJO. Esta variable se está perdiendo
-    pthread_create (&thread, NULL, listen_routine_gameboy , config);
+    pthread_create (&thread, NULL, listen_routine_gameboy , NULL);
     pthread_detach (thread);
 }
 

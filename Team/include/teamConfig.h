@@ -36,14 +36,17 @@ typedef struct {
 
 } Config;
 
+extern t_list *trainers;
+
+Config *config;
 
 /*Para crear puntero a archivo de configuración*/
 t_config *get_config(void);
 
 
 /*Para cargar las configuraciones globales y específicas de los entrenadores*/
-void Team_load_global_config(Config *config);
-void Team_load_trainers_config(); //Recibe un tipo Team*
+void Team_load_global_config();
+void Team_load_trainers_config(); 
 
 /*Para testear algunas cosas*/
 void _imprimir_lista (void *elemento);
@@ -54,6 +57,6 @@ void _imprimir_lista (void *elemento);
 /*Para liberar memoria*/
 void  free_split (char **string);
 void _free_sub_list (void* elemento);
-
+void liberar_listas (void);
 
 #endif /* INCLUDE_TEAMCONFIG_H_ */

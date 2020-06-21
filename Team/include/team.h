@@ -20,8 +20,6 @@
 #define LIBERAR 0
 
 
-
-
 /* Recursos compartidos */
 
 sem_t using_cpu;
@@ -76,6 +74,7 @@ typedef struct
 	op_code colaSuscripcion;   
 } conexionColas;
 
+extern Config *config;
 
 /* Pokemones en el mapa interno del Team*/
 typedef struct
@@ -92,43 +91,31 @@ typedef struct
     uint32_t cant;
 } global_pokemons;
 
-typedef struct
-{
-    /* Configuraciones globales */
-    Config *config;
+// Lista de entrenadores
+t_list *trainers;
 
-    /* Sobre el Team */
-    u_int32_t team_size;
-
-    t_list *trainers;
-
-
-    pthread_t trhandler_id;
-
-} Team;
 
 /*Genera lista con strings de pokemones que conforman el objetivo global*/
 t_list* Team_GET_generate (void);
 
-u_int32_t Trainer_handler_create(Team *this_team);
+int Trainer_handler_create(void);
 
 
 /*  Inicializa el proceso Team   */
-Team* Team_Init(void);
+void Team_Init(void);
 
 
 
 void* listen_routine_gameboy (void *config);
 
-void send_trainer_to_exec (Config *config);
+void send_trainer_to_exec (void);
 
 exec_error fifo_exec ();
 
 void subscribe (Config *config) ;
 
-void listen_new_pokemons (Config *config);
+void listen_new_pokemons (void);
 
-void liberar_listas(Team *this_team);
 
 void imprimir_lista (t_list *get_list);
 

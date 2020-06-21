@@ -9,9 +9,8 @@
 
 
 
-void * listen_routine_gameboy (void *configuracion)
+void * listen_routine_gameboy (void *retorno)
 {
-	Config *config=configuracion;
 
     int socket= crearSocketServidor (config->team_IP, config->team_port);
     printf ("Puerto= %s\n",config->team_port);
