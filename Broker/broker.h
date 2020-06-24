@@ -18,7 +18,7 @@
 #include <semaphore.h>
 //#include <time.h>
 #include <sys/time.h>
-
+#include <math.h>
 /* STRUCTS */
 
 typedef enum {PD, BUDDY} t_tipo_particionado;
@@ -116,6 +116,7 @@ typedef struct {
 	uint32_t id;
 	uint32_t base;
 	uint32_t tamanio;
+	uint32_t buddy_i; //para Buddy System
 	struct timeval time_creacion;
 	struct timeval time_ultima_ref;
 } t_particion;
@@ -147,6 +148,7 @@ t_cola* cola_catch;
 t_cola* cola_caught;
 
 t_list* particiones;
+uint32_t buddy_U; //U es el exponente máximo de partición (la memoria completa)
 
 pthread_mutex_t sem_cola_new;
 pthread_mutex_t sem_cola_appeared;
@@ -219,6 +221,12 @@ int cachearCatchPokemon(t_catch_pokemon* msg);
 int cachearCaughtPokemon(t_caught_pokemon* msg);
 int cachearGetPokemon(t_get_pokemon* msg);
 int cachearLocalizedPokemon(t_localized_pokemon* msg);
+
+int victimaSegunFIFO();
+// BUDDY
+void partirBuddy(int indice);
+int obtenerHuecoBuddy(int i);
+int buscarHuecoBuddy(int i);
 
 t_new_pokemon descachearNewPokemon(void* stream, uint32_t id);
 t_appeared_pokemon descachearAppearedPokemon(void* stream, uint32_t id);

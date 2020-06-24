@@ -108,11 +108,15 @@ void inicializarMemoria(){
 	cache = malloc(config_broker->tam_memoria);
 	particiones = list_create();
 
+	//Exponente en base 2 que representa a la memoria (para buddy)
+	buddy_U = (uint32_t)ceil(log10(config_broker->tam_memoria)/log10(2));
+
 	//Partición libre inicial
 	t_particion* particionInicial = malloc(sizeof(t_particion));
 	particionInicial->libre = true;
 	particionInicial->base = 0;
 	particionInicial->tamanio = config_broker->tam_memoria;
+	particionInicial->buddy_i = buddy_U;
 
 	list_add(particiones,particionInicial);
 }
@@ -162,33 +166,107 @@ int buscarParticionLibre(uint32_t largo_stream){
 	return -1;
 }
 /**
+ * Busca una partición libre y de tamaño indicado
+ */
+int buscarHuecoBuddy(int i){
+	int largo = list_size(particiones);
+	int indice = -1;
+	for(int x = 0; x <= largo; x++){
+		t_particion* part = list_get(particiones,x);
+		if(part->libre == true && part->buddy_i == i){
+			indice = x;
+		}
+	}
+	return indice;
+}
+/**
+ * Parte a la mitad el buddy del índice dado
+ */
+void partirBuddy(int indice){
+	int i = 0;
+	t_particion* buddy_izq = list_get(particiones,indice);
+	t_particion* buddy_der = list_get(particiones,indice);
+	//El orden (exponente en base 2) actual del buddy
+	i = buddy_izq->buddy_i;
+
+	if(i > 0){
+		//El buddy de la derecha comienza 2^(i-1) bytes después de la base del izquierdo
+		buddy_der->buddy_i = i - 1;
+		buddy_der->base = buddy_der->base + (int)pow(2,i-1);
+
+		buddy_izq->buddy_i = i - 1;
+
+		list_replace(particiones,indice,buddy_der);
+		list_add_in_index(particiones,indice,buddy_izq);
+	}
+}
+/**
+ * algoritmo recursivo para buscar una partición buddy adecuada.
+ * se van partiendo a la mitad los buddys de ser necesario
+ */
+int obtenerHuecoBuddy(int i){
+	int indice;
+
+	//Condición de salida de la recursividad
+	if(i == buddy_U + 1){
+		return -1;
+	}
+
+	indice = buscarHuecoBuddy(i);
+	if(indice == -1){
+		indice = obtenerHuecoBuddy(i + 1);
+		//Si encontró parto el buddy, sino no hago nada
+		if(indice != -1){
+			partirBuddy(indice);
+		}
+	}
+	return indice;
+}
+/**
  * el campo "id" de la partición depende del tipo de mensaje puede referirse al id_mensaje o id_mensaje_correlativo
  * Esta funcion es para reutilizar en cada cachearTalMensaje()
  */
 int buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint32_t id){
 	sem_wait(&mx_particiones);
-	//buscarParticionLibre(largo_stream) devuelve el índice de la particion libre o -1 si no encuentra
-	int indice = buscarParticionLibre(largo_stream);
-	int cant_intentos_fallidos = 0;
-	log_info(logBrokerInterno,"indice %d",indice);
-	while (indice < 0) {
-		cant_intentos_fallidos++;
-		if(cant_intentos_fallidos < config_broker->frecuencia_compatacion){
-			eliminarParticion();
-		}else{
-			log_info(logBrokerInterno,"Compactar");
-			compactarParticiones();
-			cant_intentos_fallidos = 0;
-
-			indice = buscarParticionLibre(largo_stream);
-			if(indice < 0){
-				cant_intentos_fallidos++;
-				eliminarParticion();
-			}
-		}
-		//Buscar de nuevo
+	int indice = -1;
+	uint32_t buddy_i = 0;
+	if(config_broker->algoritmo_memoria == PD){
+		//buscarParticionLibre(largo_stream) devuelve el índice de la particion libre o -1 si no encuentra
 		indice = buscarParticionLibre(largo_stream);
+		int cant_intentos_fallidos = 0;
+		log_info(logBrokerInterno,"indice %d",indice);
+		while (indice < 0) {
+			cant_intentos_fallidos++;
+			if(cant_intentos_fallidos < config_broker->frecuencia_compatacion){
+				eliminarParticion();
+			}else{
+				log_info(logBrokerInterno,"Compactar");
+				compactarParticiones();
+				cant_intentos_fallidos = 0;
+
+				indice = buscarParticionLibre(largo_stream);
+				if(indice < 0){
+					cant_intentos_fallidos++;
+					eliminarParticion();
+				}
+			}
+			//Buscar de nuevo
+			indice = buscarParticionLibre(largo_stream);
+		}
 	}
+	if(config_broker->algoritmo_memoria == BUDDY){
+		//calculo la potencia de 2 mínima para contener el stream
+		int i = (int)ceil(log10(largo_stream)/log10(2));
+
+		//Se busca recursivamente una partición de orden i
+		indice = obtenerHuecoBuddy(i);
+		while(indice == -1){
+			//Si el indice es -1, no encontró partición, aplico algoritmo de reemplazo
+			eliminarParticionBuddy();
+			indice = obtenerHuecoBuddy(i);
+		}
+	}
+
 	//Copiar estr. admin. de la particion
 	t_particion* part_libre = list_get(particiones, indice);
 
@@ -197,34 +275,48 @@ int buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint32
 	memcpy(cache + (part_libre->base), stream, largo_stream);
 
 	//actualizar estructura administrativa (lista de particiones)
-	t_particion* part_nueva = malloc(sizeof(t_particion));
-	part_nueva->libre = false;
-	part_nueva->tipo_mensaje = tipo_msg;
-	part_nueva->base = part_libre->base;
-	part_nueva->tamanio = largo_stream;
-	part_nueva->id = id;
-	struct timeval current_time;
-	gettimeofday(&current_time, NULL);
-	part_nueva->time_creacion = current_time; //Hora actual del sistema
-	part_nueva->time_ultima_ref = current_time; //Hora actual del sistema
+	//Esto depende del tipo de algoritmo
+	if(config_broker->algoritmo_memoria == PD){
+		t_particion* part_nueva = malloc(sizeof(t_particion));
+		part_nueva->libre = false;
+		part_nueva->tipo_mensaje = tipo_msg;
+		part_nueva->base = part_libre->base;
+		part_nueva->tamanio = largo_stream;
+		part_nueva->id = id;
+		struct timeval current_time;
+		gettimeofday(&current_time, NULL);
+		part_nueva->time_creacion = current_time; //Hora actual del sistema
+		part_nueva->time_ultima_ref = current_time; //Hora actual del sistema
 
-	part_libre->base = part_libre->base + largo_stream;
-	part_libre->tamanio = part_libre->tamanio - largo_stream;
+		part_libre->base = part_libre->base + largo_stream;
+		part_libre->tamanio = part_libre->tamanio - largo_stream;
 
-	//Y acá cambiar [{...part_libre...}] por [{nueva},{libre_mas_chica}]
-	//Pasos: Insertar la nueva -> [{nueva},{...part_libre...}]
-	list_add_in_index(particiones,indice,part_nueva);
-	//y luego eliminar/reemplazar la part_libre original
-	if(part_libre->tamanio == 0){
-		list_remove(particiones,indice+1);
-	}else{
-		list_replace(particiones,indice+1,part_libre);
+		//Y acá cambiar [{...part_libre...}] por [{nueva},{libre_mas_chica}]
+		//Pasos: Insertar la nueva -> [{nueva},{...part_libre...}]
+		list_add_in_index(particiones,indice,part_nueva);
+		//y luego eliminar/reemplazar la part_libre original
+		if(part_libre->tamanio == 0){
+			list_remove(particiones,indice+1);
+		}else{
+			list_replace(particiones,indice+1,part_libre);
+		}
+
+		// 6. Almacenado de un mensaje dentro de la memoria (indicando posición de inicio de su partición).
+		log_info(logBroker, "ID_MENSAJE %d, asigno partición base %d y tamanio %d",id, part_nueva->base,part_nueva->tamanio);
+		log_info(logBrokerInterno, "ID_MENSAJE %d, asigno partición base %d y tamanio %d",id, part_nueva->base,part_nueva->tamanio);
 	}
+	if(config_broker->algoritmo_memoria == BUDDY){
 
-	// 6. Almacenado de un mensaje dentro de la memoria (indicando posición de inicio de su partición).
-	log_info(logBroker, "ID_MENSAJE %d, asigno partición base %d y tamanio %d",id, part_nueva->base,part_nueva->tamanio);
-	log_info(logBrokerInterno, "ID_MENSAJE %d, asigno partición base %d y tamanio %d",id, part_nueva->base,part_nueva->tamanio);
+		part_libre->libre = false;
+		part_libre->tipo_mensaje = tipo_msg;
+		part_libre->id = id;
+		struct timeval current_time;
+		gettimeofday(&current_time, NULL);
+		part_libre->time_creacion = current_time; //Hora actual del sistema
+		part_libre->time_ultima_ref = current_time; //Hora actual del sistema
 
+		list_replace(particiones,indice,part_libre);
+	}
 	//-> DESMUTEAR LISTA DE PARTICIONES
 	sem_post(&mx_particiones);
 	return 1;
@@ -261,25 +353,73 @@ void liberarParticion(int indice_victima){
 		}
 	}
 }
-void eliminarParticion(){
+void eliminarParticionBuddy(){
+	int indice_victima = victimaSegunFIFO();
 	t_algoritmo_reemplazo algoritmo = config_broker->algoritmo_reemplazo;
-	int indice_victima = 0;
-	int cant_particiones = list_size(particiones);
-	struct timeval time_aux;
-	gettimeofday(&time_aux, NULL);
 	switch(algoritmo){
 		case FIFO:{
 			//Eliminar la partición con con time_creación más viejo
-			for(int i=0; i<cant_particiones; i++){
-				t_particion* part = list_get(particiones,i);
-				if(part->libre == false){
-					//Si los segundos son menores ó los segundos son iguales y los microsegundos menores
-					if(part->time_creacion.tv_sec < time_aux.tv_sec || (part->time_creacion.tv_sec == time_aux.tv_sec && part->time_creacion.tv_usec < time_aux.tv_usec)){
-						time_aux = part->time_creacion;
-						indice_victima = i;
-					}
-				}
+			indice_victima = victimaSegunFIFO();
+		}
+		break;
+		case LRU:{
+			algoritmoLRU();
+		}
+		break;
+		default:
+			log_info(logBrokerInterno,"No matcheo reemplazo");
+			return;
+		break;
+	}
+	//Eliminar partición. Si tiene un compañero (buddy) del mismo tamaño y vacío, consolidar
+	t_particion* part_liberar = list_get(particiones,indice_victima);
+	part_liberar->libre = true;
+	uint32_t i = part_liberar->buddy_i;
+	list_replace(particiones, indice_victima, part_liberar);
+
+	log_info(logBrokerInterno,"Se elimina particion base %d, i %d, indice %d",part_liberar->base,part_liberar->buddy_i,indice_victima);
+
+	//Consolidar buddys
+	bool huboConsolidacion;
+	int i_aux = i;
+	do{
+		huboConsolidacion = false;
+		//Si no es la última partición
+		if(indice_victima + 1 < list_size(particiones)){
+			t_particion* part_der = list_get(particiones,indice_victima+1);
+			if(part_der->libre == true && part_der->buddy_i == i_aux){
+				//Fusionar
+				part_liberar->buddy_i = part_liberar->buddy_i + 1;
+				list_remove(particiones,indice_victima + 1);
+				log_info(logBrokerInterno,"Se consolida con particion buddy indice %d, i %d",indice_victima+1,i_aux);
+				huboConsolidacion = true;
+				i_aux++;
 			}
+		}
+		//Si no es la primera partición
+		if(indice_victima > 0){
+			t_particion* part_izq = list_get(particiones,indice_victima-1);
+			if(part_izq->libre == true && part_izq->buddy_i == i_aux){
+				//Fusionar
+				part_liberar->base = part_izq->base;
+				part_liberar->buddy_i = part_liberar->buddy_i + 1;
+				list_remove(particiones,indice_victima -1);
+				log_info(logBrokerInterno,"Se consolida con particion indice %d",indice_victima-1);
+				huboConsolidacion = true;
+				indice_victima = indice_victima -1;
+				i_aux++;
+			}
+		}
+	}while(huboConsolidacion);
+}
+void eliminarParticion(){
+	t_algoritmo_reemplazo algoritmo = config_broker->algoritmo_reemplazo;
+	int indice_victima = 0;
+
+	switch(algoritmo){
+		case FIFO:{
+			//Eliminar la partición con con time_creación más viejo
+			indice_victima = victimaSegunFIFO();
 		}
 		break;
 		case LRU:{
@@ -294,6 +434,24 @@ void eliminarParticion(){
 	liberarParticion(indice_victima);
 }
 
+int victimaSegunFIFO(){
+	int cant_particiones = list_size(particiones);
+	struct timeval time_aux;
+	gettimeofday(&time_aux, NULL);
+	int indice_victima = -1;
+
+	for(int i=0; i<cant_particiones; i++){
+		t_particion* part = list_get(particiones,i);
+		if(part->libre == false){
+			//Si los segundos son menores ó los segundos son iguales y los microsegundos menores
+			if(part->time_creacion.tv_sec < time_aux.tv_sec || (part->time_creacion.tv_sec == time_aux.tv_sec && part->time_creacion.tv_usec < time_aux.tv_usec)){
+				time_aux = part->time_creacion;
+				indice_victima = i;
+			}
+		}
+	}
+	return indice_victima;
+}
 void algoritmoFIFO(){
 	log_info(logBrokerInterno, "Algoritmo FIFO.");
 }
