@@ -53,6 +53,7 @@ void Team_load_trainers_config(void)
     /*  Creo la lista de objetivos globales que va a manejar el Team */
     global_objective = list_create();
     aux_global_objective= list_create();
+    t_list *bag_global= list_create();
 
     /*  Creo un puntero a estructura del tipo Trainer para ir creando cada entrenador leído por archivo de configuración.
         Estas estructuras se van apuntando en nodos de una lista definida en la estructura del Team como t_list *trainers     */
@@ -96,13 +97,17 @@ void Team_load_trainers_config(void)
         list_add(trainers, entrenadores);
 
         /*  Añado los objetivos de cada entrenador a la lista de objetivos globales */
-        list_add_all (global_objective, duplicar_lista(entrenadores->personal_objective));
+        list_add_all (global_objective, duplicar_lista(entrenadores->personal_objective)); //Ver si se puede poner un list_duplicate
+        list_add_all (bag_global,entrenadores->bag);
         
         /*  Libero memoria innecesaria generada por la función string_split de las commons  */
         free (posicion);
         //free (mochila);
         free (objetivos);
     }
+
+    remover_objetivos_globales_conseguidos(bag_global);
+    list_destroy(bag_global);
 
     /*  Libero memoria innecesaria generada por la función string_split de las commons  */
    /* free_split (pos_trainers_to_array);
@@ -122,8 +127,9 @@ void Team_load_trainers_config(void)
 
 void Team_load_global_config()
 {
+    ciclos_cpu=0;
     config->reconnection_time    = config_get_int_value(config->team_config, "TIEMPO_RECONEXION");
-    config->cpu_cycle            = config_get_int_value(config->team_config, "RETARDO_CICLO_CPU");
+    config->retardo_cpu          = config_get_int_value(config->team_config, "RETARDO_CICLO_CPU");
     config->planning_algorithm   = string_duplicate(config_get_string_value(config->team_config, "ALGORITMO_PLANIFICACION"));
     config->quantum              = config_get_int_value(config->team_config, "QUANTUM");
     config->initial_estimation   = config_get_int_value(config->team_config, "ESTIMACION_INICIAL");
@@ -137,7 +143,7 @@ void Team_load_global_config()
     {
         puts ("\n\n\nShowing the global configurations:");
         printf ("TIEMPO_RECONEXION= %d\n",config->reconnection_time );
-        printf ("RETARDO_CICLO_CPU= %d\n",config->cpu_cycle);
+        printf ("RETARDO_CICLO_CPU= %d\n",config->retardo_cpu);
         printf ("ALGORITMO_PLANIFICACION= %s\n",config->planning_algorithm);
         printf ("QUANTUM= %d\n",config->quantum);
         printf ("ESTIMACION_INICIAL= %d\n",config->initial_estimation);
@@ -203,4 +209,36 @@ void _imprimir_inventario (void *elemento)
 void _imprimir_objetivos (void *elemento)
 {
     printf ("Objetivos: %s\n",(char *) elemento);
+}
+
+
+void remover_objetivos_globales_conseguidos(t_list *global_bag)
+{
+    char *nombre;
+
+    bool comparar (void *element)
+    {
+        if (!strcmp( (char *)element, nombre))
+        return true; else return false;
+    }
+
+
+    bool comparar_y_borrar (void *element)
+    {
+        for (int i=0; i<global_bag->elements_count; i++)
+        {
+            nombre=list_get(global_bag,i);
+            if (!strcmp( (char *)element, nombre ) )
+            {
+            list_remove_by_condition(global_bag,comparar);
+            return true;
+            }
+        }
+        return false;
+    }
+
+    for (int i=0; i<global_objective->elements_count; i++)
+    {
+    list_remove_by_condition(global_objective,comparar_y_borrar);
+    }
 }

@@ -27,7 +27,7 @@ void* trainer_to_catch(void *retorno)
     void calculate_distance (void *element)
     {
         Trainer *trainer=element;
-        count++;
+       // count++;
         if ( trainer->actual_status ==NEW ||trainer->actual_status == BLOCKED_NOTHING_TO_DO) //Sólo planifica entrenadores no bloqueados
         {
             u_int32_t Tx= trainer->posx;
@@ -38,7 +38,7 @@ void* trainer_to_catch(void *retorno)
             if (distance < distance_min)
             {
                 distance_min=distance;
-                index=count;
+                index=trainer->index;
                 target=1;
             }
         }
@@ -49,11 +49,14 @@ void* trainer_to_catch(void *retorno)
          // Este semáforo bloquea el proceso de planificación si no hay entrenadores para mandar a ready
                         // Se le deberá hacer el post una vez que el entrenador reciba el caught y pueda volver a ser  planificado
         pthread_mutex_lock (&global_sem);
-        if (list_size (global_objective) > 1 )
-        {
+        printf ("Lista global: %d\n", list_size (global_objective));
+        printf ("Lista global aux: %d\n", list_size (aux_global_objective));
+        sem_wait (&trainer_count);puts ("pasé bloqueo"); 
+        if (list_size (global_objective) > 0 )
+        { puts ("entre");
             pthread_mutex_unlock (&global_sem);
-
-            sem_wait (&trainer_count);
+            puts ("me bloqueo");
+            
             sem_wait(&poklist_sem); //Para evitar espera activa si no hay pokemones en el mapa. Revisar este comentario.
             sem_wait(&poklist_sem2); //Para evitar espera activa si no hay pokemones en el mapa. En realidad es por productor consumidor
             actual_pokemon =  list_remove (mapped_pokemons, 0);
@@ -63,16 +66,17 @@ void* trainer_to_catch(void *retorno)
         
             list_iterate (trainers,calculate_distance);
             printf ("target= %d\n",target);
+            printf ("indice planificado: %d\n", index);
             if (target ==1) //Si se pudo encontrar un entrenador libre y más cercano que vaya a cazar al pokemon, avanzo y lo mando
             {
-                ( (Trainer*) list_get (trainers, index))->actual_objective.posx = actual_pokemon->posx;
-                ( (Trainer*) list_get (trainers, index))->actual_objective.posy = actual_pokemon->posy;
-                ( (Trainer*) list_get (trainers, index))->actual_objective.name = string_duplicate (actual_pokemon->name); //Malloc
-                ( (Trainer*) list_get (trainers, index))->actual_status= READY;                                           //oculto
-                ( (Trainer*) list_get (trainers, index))->actual_operation= OP_EXECUTING_CATCH;        
+                Trainer *trainer=list_get (trainers, index);
+                trainer->actual_objective.posx = actual_pokemon->posx;
+                trainer->actual_objective.posy = actual_pokemon->posy;
+                trainer->actual_objective.name = string_duplicate (actual_pokemon->name); //Malloc
+                trainer->actual_status= READY;                                           //oculto
+                trainer->actual_operation= OP_EXECUTING_CATCH;        
                 
-                send_trainer_to_ready (trainers, index, OP_EXECUTING_CATCH);
-
+                send_trainer_to_ready (trainers, index, OP_EXECUTING_CATCH); 
                 count=-1;
                 index=-1;
                 distance_min= 100000  ; //Arreglar esta hardcodeada trucha
@@ -87,7 +91,9 @@ void* trainer_to_catch(void *retorno)
                 {
 
                     pthread_mutex_unlock (&auxglobal_sem);
+                    puts ("me bloqueo esperando entrenadores libres");
                     sem_wait (&trainer_count);
+                    puts ("Encontre entrenadores libres");
                 }
                 else 
                 {
@@ -105,7 +111,6 @@ void* trainer_to_catch(void *retorno)
 void send_trainer_to_ready (t_list *lista, int index, Operation op)
 
 {
-    printf ("OP vale %d\n",op);
     switch (op)
     {
         case OP_EXECUTING_CATCH:
@@ -150,27 +155,39 @@ void mover_objetivo_a_lista_auxiliar (mapPokemons *actual_pokemon)
 void send_trainer_to_exec (void)
 {
     pthread_t thread;
+    if (!strcmp(config->planning_algorithm, "FIFO"))
+    pthread_create(&thread, NULL, (void*)fifo_exec,NULL);
+
+    if (!strcmp(config->planning_algorithm, "RR"))
+    pthread_create(&thread, NULL, (void*)RR_exec,NULL);
+
+    /*
+    if (!strcmp(config->planning_algorithm, "SJF"))
+    pthread_create(&thread, NULL, trainer_exec,config);
+
+    if (!strcmp(config->planning_algorithm, "SJF-CD"))
     pthread_create(&thread, NULL, trainer_exec,config);
     pthread_detach(thread);
+    */
 }
 
-void *trainer_exec (void *configuracion)
+/*Desbloquea la planificación si todos los entrenadores quedaron bloqueados por deadlock o terminaron, para habilitar la fase de recuperación de Dadlock*/
+
+void desbloquear_planificacion(void)
 {
-    exec_error error;
-    Config *config=configuracion;
-    while (1) //Este while debería ser "mientras team no haya ganado"
+     puts ("*****************************ENTRE A PLANIFICACION************************************");
+    int trainer_block_exit=0;
+    void buscar_entrenadores_libres (void *entrenador)
     {
-
-    if (!strcmp(config->planning_algorithm, "FIFO"))
-    {
-       error= fifo_exec ();
+        Trainer *trainer=entrenador;
+        if (trainer->actual_status==BLOCKED_DEADLOCK || trainer->actual_status==EXIT)
+        trainer_block_exit++;  
     }
-    /*
-    *TO DO: sjfcd_exec()
-    *TO DO: sjf_exec()
-    *TO DO: rr_exec()
-    */
-
+    list_iterate(trainers,buscar_entrenadores_libres);
+    if (list_size(trainers)==trainer_block_exit)
+    {
+        puts ("-------------------------------------------DESBLOQUEANDO PLANIFICACION---------------------------------------");
+    sem_post(&trainer_count);
     }
 
 }
@@ -189,10 +206,16 @@ void* trainer_routine (void *train)
 			case OP_EXECUTING_CATCH:
 			{
 				move_trainer_to_objective (train, OP_EXECUTING_CATCH); //Entre paréntesis debería ir "trainer". No sé por qué funciona así
+                puts ("es este");
+                if (!strcmp(config->planning_algorithm, "RR"))
+                consumir_cpu(trainer);
+
 				int result= send_catch (trainer);
+                
+
 				if (result == 1 )
 				{
-                    log_info (internalLogTeam, "El entrenador %d cazó a %s en (%d,%d)"  
+                    log_warning (internalLogTeam, "El entrenador %d cazó a %s en (%d,%d)"  
                              , trainer->index ,trainer->actual_objective.name,trainer->actual_objective.posx, trainer->actual_objective.posy);
 
                     remover_objetivo_global_auxiliar(trainer->actual_objective.name); //Elimino el objetivo global auxiliar
@@ -201,7 +224,8 @@ void* trainer_routine (void *train)
                     if (detectar_deadlock (trainer))     
                     {
                         log_error (logTeam, "Ha ocurrido un DEADLOCK en el entrenador %d", trainer->index);
-                        trainer->actual_status = BLOCKED_DEADLOCK; 
+                        trainer->actual_status = BLOCKED_DEADLOCK;
+                        
                         trainer_to_deadlock (trainer);
                         sem_wait (&trainer->trainer_sem); //Bloqueo al entrenador hasta ejecutar el algoritmo de recuperación de deadlock
                     }  
@@ -209,6 +233,7 @@ void* trainer_routine (void *train)
                             {
                                 log_info (internalLogTeam, "El entrenador %d ha alcanzado su objetivo satisfactoriamente", trainer->index);
                                 trainer->actual_status = EXIT;
+                                desbloquear_planificacion();
                             } 
                             else if (list_size (trainer->bag) < list_size (trainer->personal_objective))
                                 {
@@ -239,6 +264,7 @@ void* trainer_routine (void *train)
                     {
                         trainer->actual_status = BLOCKED_DEADLOCK;
                         trainer_to_deadlock (trainer);
+                        sem_post (&using_cpu); //Como en este caso no hay mensaje CATCH, necesito disponibilizar la CPU  
                         sem_post (&resolviendo_deadlock);
                         sem_wait (&trainer->trainer_sem); //Bloqueo al entrenador hasta ejecutar el algoritmo de recuperación de deadlock
                     }
@@ -250,12 +276,10 @@ void* trainer_routine (void *train)
                     break;
                 }
 				
-				
-
 				default: puts ("Operación no válida"); //exit (INVALID_TRAINER_OP);
 		}
     }
-
+    
     //Liberar recursos y finalizar el hilo del entrenador
     log_info (internalLogTeam,"El entrenador %d finalizó su hilo de ejecución con éxito", trainer->index);
 }
@@ -268,8 +292,9 @@ void trainer_to_deadlock(Trainer *trainer)
     sem_post (&deadlock_sem2);
     sem_post (&deadlock_sem1);
     log_info (internalLogTeam, "Se agregó al entrenador %d a la cola de bloqueados por Deadlock", trainer->index);
-    sem_post (&trainer_count); //Revisar esto. Se lo disponibiliza para ser planificado, pero sólo para solucionar deadlock
-    sem_post(&using_cpu); //Disponibilizar la CPU para otro entrenador
+    //sem_post (&trainer_count); //Revisar esto. Se lo disponibiliza para ser planificado, pero sólo para solucionar deadlock
+    desbloquear_planificacion();
+    //sem_post(&using_cpu); //Disponibilizar la CPU para otro entrenador. No es necesario, la CPU se disponibilizó al mandar el CATCH en listen.c.
 }   
 
 void remover_objetivo_global_auxiliar(char *name_pokemon)
@@ -424,13 +449,10 @@ int deadlock_recovery (void)
     printf ("Size lista de deadlock: %d\n", list_size (deadlock_list));
     if (!detectar_deadlock (list_get(deadlock_list, 0)))
     {
-        puts ("voy a romper");
         Trainer *trainer = list_remove (deadlock_list,0);
-        puts ("pase");
         trainer->actual_status=EXIT;
         sem_post(&trainer->trainer_sem);
         sem_post(&resolviendo_deadlock);
-        puts ("rrompi");
         return 0;
     }
     log_info (logTeam,"Se comenzó a ejecutar el algoritmo de recuperación de DEADLOCK");
@@ -597,6 +619,7 @@ int intercambiar(Trainer *trainer1, Trainer *trainer2)
 
 bool detectar_deadlock (Trainer *trainer)
 {
+    //Agregar: if trainer==NULL--> terminar (no hubo deadlocks)
  if (list_size (trainer->bag) >= list_size (trainer->personal_objective)  && !comparar_listas(trainer->bag,trainer->personal_objective))
  return true; 
  else return false;
@@ -620,7 +643,7 @@ void move_trainer_to_objective (Trainer *trainer, Operation op)
     u_int32_t *Ty;
     u_int32_t *Px;
     u_int32_t *Py;
-    printf ("Operacion: %d\n", op);
+
     switch (op)
     {
         case OP_EXECUTING_CATCH:
@@ -645,53 +668,61 @@ void move_trainer_to_objective (Trainer *trainer, Operation op)
 
     }
     
-    while ( (*Tx != *Px) || (*Ty!=*Py) )
+    while ( ( (*Tx != *Px) || (*Ty!=*Py) ) && !strcmp (config->planning_algorithm, "FIFO") )
     {
         if ( calculate_distance (*Tx+1, *Ty, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
         *Tx=*Tx+1;
-        //log_info (logTeam , "Se movió un entrenador hacia la derecha. Posición: (%d,%d)", *Tx, *Ty);
+        log_info (logTeam , "Se movió un entrenador hacia la derecha. Posición: (%d,%d)", *Tx, *Ty);
+        usleep (config->retardo_cpu * 100000);
         }
 
         if ( calculate_distance (*Tx, *Ty+1, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
         *Ty=*Ty+1;
-        //log_info (logTeam , "Se movió un entrenador hacia arriba. Posición: (%d,%d)", *Tx, *Ty);
+        log_info (logTeam , "Se movió un entrenador hacia arriba. Posición: (%d,%d)", *Tx, *Ty);
+        usleep (config->retardo_cpu * 100000);
         }
 
         if ( calculate_distance (*Tx-1, *Ty, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
         *Tx=*Tx-1;
-        //log_info (logTeam , "Se movió un entrenador hacia la izquierda. Posición: (%d,%d)", *Tx, *Ty);
+        log_info (logTeam , "Se movió un entrenador hacia la izquierda. Posición: (%d,%d)", *Tx, *Ty);
+        usleep (config->retardo_cpu * 100000);
         }
 
         if ( calculate_distance (*Tx, *Ty-1, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
         *Ty=*Ty-1;
-       // log_info (logTeam , "Se movió un entrenador hacia abajo. Posición: (%d,%d)", *Tx, *Ty);
+        log_info (logTeam , "Se movió un entrenador hacia abajo. Posición: (%d,%d)", *Tx, *Ty);
+        usleep (config->retardo_cpu * 100000);
         }
-        usleep (300000);
+        
     }
-/*
-    while ( (*Tx != *Px) || (*Ty!=*Py) &&RR)
+
+    while ( ( (*Tx != *Px) || (*Ty!=*Py) ) && !strcmp (config->planning_algorithm, "RR") )
     {
+ 
         if ( calculate_distance (*Tx+1, *Ty, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
+        consumir_cpu(trainer);
         *Tx=*Tx+1;
-        //log_info (logTeam , "Se movió un entrenador hacia la derecha. Posición: (%d,%d)", *Tx, *Ty);
+        log_info (logTeam , "Se movió un entrenador hacia la derecha. Posición: (%d,%d)", *Tx, *Ty);
         }
 
         if ( calculate_distance (*Tx, *Ty+1, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
+        consumir_cpu(trainer);
         *Ty=*Ty+1;
-        //log_info (logTeam , "Se movió un entrenador hacia arriba. Posición: (%d,%d)", *Tx, *Ty);
+        log_info (logTeam , "Se movió un entrenador hacia arriba. Posición: (%d,%d)", *Tx, *Ty);
         }
 
         if ( calculate_distance (*Tx-1, *Ty, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
+        consumir_cpu(trainer);
         *Tx=*Tx-1;
-        //log_info (logTeam , "Se movió un entrenador hacia la izquierda. Posición: (%d,%d)", *Tx, *Ty);
+        log_info (logTeam , "Se movió un entrenador hacia la izquierda. Posición: (%d,%d)", *Tx, *Ty);
         }
 
         if ( calculate_distance (*Tx, *Ty-1, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
+        consumir_cpu(trainer);
         *Ty=*Ty-1;
-       // log_info (logTeam , "Se movió un entrenador hacia abajo. Posición: (%d,%d)", *Tx, *Ty);
+        log_info (logTeam , "Se movió un entrenador hacia abajo. Posición: (%d,%d)", *Tx, *Ty);
         }
-        usleep (300000);
-    }*/
+    }
 }
 
 u_int32_t calculate_distance (u_int32_t Tx, u_int32_t Ty, u_int32_t Px, u_int32_t Py )
@@ -699,8 +730,22 @@ u_int32_t calculate_distance (u_int32_t Tx, u_int32_t Ty, u_int32_t Px, u_int32_
     return (abs (Tx - Px) + abs (Ty - Py));
 }
 
-/*
-void consumir_cpu(sem_t *sem_trainer)
+
+void consumir_cpu(Trainer *trainer)
 {
-    
-}*/
+    if (ciclos_cpu >= config->quantum)
+    {
+        trainer->actual_status=READY;
+        trainer->ejecucion= PENDING;
+        sem_post(&using_cpu);
+        sem_wait(&trainer->trainer_sem);
+        trainer->ejecucion= FINISHED;
+        usleep (config->retardo_cpu * 100000); //Uso usleep para que no sea tan lenta la ejecución
+    } 
+    else
+    {
+        usleep (config->retardo_cpu * 100000); //Uso usleep para que no sea tan lenta la ejecución
+        trainer->ejecucion= FINISHED;
+    }
+    ciclos_cpu++;
+}

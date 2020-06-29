@@ -23,7 +23,7 @@ void Team_Init(void)
     config= malloc (sizeof (Config));
     config->team_config = get_config();
     sem_init (&trainer_count, 0, 0);					//*********Mejorar la ubicación de esta instrucción***************//
-    sem_init (&using_cpu, 0,1);
+    sem_init (&using_cpu, 0,0);
     Team_load_global_config();
     
     Team_load_trainers_config();
@@ -110,19 +110,45 @@ void imprimir_lista (t_list *lista)
 }
 
 /* Consumidor de cola Ready */
-exec_error fifo_exec ()
+void fifo_exec (void)
 {
+    while (1) //Este while debería ser "mientras team no haya ganado"
+    {
+        
+        // if (team ganó) entonces return;
+        sem_wait ( &qr_sem1 );
+        sem_wait ( &qr_sem2 );
 
-       sem_wait (&using_cpu);
-       // if (team ganó) entonces return;
-       sem_wait ( &qr_sem1 );
-       sem_wait ( &qr_sem2 );
-
-       Trainer* trainer= list_remove (ReadyQueue, 0);
-       trainer->actual_status= EXEC;
-       sem_post ( &qr_sem2 );
-       sem_post ( &(trainer->trainer_sem) );
+        Trainer* trainer= list_remove (ReadyQueue, 0);
+        trainer->actual_status= EXEC;
+        sem_post ( &qr_sem2 );
+        sem_post ( &(trainer->trainer_sem) );
+        sem_wait (&using_cpu);
+    }
 }
+/* Consumidor de cola Ready (y productor cuando se desalojó por quantum)*/
+void RR_exec (void)
+{
+       while (1) //Este while debería ser "mientras team no haya ganado"
+       {
+
+            sem_wait ( &qr_sem1 );
+            sem_wait ( &qr_sem2 );
+            Trainer* trainer= list_remove (ReadyQueue, 0);
+            trainer->actual_status= EXEC; //Verificar si esto puede salir de la zona crítica
+            sem_post ( &qr_sem2 );
+
+            sem_post ( &(trainer->trainer_sem) );
+            sem_wait (&using_cpu);
+            if (trainer->ejecucion == PENDING)
+            {
+            send_trainer_to_ready(trainers, trainer->index,trainer->actual_operation);
+            }
+            ciclos_cpu=0;
+       }
+}
+
+
 
 
 // ============================================================================================================
@@ -163,7 +189,6 @@ int Trainer_handler_create ()
     sem_getvalue(&resolviendo_deadlock, &value);
     printf ("Resolviendo deadlock vale %d\n", value);
     sem_wait (&resolviendo_deadlock);
-    puts ("pase");
     //sleep (4);
     }
 

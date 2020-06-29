@@ -60,6 +60,10 @@ typedef struct
 
 extern t_list *trainers;
 
+//int ciclos_cpu=0;
+
+extern Config *config;
+
 typedef struct
 {
     /*  Inventario del entrenador - Son los pokemones que ya trae por archivo de configuración */
@@ -87,7 +91,9 @@ typedef struct
     int index;
 
     u_int32_t catch_result;
-    Config *config;
+    Config *config; //Sacar esto y corregir todos los impactos que genera la supresión
+
+    exec_error ejecucion;
 
 } Trainer;
 
@@ -141,6 +147,12 @@ int intercambiar(Trainer *trainer1, Trainer *trainer2);
 
 bool detectar_deadlock (Trainer* trainer);
 
-void *trainer_exec (void *config);
+void desbloquear_planificacion(void);
+
+void consumir_cpu(Trainer *trainer);
+
+void fifo_exec (void);
+
+void RR_exec (void);
 
 #endif /* INCLUDE_TRAINERS_H_ */

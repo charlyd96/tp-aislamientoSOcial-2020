@@ -9,7 +9,6 @@
 #define INCLUDE_LISTEN_H_
 
 #include <conexion.h>
-#include <team.h>
 #include <protocolo.h>
 #include <serializacion.h>
 #include <pthread.h>
@@ -27,6 +26,7 @@ extern t_log *logTeam;
 
 extern Config *config;
 
+extern int ciclos_cpu;
 void* get_opcode (int *socket);
 
 void process_request_recv (op_code cod_op, int socket_cliente);
@@ -34,9 +34,6 @@ void process_request_recv (op_code cod_op, int socket_cliente);
 int send_catch (Trainer *trainer);
 
 int search_caught(u_int32_t id_corr, sem_t *trainer_sem);
-
-
-
 
 void * send_catch_routine (void * train);
 #endif /* INCLUDE_LISTEN_H_ */

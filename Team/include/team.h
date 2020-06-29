@@ -52,10 +52,12 @@ sem_t poklist_sem2;
 extern t_log *internalLogTeam;
 extern t_log *logTeam;
 
+int ciclos_cpu;
 
 t_list *ReadyQueue;
 sem_t qr_sem1;
 sem_t qr_sem2;
+
 
 /* Errores para identificar estado en la ejecución de los hilos - para RR y SJF */
 typedef enum
@@ -109,8 +111,6 @@ void Team_Init(void);
 void* listen_routine_gameboy (void *config);
 
 void send_trainer_to_exec (void);
-
-exec_error fifo_exec ();
 
 void subscribe (Config *config) ;
 

@@ -25,9 +25,9 @@ t_log *logTeam;
 typedef struct {
     t_config* team_config;
     u_int32_t reconnection_time;
-    u_int32_t cpu_cycle;
+    int retardo_cpu;
     char *planning_algorithm;
-    u_int32_t quantum;
+    int quantum;
     u_int32_t initial_estimation;
     char *broker_IP;
     char *broker_port;
@@ -39,7 +39,7 @@ typedef struct {
 extern t_list *trainers;
 
 Config *config;
-
+extern int ciclos_cpu;
 /*Para crear puntero a archivo de configuración*/
 t_config *get_config(void);
 
@@ -59,4 +59,5 @@ void  free_split (char **string);
 void _free_sub_list (void* elemento);
 void liberar_listas (void);
 
+void remover_objetivos_globales_conseguidos(t_list *global_bag);
 #endif /* INCLUDE_TEAMCONFIG_H_ */
