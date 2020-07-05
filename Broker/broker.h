@@ -223,6 +223,7 @@ int cachearGetPokemon(t_get_pokemon* msg);
 int cachearLocalizedPokemon(t_localized_pokemon* msg);
 
 int victimaSegunFIFO();
+int victimaSegunLRU();
 // BUDDY
 void partirBuddy(int indice);
 int obtenerHuecoBuddy(int i);
