@@ -110,7 +110,7 @@ void inicializarMemoria(){
 
 	//Exponente en base 2 que representa a la memoria (para buddy)
 	buddy_U = (uint32_t)ceil(log10(config_broker->tam_memoria)/log10(2));
-
+	log_info(logBrokerInterno,"EL U es %d",buddy_U);
 	//Partición libre inicial
 	t_particion* particionInicial = malloc(sizeof(t_particion));
 	particionInicial->libre = true;
@@ -170,14 +170,15 @@ int buscarParticionLibre(uint32_t largo_stream){
  */
 int buscarHuecoBuddy(int i){
 	int largo = list_size(particiones);
-	int indice = -1;
-	for(int x = 0; x <= largo; x++){
+	for(int x = 0; x < largo; x++){
 		t_particion* part = list_get(particiones,x);
+		//log_info(logBrokerInterno,"analizo part base %d, i %d, indice %d,libre %d",part->base,part->buddy_i,x,part->libre);
 		if(part->libre == true && part->buddy_i == i){
-			indice = x;
+
+			return x;
 		}
 	}
-	return indice;
+	return -1;
 }
 /**
  * Parte a la mitad el buddy del índice dado
@@ -185,10 +186,11 @@ int buscarHuecoBuddy(int i){
 void partirBuddy(int indice){
 	int i = 0;
 	t_particion* buddy_izq = list_get(particiones,indice);
-	t_particion* buddy_der = list_get(particiones,indice);
+	t_particion* buddy_der = malloc(sizeof(t_particion));
+	*buddy_der = *buddy_izq;
 	//El orden (exponente en base 2) actual del buddy
 	i = buddy_izq->buddy_i;
-
+	//log_info(logBrokerInterno,"Se parte el buddy indice %d base %d i %d",indice,buddy_izq->base,buddy_izq->buddy_i);
 	if(i > 0){
 		//El buddy de la derecha comienza 2^(i-1) bytes después de la base del izquierdo
 		buddy_der->buddy_i = i - 1;
@@ -198,6 +200,7 @@ void partirBuddy(int indice){
 
 		list_replace(particiones,indice,buddy_der);
 		list_add_in_index(particiones,indice,buddy_izq);
+
 	}
 }
 /**
@@ -208,7 +211,7 @@ int obtenerHuecoBuddy(int i){
 	int indice;
 
 	//Condición de salida de la recursividad
-	if(i == buddy_U + 1){
+	if(i == (buddy_U + 1)){
 		return -1;
 	}
 
@@ -229,7 +232,7 @@ int obtenerHuecoBuddy(int i){
 int buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint32_t id){
 	sem_wait(&mx_particiones);
 	int indice = -1;
-	uint32_t buddy_i = 0;
+
 	if(config_broker->algoritmo_memoria == PD){
 		//buscarParticionLibre(largo_stream) devuelve el índice de la particion libre o -1 si no encuentra
 		indice = buscarParticionLibre(largo_stream);
@@ -257,7 +260,7 @@ int buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint32
 	if(config_broker->algoritmo_memoria == BUDDY){
 		//calculo la potencia de 2 mínima para contener el stream
 		int i = (int)ceil(log10(largo_stream)/log10(2));
-
+		//log_info(logBrokerInterno,"el i es %d",i);
 		//Se busca recursivamente una partición de orden i
 		indice = obtenerHuecoBuddy(i);
 		while(indice == -1){
@@ -316,6 +319,10 @@ int buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint32
 		part_libre->time_ultima_ref = current_time; //Hora actual del sistema
 
 		list_replace(particiones,indice,part_libre);
+		log_info(logBroker, "ID_MENSAJE %d, asigno partición base %d y i %d",id, part_libre->base,part_libre->buddy_i);
+		log_info(logBrokerInterno, "ID_MENSAJE %d, asigno partición base %d y i %d",id, part_libre->base,part_libre->buddy_i);
+
+
 	}
 	//-> DESMUTEAR LISTA DE PARTICIONES
 	sem_post(&mx_particiones);
@@ -352,8 +359,10 @@ void liberarParticion(int indice_victima){
 		}
 	}
 }
+
 void eliminarParticionBuddy(){
-	int indice_victima = victimaSegunFIFO();
+	log_info(logBrokerInterno,"eliminar particion buddy");
+	int indice_victima = -1;
 	t_algoritmo_reemplazo algoritmo = config_broker->algoritmo_reemplazo;
 	switch(algoritmo){
 		case FIFO:{
@@ -587,8 +596,6 @@ int cachearCaughtPokemon(t_caught_pokemon* msg){
 	void* stream = malloc(largo_stream);
 
 	memcpy(stream, &largo_stream, sizeof(uint32_t));
-
-	log_info(logBrokerInterno, "Se cacheo el CAUGHT");
 
 	int result = buscarParticionYAlocar(largo_stream,stream,CAUGHT_POKEMON,msg->id_mensaje_correlativo);
 
@@ -1212,7 +1219,7 @@ int devolverID(int socket,uint32_t* id_mensaje){
 
 	int enviado = send(socket, stream, sizeof(uint32_t), 0);
 
-	log_info(logBrokerInterno,"ID mensaje asignado %d", id);
+	//log_info(logBrokerInterno,"ID mensaje asignado %d", id);
 	return enviado;
 }
 
@@ -1234,6 +1241,11 @@ void enviarNewPokemonCacheados(int socket, op_code tipo_mensaje){
 			log_info(logBrokerInterno, "Descacheado pos y %d\n", descacheado.pos_y);
 			log_info(logBrokerInterno, "Descacheado cantidad %d\n", descacheado.cantidad);
 			log_info(logBrokerInterno, "Descacheado id mensaje x %d\n", descacheado.id_mensaje);
+
+			//Actualizo time ultima ref
+			struct timeval time_aux;
+			gettimeofday(&time_aux, NULL);
+			particion_buscada->time_ultima_ref = time_aux;
 
 			enviarNewPokemon(socket, descacheado);
 			log_info(logBrokerInterno, "Mensaje enviado");
@@ -1258,6 +1270,10 @@ void enviarAppearedPokemonCacheados(int socket, op_code tipo_mensaje){
 			log_info(logBrokerInterno, "Descacheado pos x %d\n", descacheado.pos_x);
 			log_info(logBrokerInterno, "Descacheado pos y %d\n", descacheado.pos_y);
 			log_info(logBrokerInterno, "Descacheado id correlativo %d\n", descacheado.id_mensaje_correlativo);
+			//Actualizo time ultima ref
+			struct timeval time_aux;
+			gettimeofday(&time_aux, NULL);
+			particion_buscada->time_ultima_ref = time_aux;
 
 			enviarAppearedPokemon(socket, descacheado);
 			log_info(logBrokerInterno, "Mensaje enviado");
@@ -1282,6 +1298,10 @@ void enviarCatchPokemonCacheados(int socket, op_code tipo_mensaje){
 			log_info(logBrokerInterno, "Descacheado pos x %d\n", descacheado.pos_x);
 			log_info(logBrokerInterno, "Descacheado pos y %d\n", descacheado.pos_y);
 			log_info(logBrokerInterno, "Descacheado id %d\n", descacheado.id_mensaje);
+			//Actualizo time ultima ref
+			struct timeval time_aux;
+			gettimeofday(&time_aux, NULL);
+			particion_buscada->time_ultima_ref = time_aux;
 
 			enviarCatchPokemon(socket, descacheado);
 			log_info(logBrokerInterno, "Mensaje enviado");
@@ -1331,6 +1351,11 @@ void enviarGetPokemonCacheados(int socket, op_code tipo_mensaje){
 			log_info(logBrokerInterno, "Descacheado nombre %s\n", descacheado.nombre_pokemon);
 			log_info(logBrokerInterno, "Descacheado id %d\n", descacheado.id_mensaje);
 
+			//Actualizo time ultima ref
+			struct timeval time_aux;
+			gettimeofday(&time_aux, NULL);
+			particion_buscada->time_ultima_ref = time_aux;
+
 			enviarGetPokemon(socket, descacheado);
 			log_info(logBrokerInterno, "Mensaje enviado");
 		}
@@ -1364,6 +1389,11 @@ void enviarLocalizedPokemonCacheados(int socket, op_code tipo_mensaje){
 			}
 
 			log_info(logBrokerInterno, "Descacheado id correlativo %d\n", descacheado.id_mensaje_correlativo);
+
+			//Actualizo time ultima ref
+			struct timeval time_aux;
+			gettimeofday(&time_aux, NULL);
+			particion_buscada->time_ultima_ref = time_aux;
 
 			enviarLocalizedPokemon(socket, descacheado);
 			log_info(logBrokerInterno, "Mensaje enviado");

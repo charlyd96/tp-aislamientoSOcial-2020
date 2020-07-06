@@ -228,6 +228,7 @@ int victimaSegunLRU();
 void partirBuddy(int indice);
 int obtenerHuecoBuddy(int i);
 int buscarHuecoBuddy(int i);
+void eliminarParticionBuddy();
 
 t_new_pokemon descachearNewPokemon(void* stream, uint32_t id);
 t_appeared_pokemon descachearAppearedPokemon(void* stream, uint32_t id);
