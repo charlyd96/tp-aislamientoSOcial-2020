@@ -129,7 +129,7 @@ void send_trainer_to_ready (t_list *lista, int index, Operation op)
             sem_post (&qr_sem2);
             sem_post (&qr_sem1);
             log_info (internalLogTeam, "Se planificó a Ready al entrenador %d para resolver un DEADLOCK", 
-            ( (Trainer*) list_get(deadlock_list, index) )->index);
+            ( (Trainer*) list_get(lista, index) )->index);
             break;
         }
     }
@@ -227,6 +227,7 @@ void* trainer_routine (void *train)
                         trainer->actual_status = BLOCKED_DEADLOCK;
                         
                         trainer_to_deadlock (trainer);
+                        desbloquear_planificacion();
                         sem_wait (&trainer->trainer_sem); //Bloqueo al entrenador hasta ejecutar el algoritmo de recuperación de deadlock
                     }  
                         else if (comparar_listas(trainer->bag,trainer->personal_objective))//Verifico si cumplió sus objetivos
@@ -293,7 +294,7 @@ void trainer_to_deadlock(Trainer *trainer)
     sem_post (&deadlock_sem1);
     log_info (internalLogTeam, "Se agregó al entrenador %d a la cola de bloqueados por Deadlock", trainer->index);
     //sem_post (&trainer_count); //Revisar esto. Se lo disponibiliza para ser planificado, pero sólo para solucionar deadlock
-    desbloquear_planificacion();
+    
     //sem_post(&using_cpu); //Disponibilizar la CPU para otro entrenador. No es necesario, la CPU se disponibilizó al mandar el CATCH en listen.c.
 }   
 
@@ -540,7 +541,7 @@ int deadlock_recovery (void)
             {
             puts ("tercer if");
             entregar_trainer1 = list_get(trainer1_sobrantes, 0);
-            } //Si no se cumple ninguna, se realiza efectivo para ambos entrenadores
+            } //Si no se cumple ninguna, se realiza un intercambio efectivo para ambos entrenadores
 
     trainer1->objetivo.recibir=recibir_trainer1;
     trainer1->objetivo.entregar=entregar_trainer1;

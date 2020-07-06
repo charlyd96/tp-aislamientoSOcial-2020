@@ -13,13 +13,11 @@ void * listen_routine_gameboy (void *retorno)
 {
 
     int socket= crearSocketServidor (config->team_IP, config->team_port);
-    printf ("Puerto= %s\n",config->team_port);
-    printf ("IP= %s\n",config->team_IP);
     while (1) //Este while en realidad debería llevar como condición, que el proceso Team no haya ganado.
 		{
-		sleep (1);
 		pthread_t thread;
 		int socket_cliente = aceptarCliente (socket);
+		
 		printf ("Socket cliente: %d\n", socket_cliente);
 		pthread_create (&thread, NULL, (void *) get_opcode, &socket_cliente);
 		pthread_detach (thread);
@@ -29,9 +27,10 @@ void * listen_routine_gameboy (void *retorno)
 
 void * get_opcode (int *socket)
 {
+	int socket_cliente= *socket;
 	op_code cod_op;
-	cod_op=recibirOperacion(*socket);
-	process_request_recv(cod_op, *socket);
+	cod_op=recibirOperacion(socket_cliente);
+	process_request_recv(cod_op, socket_cliente);
 }
 
 void process_request_recv (op_code cod_op, int socket_cliente)
@@ -51,6 +50,7 @@ void process_request_recv (op_code cod_op, int socket_cliente)
 				list_add(mapped_pokemons, pokemon_to_add );
 				sem_post(&poklist_sem);
 				sem_post(&poklist_sem2);
+				printf ("Se recibió un %s\n", mensaje_appeared->nombre_pokemon);
 				break;
 				}
 			case LOCALIZED_POKEMON:{ puts ("recibi localized");break;}

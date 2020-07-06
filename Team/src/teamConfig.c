@@ -79,7 +79,7 @@ void Team_load_trainers_config(void)
         {//puts ("if");
         //printf ("%s\n",*(pok_in_bag_to_array + i ));
            // puts (*(pok_in_bag_to_array + i ));
-              list_add(entrenadores->bag, *(pok_in_bag_to_array ));
+              //list_add(entrenadores->bag, *(pok_in_bag_to_array ));
         }
       
         char **objetivos = string_split(*(trainers_obj_to_array + i), "|" );

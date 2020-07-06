@@ -9,7 +9,18 @@
 
 int main(void)
 {
-    internalLogTeam= log_create ("internalLogTeam.log", "Team", 1,LOG_LEVEL_INFO);
+      /*void* routine(void *dato)
+{
+    sleep (13);
+    sem_post ( &using_cpu);
+    puts ("hice el post");
+}
+   pthread_t thread;
+   pthread_create(&thread,NULL,routine,NULL);
+   pthread_detach(thread);*/
+
+   
+   internalLogTeam= log_create ("internalLogTeam.log", "Team", 1,LOG_LEVEL_INFO);
     logTeam= log_create ("logTeam.log", "Team", 1,LOG_LEVEL_INFO);
     Team_Init (); //Obtiene configuraciones y entrenadores, los localiza y define el objetivo global
 
@@ -21,11 +32,11 @@ int main(void)
     //enviar_mensajes_get(squad->config, GET_list); //Envía los mensajes GET al Broker y libera la lista
 
     listen_new_pokemons (); //Crea hilo para socket de escucha del GameBoy
-    //imprimir_lista (GET_list); //Imprime objetivos globales
+   //imprimir_lista (GET_list); //Imprime objetivos globales
 
     Trainer_handler_create(); //Crea hilo de manejo y planificación de entrenadores (trainer_to_catch) y
     						  //crea el hilo de cada entrenador
-   
+
     //liberar semaforos
     sleep (1); //Para que se imprima el último log
     /* Solo para probar la correcta liberación de las listas*/
@@ -35,3 +46,4 @@ int main(void)
     return 0;
 
 }
+

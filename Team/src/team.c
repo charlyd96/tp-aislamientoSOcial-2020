@@ -140,6 +140,7 @@ void RR_exec (void)
 
             sem_post ( &(trainer->trainer_sem) );
             sem_wait (&using_cpu);
+
             if (trainer->ejecucion == PENDING)
             {
             send_trainer_to_ready(trainers, trainer->index,trainer->actual_operation);
