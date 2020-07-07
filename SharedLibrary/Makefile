@@ -13,18 +13,18 @@ endif
 ifeq ($(config),debug)
   RESCOMP = windres
   TARGETDIR = Debug
-  TARGET = $(TARGETDIR)/Team
+  TARGET = $(TARGETDIR)/libSharedLibrary.so
   OBJDIR = obj/Debug
   DEFINES += -DDB_DEBUG
-  INCLUDES += -Iinclude -I../SharedLibrary
+  INCLUDES += -I.
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
-  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -g -Wall -Wextra
-  ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m32 -g -Wall -Wextra
+  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -fPIC -g -Wall -Wextra
+  ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m32 -fPIC -g -Wall -Wextra
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
-  LIBS += ../SharedLibrary/Debug/libSharedLibrary.so -lcommons -lpthread
-  LDDEPS += ../SharedLibrary/Debug/libSharedLibrary.so
-  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -Wl,-rpath,'$$ORIGIN/../../SharedLibrary/Debug' -m32
+  LIBS +=
+  LDDEPS +=
+  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -m32 -shared -Wl,-soname=libSharedLibrary.so
   LINKCMD = $(CC) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
   define PREBUILDCMDS
   endef
@@ -40,18 +40,18 @@ endif
 ifeq ($(config),release)
   RESCOMP = windres
   TARGETDIR = Release
-  TARGET = $(TARGETDIR)/Team
+  TARGET = $(TARGETDIR)/libSharedLibrary.so
   OBJDIR = obj/Release
   DEFINES += -DDB_RELEASE
-  INCLUDES += -Iinclude -I../SharedLibrary
+  INCLUDES += -I.
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
-  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -O3
-  ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m32 -O3
+  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -O3 -fPIC
+  ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m32 -O3 -fPIC
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
-  LIBS += ../SharedLibrary/Release/libSharedLibrary.so -lcommons -lpthread
-  LDDEPS += ../SharedLibrary/Release/libSharedLibrary.so
-  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -Wl,-rpath,'$$ORIGIN/../../SharedLibrary/Release' -m32 -s
+  LIBS +=
+  LDDEPS +=
+  ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -m32 -shared -Wl,-soname=libSharedLibrary.so -s
   LINKCMD = $(CC) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
   define PREBUILDCMDS
   endef
@@ -65,11 +65,20 @@ all: prebuild prelink $(TARGET)
 endif
 
 OBJECTS := \
-	$(OBJDIR)/listen.o \
-	$(OBJDIR)/mainTeam.o \
-	$(OBJDIR)/team.o \
-	$(OBJDIR)/teamConfig.o \
-	$(OBJDIR)/trainers.o \
+	$(OBJDIR)/bitarray.o \
+	$(OBJDIR)/dictionary.o \
+	$(OBJDIR)/list.o \
+	$(OBJDIR)/queue.o \
+	$(OBJDIR)/config.o \
+	$(OBJDIR)/error.o \
+	$(OBJDIR)/log.o \
+	$(OBJDIR)/memory.o \
+	$(OBJDIR)/process.o \
+	$(OBJDIR)/string.o \
+	$(OBJDIR)/temporal.o \
+	$(OBJDIR)/txt.o \
+	$(OBJDIR)/conexion.o \
+	$(OBJDIR)/serializacion.o \
 
 RESOURCES := \
 
@@ -81,7 +90,7 @@ ifeq (.exe,$(findstring .exe,$(ComSpec)))
 endif
 
 $(TARGET): $(GCH) ${CUSTOMFILES} $(OBJECTS) $(LDDEPS) $(RESOURCES) | $(TARGETDIR)
-	@echo Linking Team
+	@echo Linking SharedLibrary
 	$(SILENT) $(LINKCMD)
 	$(POSTBUILDCMDS)
 
@@ -104,7 +113,7 @@ else
 endif
 
 clean:
-	@echo Cleaning Team
+	@echo Cleaning SharedLibrary
 ifeq (posix,$(SHELLTYPE))
 	$(SILENT) rm -f  $(TARGET)
 	$(SILENT) rm -rf $(OBJDIR)
@@ -128,19 +137,46 @@ else
 $(OBJECTS): | $(OBJDIR)
 endif
 
-$(OBJDIR)/listen.o: src/listen.c
+$(OBJDIR)/bitarray.o: commons/bitarray.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/mainTeam.o: src/mainTeam.c
+$(OBJDIR)/dictionary.o: commons/collections/dictionary.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/team.o: src/team.c
+$(OBJDIR)/list.o: commons/collections/list.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/teamConfig.o: src/teamConfig.c
+$(OBJDIR)/queue.o: commons/collections/queue.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/trainers.o: src/trainers.c
+$(OBJDIR)/config.o: commons/config.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/error.o: commons/error.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/log.o: commons/log.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/memory.o: commons/memory.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/process.o: commons/process.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/string.o: commons/string.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/temporal.o: commons/temporal.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/txt.o: commons/txt.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/conexion.o: conexion.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/serializacion.o: serializacion.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 

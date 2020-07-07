@@ -20,9 +20,11 @@
 #include <commons/config.h>
 #include <commons/string.h>
 #include <commons/txt.h>
+#include <commons/collections/list.h>
 #include <pthread.h>
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <math.h>
 
 
 char* pathGamecardConfig = "gameCard.config";
@@ -57,6 +59,11 @@ typedef enum{
 	OPEN_BLOCK_ERROR,
 } error;
 
+typedef struct{
+	int size;
+	char* blocks;
+}t_block;
+
 t_config *FSmetadata; //No necesita ser global porque se usa sólo en la inicialización
 t_FS_config *FS_config;
 
@@ -82,7 +89,11 @@ void atender_newPokemon(int socket);
 void atender_getPokemon(int socket);
 void atender_catchPokemon(int socket);
 void leer_FS_metadata (t_configuracion *config_gamecard);
-void crear_metadata (char *directorio);
+void crear_metadata (char *directorio,t_block* info_blocks);
 void* concatenar_bloques (char *path_pokemon , t_new_pokemon *mensaje);
-
+t_block* crear_blocks(t_new_pokemon* new_pokemon);
+void bloques_disponibles(int cantidad, t_list* bloques);
+char* get_bitmap();
+char* escribir_bloque(int block_number, int block_size, char* texto, int* largo_texto);
+int cantidad_bloques(int largo_texto, int block_size);
 #endif /* GAMECARD_H_ */

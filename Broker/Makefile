@@ -13,10 +13,10 @@ endif
 ifeq ($(config),debug)
   RESCOMP = windres
   TARGETDIR = Debug
-  TARGET = $(TARGETDIR)/Team
+  TARGET = $(TARGETDIR)/Broker
   OBJDIR = obj/Debug
   DEFINES += -DDB_DEBUG
-  INCLUDES += -Iinclude -I../SharedLibrary
+  INCLUDES += -I. -I../SharedLibrary
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -g -Wall -Wextra
@@ -40,10 +40,10 @@ endif
 ifeq ($(config),release)
   RESCOMP = windres
   TARGETDIR = Release
-  TARGET = $(TARGETDIR)/Team
+  TARGET = $(TARGETDIR)/Broker
   OBJDIR = obj/Release
   DEFINES += -DDB_RELEASE
-  INCLUDES += -Iinclude -I../SharedLibrary
+  INCLUDES += -I. -I../SharedLibrary
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -O3
@@ -65,11 +65,7 @@ all: prebuild prelink $(TARGET)
 endif
 
 OBJECTS := \
-	$(OBJDIR)/listen.o \
-	$(OBJDIR)/mainTeam.o \
-	$(OBJDIR)/team.o \
-	$(OBJDIR)/teamConfig.o \
-	$(OBJDIR)/trainers.o \
+	$(OBJDIR)/broker.o \
 
 RESOURCES := \
 
@@ -81,7 +77,7 @@ ifeq (.exe,$(findstring .exe,$(ComSpec)))
 endif
 
 $(TARGET): $(GCH) ${CUSTOMFILES} $(OBJECTS) $(LDDEPS) $(RESOURCES) | $(TARGETDIR)
-	@echo Linking Team
+	@echo Linking Broker
 	$(SILENT) $(LINKCMD)
 	$(POSTBUILDCMDS)
 
@@ -104,7 +100,7 @@ else
 endif
 
 clean:
-	@echo Cleaning Team
+	@echo Cleaning Broker
 ifeq (posix,$(SHELLTYPE))
 	$(SILENT) rm -f  $(TARGET)
 	$(SILENT) rm -rf $(OBJDIR)
@@ -128,19 +124,7 @@ else
 $(OBJECTS): | $(OBJDIR)
 endif
 
-$(OBJDIR)/listen.o: src/listen.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/mainTeam.o: src/mainTeam.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/team.o: src/team.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/teamConfig.o: src/teamConfig.c
-	@echo $(notdir $<)
-	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/trainers.o: src/trainers.c
+$(OBJDIR)/broker.o: broker.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 
