@@ -396,3 +396,40 @@ t_suscribe* recibirSuscripcion(op_code tipo_suscripcion,int socket_cliente){
 
 	return suscripcion;
 }
+
+char* colaParaLogs(op_code cola){
+	char* colaLog;
+
+	switch(cola){
+		case NEW_POKEMON:{
+			colaLog = "NEW_POKEMON";
+			break;
+		}
+		case APPEARED_POKEMON:{
+			colaLog = "APPEARED_POKEMON";
+			break;
+		}
+		case CATCH_POKEMON:{
+			colaLog = "CATCH_POKEMON";
+			break;
+		}
+		case CAUGHT_POKEMON:{
+			colaLog = "CAUGHT_POKEMON";
+			break;
+		}
+		case GET_POKEMON:{
+			colaLog = "GET_POKEMON";
+			break;
+		}
+		case LOCALIZED_POKEMON:{
+			colaLog = "LOCALIZED_POKEMON";
+			break;
+		}
+		default:{
+			colaLog = "NO ASIGNADA";
+			break;
+		}
+	}
+
+	return colaLog;
+}

@@ -252,6 +252,4 @@ void enviarCaughtPokemonCacheados(int socket, op_code tipo_mensaje);
 void enviarGetPokemonCacheados(int socket, op_code tipo_mensaje);
 void enviarLocalizedPokemonCacheados(int socket, op_code tipo_mensaje);
 
-char* colaParaLogs(op_code cola);
-
 #endif /* BROKER_H_ */

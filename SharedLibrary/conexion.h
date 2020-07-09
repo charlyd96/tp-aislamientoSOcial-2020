@@ -53,6 +53,7 @@ t_get_pokemon* recibirGetPokemon(int socket_cliente);
 t_localized_pokemon* recibirLocalizedPokemon(int socket_cliente);
 t_suscribe* recibirSuscripcion(op_code tipo,int socket_cliente);
 
+char* colaParaLogs(op_code cola);
 
 /* HAY QUE REVISARLO
 void recibirCliente(int* socket);
