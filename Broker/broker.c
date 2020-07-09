@@ -108,15 +108,18 @@ void inicializarMemoria(){
 	cache = malloc(config_broker->tam_memoria);
 	particiones = list_create();
 
-	//Exponente en base 2 que representa a la memoria (para buddy)
-	buddy_U = (uint32_t)ceil(log10(config_broker->tam_memoria)/log10(2));
-	log_info(logBrokerInterno,"EL U es %d",buddy_U);
 	//Partición libre inicial
 	t_particion* particionInicial = malloc(sizeof(t_particion));
+
+	if(config_broker->algoritmo_memoria == BUDDY){
+		//Exponente en base 2 que representa a la memoria (para buddy)
+		buddy_U = (uint32_t)ceil(log10(config_broker->tam_memoria)/log10(2));
+		log_info(logBrokerInterno,"EL U es %d",buddy_U);
+		particionInicial->buddy_i = buddy_U;
+	}
 	particionInicial->libre = true;
 	particionInicial->base = 0;
 	particionInicial->tamanio = config_broker->tam_memoria;
-	particionInicial->buddy_i = buddy_U;
 
 	list_add(particiones,particionInicial);
 }
@@ -174,7 +177,6 @@ int buscarHuecoBuddy(int i){
 		t_particion* part = list_get(particiones,x);
 		//log_info(logBrokerInterno,"analizo part base %d, i %d, indice %d,libre %d",part->base,part->buddy_i,x,part->libre);
 		if(part->libre == true && part->buddy_i == i){
-
 			return x;
 		}
 	}
@@ -792,6 +794,47 @@ t_localized_pokemon descachearLocalizedPokemon(void* stream, uint32_t id){
 	mensaje_a_enviar.id_mensaje_correlativo = id;
 
 	return mensaje_a_enviar;
+}
+
+char* fecha_y_hora_actual(){
+	time_t tiempo = time(0);
+	struct tm *tlocal = localtime(&tiempo);
+	char* output = malloc(128);
+	strftime(output,128,"%d/%m/%y %H:%M:%S",tlocal);
+	printf("%s\n",output);
+
+	output[127] = '\0';
+
+	return output;
+}
+
+void dump_cache(){
+	int tam_lista = list_size(particiones);
+	t_particion* particion_buscada;
+
+	char* fecha_y_hora = fecha_y_hora_actual();
+
+	FILE* archivo_dump;
+	archivo_dump = fopen("archivo_dump.txt", "a");
+
+	fprintf(archivo_dump, "-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n");
+	fprintf(archivo_dump, "Dump: %s\n", fecha_y_hora);
+
+	for (int i = 0; i < tam_lista ; i++){
+		log_info(logBrokerInterno, "Estoy en el Dump");
+
+		particion_buscada = list_get(particiones, i);
+
+		if(particion_buscada->libre == 0){
+			fprintf(archivo_dump, "Partición %d: %05p - %05p.		[X]		Size: %db		LRU: %ld.%06ld		Cola:%d		ID:%d\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), particion_buscada->tamanio, particion_buscada->time_ultima_ref.tv_sec, particion_buscada->time_ultima_ref.tv_usec, particion_buscada->tipo_mensaje, particion_buscada->id);
+		}else{
+			fprintf(archivo_dump, "Partición %d: %05p - %05p.		[L]		Size: %db\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), particion_buscada->tamanio);
+		}
+	}
+
+	fprintf(archivo_dump, "-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n");
+
+	fclose(archivo_dump);
 }
 
 /* FUNCIONES - CONEXIÓN */

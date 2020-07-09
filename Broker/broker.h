@@ -16,9 +16,10 @@
 #include <commons/log.h>
 #include <pthread.h>
 #include <semaphore.h>
-//#include <time.h>
+#include <time.h>
 #include <sys/time.h>
 #include <math.h>
+
 /* STRUCTS */
 
 typedef enum {PD, BUDDY} t_tipo_particionado;
@@ -35,6 +36,7 @@ typedef struct {
 	char* ip_broker;
 	char* puerto_broker;
 	int frecuencia_compatacion;
+	char* log_file;
 } t_configuracion;
 
 typedef struct {
@@ -131,7 +133,7 @@ t_config* config_ruta;
 t_log* logBrokerInterno;
 t_log* logBroker;
 
-char* pathConfigBroker = "broker.config";
+char* pathConfigBroker = "/home/utnso/workspace/tp-2020-1c-aislamientoSOcial/Broker/broker.config";
 int socketServidorBroker;
 int cliente;
 
@@ -167,7 +169,6 @@ sem_t mensajes_localized;
 sem_t mx_particiones;
 
 sem_t identificador;
-
 
 /* FUNCIONES */
 
@@ -237,6 +238,9 @@ t_caught_pokemon descachearCaughtPokemon(void* stream, uint32_t id);
 t_get_pokemon descachearGetPokemon(void* stream, uint32_t id);
 t_localized_pokemon descachearLocalizedPokemon(void* stream, uint32_t id);
 
+char* fecha_y_hora_actual();
+void dump_cache();
+
 /// COMUNICACIÓN
 int devolverID(int socket,uint32_t*id);
 
@@ -246,5 +250,7 @@ void enviarCatchPokemonCacheados(int socket, op_code tipo_mensaje);
 void enviarCaughtPokemonCacheados(int socket, op_code tipo_mensaje);
 void enviarGetPokemonCacheados(int socket, op_code tipo_mensaje);
 void enviarLocalizedPokemonCacheados(int socket, op_code tipo_mensaje);
+
+char* colaParaLogs(op_code cola);
 
 #endif /* BROKER_H_ */
