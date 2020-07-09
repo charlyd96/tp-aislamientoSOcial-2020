@@ -956,6 +956,8 @@ void atenderMensajeNewPokemon(int socket_cliente){
 
 	encolarNewPokemon(new_pokemon);
 
+	list_add(cola_new->suscriptores, socket_cliente);
+
 	int enviado = devolverID(socket_cliente,&id_mensaje);
 	new_pokemon->id_mensaje = id_mensaje;
 
@@ -980,6 +982,8 @@ void atenderMensajeAppearedPokemon(int socket_cliente){
 
 	encolarAppearedPokemon(appeared_pokemon);
 
+	list_add(cola_appeared->suscriptores, socket_cliente);
+
 	int enviado = devolverID(socket_cliente,&id_mensaje);
 //	appeared_pokemon->id_mensaje_correlativo = id_mensaje;
 
@@ -996,6 +1000,8 @@ void atenderMensajeCatchPokemon(int socket_cliente){
 	uint32_t id_mensaje;
 
 	encolarCatchPokemon(catch_pokemon);
+
+	list_add(cola_catch->suscriptores, socket_cliente);
 
 	int enviado = devolverID(socket_cliente,&id_mensaje);
 	catch_pokemon->id_mensaje = id_mensaje;
@@ -1020,6 +1026,8 @@ void atenderMensajeCaughtPokemon(int socket_cliente){
 
 	encolarCaughtPokemon(caught_pokemon);
 
+	list_add(cola_caught->suscriptores, socket_cliente);
+
 	int enviado = devolverID(socket_cliente,&id_mensaje);
 	caught_pokemon->id_mensaje_correlativo = id_mensaje;
 
@@ -1035,6 +1043,8 @@ void atenderMensajeGetPokemon(int socket_cliente){
 	uint32_t id_mensaje;
 
 	encolarGetPokemon(get_pokemon);
+
+	list_add(cola_get->suscriptores, socket_cliente);
 
 	int enviado = devolverID(socket_cliente,&id_mensaje);
 	get_pokemon->id_mensaje = id_mensaje;
@@ -1052,6 +1062,8 @@ void atenderMensajeLocalizedPokemon(int socket_cliente){
 	uint32_t id_mensaje;
 
 	encolarLocalizedPokemon(localized_pokemon);
+
+	list_add(cola_localized->suscriptores, socket_cliente);
 
 	int enviado = devolverID(socket_cliente,&id_mensaje);
 //	localized_pokemon->id_mensaje_correlativo = id_mensaje;
