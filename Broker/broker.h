@@ -240,6 +240,7 @@ t_localized_pokemon descachearLocalizedPokemon(void* stream, uint32_t id);
 
 char* fecha_y_hora_actual();
 void dump_cache();
+void controlador_de_seniales(int signal);
 
 /// COMUNICACIÓN
 int devolverID(int socket,uint32_t*id);

@@ -837,6 +837,19 @@ void dump_cache(){
 	fclose(archivo_dump);
 }
 
+void controlador_de_seniales(int signal){
+	switch(signal){
+		case SIGUSR1:{
+			dump_cache();
+			break;
+		}
+		default:{
+			log_info(logBrokerInterno, "Verificar la señal enviada.");
+			break;
+		}
+	}
+}
+
 /* FUNCIONES - CONEXIÓN */
 
 void atenderCliente(int* socket){
@@ -1459,6 +1472,8 @@ int main(void){
 	if(socketServidorBroker != -1){
 
 		log_info(logBrokerInterno,"Socket Servidor %d.", socketServidorBroker);
+
+		signal(SIGUSR1, &controlador_de_seniales);
 
 		while(1){
 			cliente = aceptarCliente(socketServidorBroker);
