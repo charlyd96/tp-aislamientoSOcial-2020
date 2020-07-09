@@ -107,6 +107,29 @@ op_code recibirOperacion(int socket_cliente){
 	}
 	return cod_op;
 }
+
+int enviarACK(int socket_destino){
+	t_log* logger = log_create("conexion.log", "CONEXION", 0, LOG_LEVEL_ERROR);
+
+	uint32_t ack = 1;
+	int ack_enviado = send(socket_destino, &ack, sizeof(uint32_t), 0);
+	if(ack_enviado == -1){
+		log_error(logger, "No se pudo enviar el ACK.");
+	}
+	return ack_enviado;
+}
+
+int recibirACK(int socket_origen){
+	t_log* logger = log_create("conexion.log", "CONEXION", 0, LOG_LEVEL_ERROR);
+
+	uint32_t ack_recibido;
+	int ack = recv(socket_origen, &ack_recibido, sizeof(uint32_t), 0);
+	if(ack == -1){
+		log_error(logger, "No se pudo enviar el ACK.");
+	}
+	return ack_recibido;
+}
+
 /**
  * Envía un mensaje por el socket indicado
  *
