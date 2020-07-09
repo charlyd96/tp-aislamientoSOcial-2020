@@ -245,7 +245,9 @@ int buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint32
 			if(cant_intentos_fallidos < config_broker->frecuencia_compatacion){
 				eliminarParticion();
 			}else{
-				log_info(logBrokerInterno,"Compactar");
+				// 8. Ejecución de compactación (para particiones dinámicas)
+				log_info(logBroker, "Ejecución de Compactación.");
+				log_info(logBrokerInterno,"Ejecución de Compactación.");
 				compactarParticiones();
 				cant_intentos_fallidos = 0;
 
@@ -306,8 +308,12 @@ int buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint32
 			list_replace(particiones,indice+1,part_libre);
 		}
 
+		char* cola = colaParaLogs(part_nueva->tipo_mensaje);
+
 		// 6. Almacenado de un mensaje dentro de la memoria (indicando posición de inicio de su partición).
-		log_info(logBroker, "ID_MENSAJE %d, asigno partición base %d y tamanio %d",id, part_nueva->base,part_nueva->tamanio);
+		log_info(logBroker, "Se almacena el Mensaje %s en la Partición con posición de inicio %d (%p).", cola, part_nueva->base, part_nueva->base);
+		log_info(logBrokerInterno, "Se almacena el Mensaje %s en la Partición con posición de inicio %d (%p).", cola, part_nueva->base, part_nueva->base);
+
 		log_info(logBrokerInterno, "ID_MENSAJE %d, asigno partición base %d y tamanio %d",id, part_nueva->base,part_nueva->tamanio);
 	}
 	if(config_broker->algoritmo_memoria == BUDDY){
@@ -336,7 +342,9 @@ void liberarParticion(int indice_victima){
 	part_liberar->libre = true;
 	list_replace(particiones, indice_victima, part_liberar);
 
-	log_info(logBrokerInterno,"Se elimina particion base %d, tamanio %d, indice %d",part_liberar->base,part_liberar->tamanio,indice_victima);
+	// 7. Eliminado de una partición de memoria (indicado la posición de inicio de la misma).
+	log_info(logBroker, "Se elimina la Partición con posición de inicio %d (%p).", part_liberar->base, part_liberar->base);
+	log_info(logBroker, "Se elimina la Partición con posición de inicio %d (%p).", part_liberar->base, part_liberar->base);
 	//Consolidar
 
 	//Si no es la última partición
@@ -387,7 +395,9 @@ void eliminarParticionBuddy(){
 	uint32_t i = part_liberar->buddy_i;
 	list_replace(particiones, indice_victima, part_liberar);
 
-	log_info(logBrokerInterno,"Se elimina particion base %d, i %d, indice %d",part_liberar->base,part_liberar->buddy_i,indice_victima);
+	// 7. Eliminado de una partición de memoria (indicado la posición de inicio de la misma).
+	log_info(logBroker, "Se elimina la Partición con posición de inicio %d (%p).", part_liberar->base, part_liberar->base);
+	log_info(logBroker, "Se elimina la Partición con posición de inicio %d (%p).", part_liberar->base, part_liberar->base);
 
 	//Consolidar buddys
 	bool huboConsolidacion;
@@ -401,6 +411,8 @@ void eliminarParticionBuddy(){
 				//Fusionar
 				part_liberar->buddy_i = part_liberar->buddy_i + 1;
 				list_remove(particiones,indice_victima + 1);
+				// 8. Asociación de bloques (para buddy system), indicar que particiones se asociaron (indicar posición inicio de ambas particiones).
+				log_info(logBroker, "Asociación de Particiones: Partición %p con Partición %p.", part_liberar->base, part_der->base);
 				log_info(logBrokerInterno,"Se consolida con particion buddy indice %d, i %d",indice_victima+1,i_aux);
 				huboConsolidacion = true;
 				i_aux++;
@@ -414,6 +426,8 @@ void eliminarParticionBuddy(){
 				part_liberar->base = part_izq->base;
 				part_liberar->buddy_i = part_liberar->buddy_i + 1;
 				list_remove(particiones,indice_victima -1);
+				// 8. Asociación de bloques (para buddy system), indicar que particiones se asociaron (indicar posición inicio de ambas particiones).
+				log_info(logBroker, "Asociación de Particiones: Partición %p con Partición %p.", part_liberar->base, part_izq->base);
 				log_info(logBrokerInterno,"Se consolida con particion indice %d",indice_victima-1);
 				huboConsolidacion = true;
 				indice_victima = indice_victima -1;
@@ -840,6 +854,10 @@ void dump_cache(){
 void controlador_de_seniales(int signal){
 	switch(signal){
 		case SIGUSR1:{
+			// 9. Ejecución de Dump de cache (solo informar que se solicitó el mismo).
+			log_info(logBroker, "Se solicitó Dump de la Caché.");
+			log_info(logBrokerInterno, "Se solicitó Dump de la Caché.");
+
 			dump_cache();
 			break;
 		}
@@ -854,30 +872,54 @@ void controlador_de_seniales(int signal){
 
 void atenderCliente(int* socket){
 	int socket_cliente = *socket;
-	log_info(logBrokerInterno,"Atender Cliente socket %d: ", socket_cliente);
+	log_info(logBrokerInterno,"Atender Cliente %d: ", socket_cliente);
 	op_code cod_op = recibirOperacion(socket_cliente);
 	switch(cod_op){
 		case NEW_POKEMON:{
+			// 1. Conexión de un proceso al broker.
+			log_info(logBroker, "Se conectó un Team.");
+			log_info(logBrokerInterno, "Se conectó un Team.");
+
 			atenderMensajeNewPokemon(socket_cliente);
 			break;
 		}
 		case APPEARED_POKEMON:{
+			// 1. Conexión de un proceso al broker.
+			log_info(logBroker, "Se conectó un Game Card.");
+			log_info(logBrokerInterno, "Se conectó un Game Card.");
+
 			atenderMensajeAppearedPokemon(socket_cliente);
 			break;
 		}
 		case CATCH_POKEMON:{
+			// 1. Conexión de un proceso al broker.
+			log_info(logBroker, "Se conectó un Team.");
+			log_info(logBrokerInterno, "Se conectó un Team.");
+
 			atenderMensajeCatchPokemon(socket_cliente);
 			break;
 		}
 		case CAUGHT_POKEMON:{
+			// 1. Conexión de un proceso al broker.
+			log_info(logBroker, "Se conectó un Game Card.");
+			log_info(logBrokerInterno, "Se conectó un Game Card.");
+
 			atenderMensajeCaughtPokemon(socket_cliente);
 			break;
 		}
 		case GET_POKEMON:{
+			// 1. Conexión de un proceso al broker.
+			log_info(logBroker, "Se conectó un Team.");
+			log_info(logBrokerInterno, "Se conectó un Team.");
+
 			atenderMensajeGetPokemon(socket_cliente);
 			break;
 		}
 		case LOCALIZED_POKEMON:{
+			// 1. Conexión de un proceso al broker.
+			log_info(logBroker, "Se conectó un Game Card.");
+			log_info(logBrokerInterno, "Se conectó un Game Card.");
+
 			atenderMensajeLocalizedPokemon(socket_cliente);
 			break;
 		}
@@ -904,8 +946,8 @@ void atenderMensajeNewPokemon(int socket_cliente){
 	t_new_pokemon* new_pokemon = recibirNewPokemon(socket_cliente);
 
 	// 3. Llegada de un nuevo mensaje a una cola de mensajes.
-	log_info(logBroker, "Llegó un mensaje NEW_POKEMON %s %d %d %d.",new_pokemon->nombre_pokemon,new_pokemon->pos_x,new_pokemon->pos_y,new_pokemon->cantidad);
-	log_info(logBrokerInterno, "Llegó un mensaje NEW_POKEMON %s %d %d %d.",new_pokemon->nombre_pokemon,new_pokemon->pos_x,new_pokemon->pos_y,new_pokemon->cantidad);
+	log_info(logBroker, "Llegó un Mensaje NEW_POKEMON %s %d %d %d.",new_pokemon->nombre_pokemon,new_pokemon->pos_x,new_pokemon->pos_y,new_pokemon->cantidad);
+	log_info(logBrokerInterno, "Llegó un Mensaje NEW_POKEMON %s %d %d %d.",new_pokemon->nombre_pokemon,new_pokemon->pos_x,new_pokemon->pos_y,new_pokemon->cantidad);
 
 	uint32_t id_mensaje;
 
@@ -920,9 +962,17 @@ void atenderMensajeNewPokemon(int socket_cliente){
 void atenderMensajeAppearedPokemon(int socket_cliente){
 	t_appeared_pokemon* appeared_pokemon = recibirAppearedPokemon(socket_cliente);
 
-	// 3. Llegada de un nuevo mensaje a una cola de mensajes.
-	log_info(logBroker, "Llegó un mensaje APPEARED_POKEMON %s %d %d.",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y);
-	log_info(logBrokerInterno, "Llegó un mensaje APPEARED_POKEMON %s %d %d.",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y);
+	if(appeared_pokemon->id_mensaje_correlativo > 0){
+		// 3. Llegada de un nuevo mensaje a una cola de mensajes.
+		log_info(logBroker, "Llegó un Mensaje APPEARED_POKEMON %s %d %d %d.",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y, appeared_pokemon->id_mensaje_correlativo);
+		log_info(logBrokerInterno, "Llegó un Mensaje APPEARED_POKEMON %s %d %d %d.",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y, appeared_pokemon->id_mensaje_correlativo);
+
+	}else{
+		// 3. Llegada de un nuevo mensaje a una cola de mensajes.
+		log_info(logBroker, "Llegó un Mensaje APPEARED_POKEMON %s %d %d.",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y);
+		log_info(logBrokerInterno, "Llegó un Mensaje APPEARED_POKEMON %s %d %d.",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y);
+	}
+
 	uint32_t id_mensaje;
 
 	encolarAppearedPokemon(appeared_pokemon);
@@ -937,8 +987,8 @@ void atenderMensajeCatchPokemon(int socket_cliente){
 	t_catch_pokemon* catch_pokemon = recibirCatchPokemon(socket_cliente);
 
 	// 3. Llegada de un nuevo mensaje a una cola de mensajes.
-	log_info(logBroker, "Llegó un mensaje CATCH_POKEMON %s %d %d.",catch_pokemon->nombre_pokemon,catch_pokemon->pos_x,catch_pokemon->pos_y);
-	log_info(logBrokerInterno, "Llegó un mensaje CATCH_POKEMON %s %d %d.",catch_pokemon->nombre_pokemon,catch_pokemon->pos_x,catch_pokemon->pos_y);
+	log_info(logBroker, "Llegó un Mensaje CATCH_POKEMON %s %d %d.",catch_pokemon->nombre_pokemon,catch_pokemon->pos_x,catch_pokemon->pos_y);
+	log_info(logBrokerInterno, "Llegó un Mensaje CATCH_POKEMON %s %d %d.",catch_pokemon->nombre_pokemon,catch_pokemon->pos_x,catch_pokemon->pos_y);
 
 	uint32_t id_mensaje;
 
@@ -953,9 +1003,15 @@ void atenderMensajeCatchPokemon(int socket_cliente){
 void atenderMensajeCaughtPokemon(int socket_cliente){
 	t_caught_pokemon* caught_pokemon = recibirCaughtPokemon(socket_cliente);
 
-	// 3. Llegada de un nuevo mensaje a una cola de mensajes.
-	log_info(logBroker, "Llegó un mensaje CAUGHT_POKEMON %d %d.",caught_pokemon->atrapo_pokemon,caught_pokemon->id_mensaje_correlativo);
-	log_info(logBrokerInterno, "Llegó un mensaje CAUGHT_POKEMON %d %d.",caught_pokemon->atrapo_pokemon,caught_pokemon->id_mensaje_correlativo);
+	if(caught_pokemon->id_mensaje_correlativo >= 0){
+		// 3. Llegada de un nuevo mensaje a una cola de mensajes.
+		log_info(logBroker, "Llegó un Mensaje CAUGHT_POKEMON %d %d.",caught_pokemon->id_mensaje_correlativo,caught_pokemon->atrapo_pokemon);
+		log_info(logBrokerInterno, "Llegó un Mensaje CAUGHT_POKEMON %d %d.",caught_pokemon->id_mensaje_correlativo,caught_pokemon->atrapo_pokemon);
+	}else{
+		// 3. Llegada de un nuevo mensaje a una cola de mensajes.
+		log_info(logBroker, "Llegó un Mensaje CAUGHT_POKEMON %d.",caught_pokemon->atrapo_pokemon);
+		log_info(logBrokerInterno, "Llegó un Mensaje CAUGHT_POKEMON %d.",caught_pokemon->atrapo_pokemon);
+	}
 
 	uint32_t id_mensaje;
 
@@ -971,8 +1027,8 @@ void atenderMensajeGetPokemon(int socket_cliente){
 	t_get_pokemon* get_pokemon = recibirGetPokemon(socket_cliente);
 
 	// 3. Llegada de un nuevo mensaje a una cola de mensajes.
-	log_info(logBroker, "Llegó un mensaje GET_POKEMON %s.",get_pokemon->nombre_pokemon);
-	log_info(logBrokerInterno, "Llegó un mensaje GET_POKEMON %s.",get_pokemon->nombre_pokemon);
+	log_info(logBroker, "Llegó un Mensaje GET_POKEMON %s.",get_pokemon->nombre_pokemon);
+	log_info(logBrokerInterno, "Llegó un Mensaje GET_POKEMON %s.",get_pokemon->nombre_pokemon);
 	uint32_t id_mensaje;
 
 	encolarGetPokemon(get_pokemon);
@@ -987,8 +1043,8 @@ void atenderMensajeLocalizedPokemon(int socket_cliente){
 	t_localized_pokemon* localized_pokemon = recibirLocalizedPokemon(socket_cliente);
 
 	// 3. Llegada de un nuevo mensaje a una cola de mensajes.
-	log_info(logBroker, "Llegó un mensaje LOCALIZED_POKEMON.");
-	log_info(logBrokerInterno, "Llegó un mensaje LOCALIZED_POKEMON.");
+	log_info(logBroker, "Llegó un Mensaje LOCALIZED_POKEMON.");
+	log_info(logBrokerInterno, "Llegó un Mensaje LOCALIZED_POKEMON.");
 
 	uint32_t id_mensaje;
 
@@ -1005,9 +1061,11 @@ void atenderSuscripcionTeam(int socket_cliente){
 
 	int index = suscribir(socket_cliente,suscribe_team->cola_suscribir);
 
+	char* cola = colaParaLogs(suscribe_team->cola_suscribir);
+
 	// 2. Suscripción de un proceso a una cola de mensajes.
-	log_info(logBroker, "Se suscribe un Team a la Cola de Mensajes %d", suscribe_team->cola_suscribir);
-	log_info(logBrokerInterno, "Se suscribe un Team a la Cola de Mensajes %d", suscribe_team->cola_suscribir);
+	log_info(logBroker, "Se suscribe un Team a la Cola de Mensajes %s", cola);
+	log_info(logBrokerInterno, "Se suscribe un Team a la Cola de Mensajes %s", cola);
 
 	switch(suscribe_team->cola_suscribir){
 		case APPEARED_POKEMON:{
@@ -1034,9 +1092,11 @@ void atenderSuscripcionGameCard(int socket_cliente){
 
 	int index = suscribir(socket_cliente,suscribe_gamecard->cola_suscribir);
 
+	char* cola = colaParaLogs(suscribe_gamecard->cola_suscribir);
+
 	// 2. Suscripción de un proceso a una cola de mensajes.
-	log_info(logBroker, "Se suscribe un Game Card a la Cola de Mensajes %d", suscribe_gamecard->cola_suscribir);
-	log_info(logBrokerInterno, "Se suscribe un Game Card a la Cola de Mensajes %d", suscribe_gamecard->cola_suscribir);
+	log_info(logBroker, "Se suscribe un Game Card a la Cola de Mensajes %s", cola);
+	log_info(logBrokerInterno, "Se suscribe un Game Card a la Cola de Mensajes %s", cola);
 
 	switch(suscribe_gamecard->cola_suscribir){
 		case NEW_POKEMON:{
@@ -1063,9 +1123,11 @@ void atenderSuscripcionGameBoy(int socket_cliente){
 
 	int index = suscribir(socket_cliente,suscribe_gameboy->cola_suscribir);
 
+	char* cola = colaParaLogs(suscribe_gameboy->cola_suscribir);
+
 	// 2. Suscripción de un proceso a una cola de mensajes.
-	log_info(logBroker, "Se suscribe el Game Boy a la Cola de Mensajes %d", suscribe_gameboy->cola_suscribir);
-	log_info(logBrokerInterno, "Se suscribe el Game Boy a la Cola de Mensajes %d", suscribe_gameboy->cola_suscribir);
+	log_info(logBroker, "Se suscribe el Game Boy a la Cola de Mensajes %s", cola);
+	log_info(logBrokerInterno, "Se suscribe el Game Boy a la Cola de Mensajes %s", cola);
 
 	switch(suscribe_gameboy->cola_suscribir){
 		case NEW_POKEMON:{
@@ -1292,11 +1354,11 @@ void enviarNewPokemonCacheados(int socket, op_code tipo_mensaje){
 
 			t_new_pokemon descacheado = descachearNewPokemon(stream, particion_buscada->id);
 
-			log_info(logBrokerInterno, "Descacheado nombre %s\n", descacheado.nombre_pokemon);
-			log_info(logBrokerInterno, "Descacheado pos x %d\n", descacheado.pos_x);
-			log_info(logBrokerInterno, "Descacheado pos y %d\n", descacheado.pos_y);
-			log_info(logBrokerInterno, "Descacheado cantidad %d\n", descacheado.cantidad);
-			log_info(logBrokerInterno, "Descacheado id mensaje x %d\n", descacheado.id_mensaje);
+			log_info(logBrokerInterno, "Descacheado nombre %s", descacheado.nombre_pokemon);
+			log_info(logBrokerInterno, "Descacheado pos x %d", descacheado.pos_x);
+			log_info(logBrokerInterno, "Descacheado pos y %d", descacheado.pos_y);
+			log_info(logBrokerInterno, "Descacheado cantidad %d", descacheado.cantidad);
+			log_info(logBrokerInterno, "Descacheado id mensaje x %d", descacheado.id_mensaje);
 
 			//Actualizo time ultima ref
 			struct timeval time_aux;
@@ -1304,7 +1366,12 @@ void enviarNewPokemonCacheados(int socket, op_code tipo_mensaje){
 			particion_buscada->time_ultima_ref = time_aux;
 
 			enviarNewPokemon(socket, descacheado);
-			log_info(logBrokerInterno, "Mensaje enviado");
+
+			char* cola = colaParaLogs(particion_buscada->tipo_mensaje);
+
+			// 4. Envío de un mensaje a un suscriptor específico.
+			log_info(logBroker, "Se envió el Mensaje: %s %s %d %d %d con ID de Mensaje %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.cantidad, descacheado.id_mensaje);
+			log_info(logBrokerInterno, "Se envió el Mensaje: %s %s %d %d %d con ID de Mensaje %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.cantidad, descacheado.id_mensaje);
 		}
 	}
 }
@@ -1322,17 +1389,22 @@ void enviarAppearedPokemonCacheados(int socket, op_code tipo_mensaje){
 
 			t_appeared_pokemon descacheado = descachearAppearedPokemon(stream, particion_buscada->id);
 
-			log_info(logBrokerInterno, "Descacheado nombre %s\n", descacheado.nombre_pokemon);
-			log_info(logBrokerInterno, "Descacheado pos x %d\n", descacheado.pos_x);
-			log_info(logBrokerInterno, "Descacheado pos y %d\n", descacheado.pos_y);
-			log_info(logBrokerInterno, "Descacheado id correlativo %d\n", descacheado.id_mensaje_correlativo);
+			log_info(logBrokerInterno, "Descacheado nombre %s", descacheado.nombre_pokemon);
+			log_info(logBrokerInterno, "Descacheado pos x %d", descacheado.pos_x);
+			log_info(logBrokerInterno, "Descacheado pos y %d", descacheado.pos_y);
+			log_info(logBrokerInterno, "Descacheado id correlativo %d", descacheado.id_mensaje_correlativo);
 			//Actualizo time ultima ref
 			struct timeval time_aux;
 			gettimeofday(&time_aux, NULL);
 			particion_buscada->time_ultima_ref = time_aux;
 
 			enviarAppearedPokemon(socket, descacheado);
-			log_info(logBrokerInterno, "Mensaje enviado");
+
+			char* cola = colaParaLogs(particion_buscada->tipo_mensaje);
+
+			// 4. Envío de un mensaje a un suscriptor específico.
+			log_info(logBroker, "Se envió el Mensaje: %s %s %d %d con ID de Mensaje Correlativo %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.id_mensaje_correlativo);
+			log_info(logBrokerInterno, "Se envió el Mensaje: %s %s %d %d con ID de Mensaje Correlativo %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.id_mensaje_correlativo);
 		}
 	}
 }
@@ -1350,17 +1422,22 @@ void enviarCatchPokemonCacheados(int socket, op_code tipo_mensaje){
 
 			t_catch_pokemon descacheado = descachearCatchPokemon(stream, particion_buscada->id);
 
-			log_info(logBrokerInterno, "Descacheado nombre %s\n", descacheado.nombre_pokemon);
-			log_info(logBrokerInterno, "Descacheado pos x %d\n", descacheado.pos_x);
-			log_info(logBrokerInterno, "Descacheado pos y %d\n", descacheado.pos_y);
-			log_info(logBrokerInterno, "Descacheado id %d\n", descacheado.id_mensaje);
+			log_info(logBrokerInterno, "Descacheado nombre %s", descacheado.nombre_pokemon);
+			log_info(logBrokerInterno, "Descacheado pos x %d", descacheado.pos_x);
+			log_info(logBrokerInterno, "Descacheado pos y %d", descacheado.pos_y);
+			log_info(logBrokerInterno, "Descacheado id %d", descacheado.id_mensaje);
 			//Actualizo time ultima ref
 			struct timeval time_aux;
 			gettimeofday(&time_aux, NULL);
 			particion_buscada->time_ultima_ref = time_aux;
 
 			enviarCatchPokemon(socket, descacheado);
-			log_info(logBrokerInterno, "Mensaje enviado");
+
+			char* cola = colaParaLogs(particion_buscada->tipo_mensaje);
+
+			// 4. Envío de un mensaje a un suscriptor específico.
+			log_info(logBroker, "Se envió el Mensaje: %s %s %d %d con ID de Mensaje %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.id_mensaje);
+			log_info(logBrokerInterno, "Se envió el Mensaje: %s %s %d %d con ID de Mensaje %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.id_mensaje);
 		}
 	}
 }
@@ -1373,20 +1450,25 @@ void enviarCaughtPokemonCacheados(int socket, op_code tipo_mensaje){
 		particion_buscada = list_get(particiones, i);
 
 		if(particion_buscada->libre == 0 && particion_buscada->tipo_mensaje == tipo_mensaje){
-					struct timeval time_aux;
-					gettimeofday(&time_aux, NULL);
-					particion_buscada->time_ultima_ref = time_aux;
+			struct timeval time_aux;
+			gettimeofday(&time_aux, NULL);
+			particion_buscada->time_ultima_ref = time_aux;
 
-					void* stream = malloc(particion_buscada->tamanio);
-					memcpy(stream, cache + particion_buscada->base, particion_buscada->tamanio);
+			void* stream = malloc(particion_buscada->tamanio);
+			memcpy(stream, cache + particion_buscada->base, particion_buscada->tamanio);
 
-					t_caught_pokemon descacheado = descachearCaughtPokemon(stream, particion_buscada->id);
+			t_caught_pokemon descacheado = descachearCaughtPokemon(stream, particion_buscada->id);
 
-					log_info(logBrokerInterno, "Descacheado atrapo pokemon %d\n", descacheado.atrapo_pokemon);
-					log_info(logBrokerInterno, "Descacheado id correlativo %d\n", descacheado.id_mensaje_correlativo);
+			log_info(logBrokerInterno, "Descacheado atrapo pokemon %d", descacheado.atrapo_pokemon);
+			log_info(logBrokerInterno, "Descacheado id correlativo %d", descacheado.id_mensaje_correlativo);
 
-					enviarCaughtPokemon(socket, descacheado);
-					log_info(logBrokerInterno, "Mensaje enviado");
+			enviarCaughtPokemon(socket, descacheado);
+
+			char* cola = colaParaLogs(particion_buscada->tipo_mensaje);
+
+			// 4. Envío de un mensaje a un suscriptor específico.
+			log_info(logBroker, "Se envió el Mensaje: %s %d con ID de Mensaje Correlativo %d.", cola, descacheado.atrapo_pokemon, descacheado.id_mensaje_correlativo);
+			log_info(logBrokerInterno, "Se envió el Mensaje: %s %d con ID de Mensaje Correlativo %d.", cola, descacheado.atrapo_pokemon, descacheado.id_mensaje_correlativo);
 		}
 	}
 }
@@ -1404,8 +1486,8 @@ void enviarGetPokemonCacheados(int socket, op_code tipo_mensaje){
 
 			t_get_pokemon descacheado = descachearGetPokemon(stream, particion_buscada->id);
 
-			log_info(logBrokerInterno, "Descacheado nombre %s\n", descacheado.nombre_pokemon);
-			log_info(logBrokerInterno, "Descacheado id %d\n", descacheado.id_mensaje);
+			log_info(logBrokerInterno, "Descacheado nombre %s", descacheado.nombre_pokemon);
+			log_info(logBrokerInterno, "Descacheado id %d", descacheado.id_mensaje);
 
 			//Actualizo time ultima ref
 			struct timeval time_aux;
@@ -1413,7 +1495,12 @@ void enviarGetPokemonCacheados(int socket, op_code tipo_mensaje){
 			particion_buscada->time_ultima_ref = time_aux;
 
 			enviarGetPokemon(socket, descacheado);
-			log_info(logBrokerInterno, "Mensaje enviado");
+
+			char* cola = colaParaLogs(particion_buscada->tipo_mensaje);
+
+			// 4. Envío de un mensaje a un suscriptor específico.
+			log_info(logBroker, "Se envió el Mensaje: %s %s con ID de Mensaje %d.", cola, descacheado.nombre_pokemon, descacheado.id_mensaje);
+			log_info(logBrokerInterno, "Se envió el Mensaje: %s %s con ID de Mensaje %d.", cola, descacheado.nombre_pokemon, descacheado.id_mensaje);
 		}
 	}
 }
@@ -1431,7 +1518,9 @@ void enviarLocalizedPokemonCacheados(int socket, op_code tipo_mensaje){
 
 			t_localized_pokemon descacheado = descachearLocalizedPokemon(stream, particion_buscada->id);
 
-			log_info(logBrokerInterno, "Descacheado nombre %s\n", descacheado.nombre_pokemon);
+			log_info(logBrokerInterno, "Descacheado nombre %s", descacheado.nombre_pokemon);
+			log_info(logBrokerInterno, "Decacsheado cant %d", descacheado.cant_pos);
+
 			uint32_t pos_x, pos_y;
 			char** pos_list = string_get_string_as_array(descacheado.posiciones);
 
@@ -1440,11 +1529,17 @@ void enviarLocalizedPokemonCacheados(int socket, op_code tipo_mensaje){
 				pos_x = atoi(pos_pair[0]);
 				pos_y = atoi(pos_pair[1]);
 
-				log_info(logBrokerInterno, "Descacheado pos x %d\n", pos_x);
-				log_info(logBrokerInterno, "Descacheado pos y %d\n", pos_y);
+				log_info(logBrokerInterno, "Descacheado pos x %d", pos_x);
+				log_info(logBrokerInterno, "Descacheado pos y %d", pos_y);
+
+				char* cola = colaParaLogs(particion_buscada->tipo_mensaje);
+
+				// 4. Envío de un mensaje a un suscriptor específico.
+				log_info(logBroker, "Se envió el Mensaje: %s %s %d %d %d con ID de Mensaje Correlativo %d.", cola, descacheado.nombre_pokemon, descacheado.cant_pos, pos_x, pos_y, descacheado.id_mensaje_correlativo);
+				log_info(logBrokerInterno, "Se envió el Mensaje: %s %s %d %d %d con ID de Mensaje Correlativo %d.", cola, descacheado.nombre_pokemon, descacheado.cant_pos, pos_x, pos_y, descacheado.id_mensaje_correlativo);
 			}
 
-			log_info(logBrokerInterno, "Descacheado id correlativo %d\n", descacheado.id_mensaje_correlativo);
+			log_info(logBrokerInterno, "Descacheado id correlativo %d", descacheado.id_mensaje_correlativo);
 
 			//Actualizo time ultima ref
 			struct timeval time_aux;
@@ -1452,7 +1547,6 @@ void enviarLocalizedPokemonCacheados(int socket, op_code tipo_mensaje){
 			particion_buscada->time_ultima_ref = time_aux;
 
 			enviarLocalizedPokemon(socket, descacheado);
-			log_info(logBrokerInterno, "Mensaje enviado");
 		}
 	}
 }
