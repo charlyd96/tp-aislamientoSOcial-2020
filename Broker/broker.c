@@ -29,7 +29,7 @@ int crearConfigBroker(){
 
 	    algoritmo_mem = config_get_string_value(config_ruta, "ALGORITMO_MEMORIA");
 		if(strcmp(algoritmo_mem,"PD") == 0) config_broker->algoritmo_memoria = PD;
-		if(strcmp(algoritmo_mem,"BS") == 0) config_broker->algoritmo_memoria = BUDDY;
+		if(strcmp(algoritmo_mem,"BUDDY") == 0) config_broker->algoritmo_memoria = BUDDY;
 
 		algoritmo_reemplazo = config_get_string_value(config_ruta, "ALGORITMO_REEMPLAZO");
 		if(strcmp(algoritmo_reemplazo,"FIFO") == 0) config_broker->algoritmo_reemplazo = FIFO;
@@ -202,7 +202,6 @@ void partirBuddy(int indice){
 
 		list_replace(particiones,indice,buddy_der);
 		list_add_in_index(particiones,indice,buddy_izq);
-
 	}
 }
 /**
@@ -330,7 +329,11 @@ int buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint32
 		log_info(logBroker, "ID_MENSAJE %d, asigno partición base %d y i %d",id, part_libre->base,part_libre->buddy_i);
 		log_info(logBrokerInterno, "ID_MENSAJE %d, asigno partición base %d y i %d",id, part_libre->base,part_libre->buddy_i);
 
+		char* cola = colaParaLogs(part_libre->tipo_mensaje);
 
+		// 6. Almacenado de un mensaje dentro de la memoria (indicando posición de inicio de su partición).
+		log_info(logBroker, "Se almacena el Mensaje %s en la Partición con posición de inicio %d (%p).", cola, part_libre->base, part_libre->base);
+		log_info(logBrokerInterno, "Se almacena el Mensaje %s en la Partición con posición de inicio %d (%p).", cola, part_libre->base, part_libre->base);
 	}
 	//-> DESMUTEAR LISTA DE PARTICIONES
 	sem_post(&mx_particiones);
@@ -371,7 +374,7 @@ void liberarParticion(int indice_victima){
 }
 
 void eliminarParticionBuddy(){
-	log_info(logBrokerInterno,"eliminar particion buddy");
+	log_info(logBrokerInterno,"Eliminar particion buddy");
 	int indice_victima = -1;
 	t_algoritmo_reemplazo algoritmo = config_broker->algoritmo_reemplazo;
 	switch(algoritmo){
@@ -829,7 +832,7 @@ void dump_cache(){
 	char* fecha_y_hora = fecha_y_hora_actual();
 
 	FILE* archivo_dump;
-	archivo_dump = fopen("archivo_dump.txt", "a");
+	archivo_dump = fopen("archivo_dump.txt", "w+");
 
 	fprintf(archivo_dump, "-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n");
 	fprintf(archivo_dump, "Dump: %s\n", fecha_y_hora);
