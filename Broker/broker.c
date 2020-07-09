@@ -26,6 +26,7 @@ int crearConfigBroker(){
 	    config_broker->ip_broker = config_get_string_value(config_ruta, "IP_BROKER");
 	    config_broker->puerto_broker = config_get_string_value(config_ruta, "PUERTO_BROKER");
 	    config_broker->frecuencia_compatacion = config_get_int_value(config_ruta, "FRECUENCIA_COMPACTACION");
+	    config_broker->log_file = config_get_string_value(config_ruta, "LOG_FILE");
 
 	    algoritmo_mem = config_get_string_value(config_ruta, "ALGORITMO_MEMORIA");
 		if(strcmp(algoritmo_mem,"PD") == 0) config_broker->algoritmo_memoria = PD;
