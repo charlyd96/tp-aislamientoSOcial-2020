@@ -19,7 +19,8 @@ project "Broker"
     links{
         "SharedLibrary",
         "commons",
-        "pthread"
+        "pthread",
+        "m"
     }
 
     filter "configurations:Debug"

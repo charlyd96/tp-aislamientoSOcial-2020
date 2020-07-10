@@ -52,7 +52,11 @@ void* trainer_to_catch(void *retorno)
         pthread_mutex_lock (&global_sem);
         //printf ("Lista global: %d\n", list_size (global_objective));
         //printf ("Lista global aux: %d\n", list_size (aux_global_objective));
+<<<<<<< HEAD
         sem_wait (&trainer_count);puts ("pasé bloqueo"); 
+=======
+        sem_wait (&trainer_count);
+>>>>>>> 3835fecfd77689ba8abbb2a029715aa7a7305605
         if (list_size (global_objective) > 0 )
         { 
             pthread_mutex_unlock (&global_sem);
@@ -61,6 +65,7 @@ void* trainer_to_catch(void *retorno)
             sem_wait(&poklist_sem2); //Para evitar espera activa si no hay pokemones en el mapa. En realidad es por productor consumidor
             actual_pokemon =  list_remove (mapped_pokemons, 0);
             sem_post(&poklist_sem2);
+<<<<<<< HEAD
 
             mover_objetivo_a_lista_auxiliar (actual_pokemon);
 
@@ -108,6 +113,56 @@ void* trainer_to_catch(void *retorno)
             }
     }
 
+=======
+
+            mover_objetivo_a_lista_auxiliar (actual_pokemon);
+
+            void imprimir_estados (void *trainer)
+            {
+            printf ("Estado %d: %d\t",((Trainer*)trainer)->index,((Trainer*)trainer)->actual_status);   
+            }
+            //list_iterate (trainers,imprimir_estados);
+
+            list_iterate (trainers,calculate_distance);
+            //printf ("target= %d\n",target);
+            printf ("indice planificado: %d\n", index);
+            if (target ==1) //Si se pudo encontrar un entrenador libre y más cercano que vaya a cazar al pokemon, avanzo y lo mando
+            {
+                Trainer *trainer=list_get (trainers, index);
+                trainer->actual_objective.posx = actual_pokemon->posx;
+                trainer->actual_objective.posy = actual_pokemon->posy;
+                trainer->actual_objective.name = string_duplicate (actual_pokemon->name); //Malloc
+                trainer->actual_status= READY;                                           //oculto
+                trainer->actual_operation= OP_EXECUTING_CATCH;        
+                printf ("El entrenador %d atrapará a un %s ubicado en (%d,%d)\n", trainer->index,trainer->actual_objective.name,actual_pokemon->posx,actual_pokemon->posy);
+                send_trainer_to_ready (trainers, index, OP_EXECUTING_CATCH); 
+                count=-1;
+                index=-1;
+                distance_min= 100000  ; //Arreglar esta hardcodeada trucha
+                target=-1;
+            }
+        } 
+        else 
+            {   
+                pthread_mutex_unlock (&global_sem);
+                pthread_mutex_lock (&auxglobal_sem);                
+                if (list_size (aux_global_objective) > 0 ) 
+                {
+
+                    pthread_mutex_unlock (&auxglobal_sem);
+               
+                    sem_wait (&trainer_count);
+                    
+                }
+                else 
+                {
+                    pthread_mutex_unlock (&auxglobal_sem);
+                    break;
+                } 
+            }
+    }
+
+>>>>>>> 3835fecfd77689ba8abbb2a029715aa7a7305605
     puts ("Terminó la búsqueda de pokemones");
     //***********LIBERAR MEMORIA Y TERMINAR EL HILO **************//
 }
@@ -210,6 +265,10 @@ void* trainer_routine (void *train)
 			case OP_EXECUTING_CATCH:
 			{
 				move_trainer_to_objective (train, OP_EXECUTING_CATCH); //Entre paréntesis debería ir "trainer". No sé por qué funciona así
+<<<<<<< HEAD
+=======
+                
+>>>>>>> 3835fecfd77689ba8abbb2a029715aa7a7305605
                 if (!strcmp(config->planning_algorithm, "RR"))
                 consumir_cpu(trainer);
 
@@ -370,8 +429,29 @@ t_list* duplicar_lista (t_list *lista)
  *      le falta atrapar al entrenador, y la otra contiene los pokemones que atrapó pero que no necesita.
  * ============================================================================================================ 
  */
+<<<<<<< HEAD
 
 
+void split_objetivos_capturados (Trainer *trainer, t_list *lista_pok_sobrantes, t_list *lista_pok_faltantes)
+    {
+    t_list *lista_objetivos  = trainer->personal_objective;
+    t_list *lista_capturados = trainer->bag;
+    t_list *lista_objetivos_duplicados= list_duplicate (trainer->personal_objective);
+    t_list *lista_capturados_duplicados= list_duplicate (trainer->bag);
+=======
+>>>>>>> 3835fecfd77689ba8abbb2a029715aa7a7305605
+
+    /* "Genera" una lista nueva con los pokemones que le faltan atrapar*/
+    void buscar_objetivos_faltantes (void *nombre1)
+    {
+        bool comparar_strcmp (void *element)
+            {
+                if (!strcmp( (char *)element, nombre1) )
+                return true; else return false;
+            }
+
+<<<<<<< HEAD
+=======
 void split_objetivos_capturados (Trainer *trainer, t_list *lista_pok_sobrantes, t_list *lista_pok_faltantes)
     {
     t_list *lista_objetivos  = trainer->personal_objective;
@@ -388,6 +468,7 @@ void split_objetivos_capturados (Trainer *trainer, t_list *lista_pok_sobrantes, 
                 return true; else return false;
             }
 
+>>>>>>> 3835fecfd77689ba8abbb2a029715aa7a7305605
         for (int i=0; i<lista_objetivos->elements_count; i++)
         {
             char *nombre2= list_get(lista_objetivos,i);
@@ -678,25 +759,41 @@ void move_trainer_to_objective (Trainer *trainer, Operation op)
     {
         if ( calculate_distance (*Tx+1, *Ty, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
         *Tx=*Tx+1;
+<<<<<<< HEAD
         //log_info (logTeam , "Se movió un entrenador hacia la derecha. Posición: (%d,%d)", *Tx, *Ty);
+=======
+        log_info (logTeam , "Se movió un entrenador hacia la derecha. Posición: (%d,%d)", *Tx, *Ty);
+>>>>>>> 3835fecfd77689ba8abbb2a029715aa7a7305605
         usleep (config->retardo_cpu * 1);
         }
 
         if ( calculate_distance (*Tx, *Ty+1, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
         *Ty=*Ty+1;
+<<<<<<< HEAD
         //log_info (logTeam , "Se movió un entrenador hacia arriba. Posición: (%d,%d)", *Tx, *Ty);
+=======
+        log_info (logTeam , "Se movió un entrenador hacia arriba. Posición: (%d,%d)", *Tx, *Ty);
+>>>>>>> 3835fecfd77689ba8abbb2a029715aa7a7305605
         usleep (config->retardo_cpu * 1);
         }
 
         if ( calculate_distance (*Tx-1, *Ty, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
         *Tx=*Tx-1;
+<<<<<<< HEAD
         //log_info (logTeam , "Se movió un entrenador hacia la izquierda. Posición: (%d,%d)", *Tx, *Ty);
+=======
+        log_info (logTeam , "Se movió un entrenador hacia la izquierda. Posición: (%d,%d)", *Tx, *Ty);
+>>>>>>> 3835fecfd77689ba8abbb2a029715aa7a7305605
         usleep (config->retardo_cpu * 1);
         }
 
         if ( calculate_distance (*Tx, *Ty-1, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
         *Ty=*Ty-1;
+<<<<<<< HEAD
         //log_info (logTeam , "Se movió un entrenador hacia abajo. Posición: (%d,%d)", *Tx, *Ty);
+=======
+        log_info (logTeam , "Se movió un entrenador hacia abajo. Posición: (%d,%d)", *Tx, *Ty);
+>>>>>>> 3835fecfd77689ba8abbb2a029715aa7a7305605
         usleep (config->retardo_cpu * 1);
         }
         
@@ -708,6 +805,7 @@ void move_trainer_to_objective (Trainer *trainer, Operation op)
         if ( calculate_distance (*Tx+1, *Ty, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
         consumir_cpu(trainer);
         *Tx=*Tx+1;
+<<<<<<< HEAD
         //log_info (logTeam , "Se movió un entrenador hacia la derecha. Posición: (%d,%d)", *Tx, *Ty);
         }
 
@@ -727,6 +825,27 @@ void move_trainer_to_objective (Trainer *trainer, Operation op)
         consumir_cpu(trainer);
         *Ty=*Ty-1;
         //log_info (logTeam , "Se movió un entrenador hacia abajo. Posición: (%d,%d)", *Tx, *Ty);
+=======
+        log_info (logTeam , "Se movió un entrenador hacia la derecha. Posición: (%d,%d)", *Tx, *Ty);
+        }
+
+        if ( calculate_distance (*Tx, *Ty+1, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
+        consumir_cpu(trainer);
+        *Ty=*Ty+1;
+        log_info (logTeam , "Se movió un entrenador hacia arriba. Posición: (%d,%d)", *Tx, *Ty);
+        }
+
+        if ( calculate_distance (*Tx-1, *Ty, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
+        consumir_cpu(trainer);
+        *Tx=*Tx-1;
+        log_info (logTeam , "Se movió un entrenador hacia la izquierda. Posición: (%d,%d)", *Tx, *Ty);
+        }
+
+        if ( calculate_distance (*Tx, *Ty-1, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
+        consumir_cpu(trainer);
+        *Ty=*Ty-1;
+        log_info (logTeam , "Se movió un entrenador hacia abajo. Posición: (%d,%d)", *Tx, *Ty);
+>>>>>>> 3835fecfd77689ba8abbb2a029715aa7a7305605
         }
     }
 }

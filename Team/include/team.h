@@ -38,12 +38,21 @@ t_list *global_objective;
 //sem_t global_sem1;
 //sem_t global_sem2;
 pthread_mutex_t global_sem;
+<<<<<<< HEAD
 
 t_list *aux_global_objective;
 //sem_t auxglobal_sem1;
 //sem_t auxglobal_sem2;
 pthread_mutex_t auxglobal_sem;
 
+=======
+
+t_list *aux_global_objective;
+//sem_t auxglobal_sem1;
+//sem_t auxglobal_sem2;
+pthread_mutex_t auxglobal_sem;
+
+>>>>>>> 3835fecfd77689ba8abbb2a029715aa7a7305605
 t_list *mapped_pokemons;
 sem_t poklist_sem;
 sem_t poklist_sem2;
@@ -68,6 +77,7 @@ typedef enum
 
 
 
+<<<<<<< HEAD
 typedef struct
 {
 	char *broker_IP;
@@ -76,6 +86,8 @@ typedef struct
 	op_code colaSuscripcion;   
 } conexionColas;
 
+=======
+>>>>>>> 3835fecfd77689ba8abbb2a029715aa7a7305605
 extern Config *config;
 
 /* Pokemones en el mapa interno del Team*/
@@ -112,14 +124,14 @@ void* listen_routine_gameboy (void *config);
 
 void send_trainer_to_exec (void);
 
-void subscribe (Config *config) ;
+void subscribe (void) ;
 
 void listen_new_pokemons (void);
 
 
 void imprimir_lista (t_list *get_list);
 
-void enviar_mensajes_get (Config *config, t_list *get_list);
+void enviar_mensajes_get (t_list *get_list);
 
 void* listen_routine_colas (void *conexion);
 #endif /* TEAM_H_ */
