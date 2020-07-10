@@ -149,13 +149,6 @@ t_cola* cola_localized;
 t_cola* cola_catch;
 t_cola* cola_caught;
 
-t_nodo_cola_new* nodo_new;
-t_nodo_cola_appeared* nodo_appeared;
-t_nodo_cola_get* nodo_get;
-t_nodo_cola_localized* nodo_localized;
-t_nodo_cola_catch* nodo_catch;
-t_nodo_cola_caught* nodo_caught;
-
 t_list* particiones;
 uint32_t buddy_U; //U es el exponente máximo de partición (la memoria completa)
 

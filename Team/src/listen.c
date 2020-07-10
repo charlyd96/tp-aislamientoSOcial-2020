@@ -89,13 +89,8 @@ void * send_catch_routine (void * train)
 
 	int socket = crearSocketCliente (IP,puerto);
 	//printf ("Socket: %d\n", socket);
-<<<<<<< HEAD
-	//log_info (logTeam,"Se enviará un mensaje CATCH %s %d %d", trainer->actual_objective.name, 
-	//trainer->actual_objective.posx, trainer->actual_objective.posy);
-=======
 	log_info (logTeam,"Se enviará un mensaje CATCH %s %d %d", trainer->actual_objective.name, 
 	trainer->actual_objective.posx, trainer->actual_objective.posy);
->>>>>>> 3835fecfd77689ba8abbb2a029715aa7a7305605
 	
 	
 
@@ -108,13 +103,8 @@ void * send_catch_routine (void * train)
 		message.id_mensaje=0;
 
 		enviarCatchPokemon (socket, message);
-<<<<<<< HEAD
-	
-
-=======
 		
 		puts ("esperando ID");
->>>>>>> 3835fecfd77689ba8abbb2a029715aa7a7305605
 		recv (socket,&(message.id_mensaje),sizeof(uint32_t),MSG_WAITALL); //Recibir ID
 		close (socket);
 		printf ("\t\t\t\t\t\t\tEl Id devuelto fue: %d\t\t\t\t\t\t\n", message.id_mensaje);

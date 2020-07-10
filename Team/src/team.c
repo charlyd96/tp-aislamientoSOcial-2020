@@ -27,13 +27,8 @@ void Team_Init(void)
     Team_load_global_config();
     
     Team_load_trainers_config();
-<<<<<<< HEAD
 
 
-=======
-
-
->>>>>>> 3835fecfd77689ba8abbb2a029715aa7a7305605
     ReadyQueue= list_create  ();                 //*********Mejorar la ubicación de esta instrucción***************//
     mapped_pokemons = list_create();             //*********Mejorar la ubicación de esta instrucción***************//
     cola_caught = list_create();
