@@ -17,17 +17,17 @@ void * listen_routine_gameboy (void *retorno)
 		{
 		pthread_t thread;
 		int socket_cliente = aceptarCliente (socket);
-		
 		printf ("Socket cliente: %d\n", socket_cliente);
-		pthread_create (&thread, NULL, (void *) get_opcode, &socket_cliente);
-		pthread_detach (thread);
+		get_opcode(socket_cliente);
+		//pthread_create (&thread, NULL, (void *) get_opcode, (int*)socket_cliente);
+		//pthread_detach (thread);
 		}
 }
 
 
-void * get_opcode (int *socket)
+void * get_opcode (int socket)
 {
-	int socket_cliente= *socket;
+	int socket_cliente= socket;
 	op_code cod_op;
 	cod_op=recibirOperacion(socket_cliente);
 	process_request_recv(cod_op, socket_cliente);
@@ -88,9 +88,9 @@ void * send_catch_routine (void * train)
 
 
 	int socket = crearSocketCliente (IP,puerto);
-	printf ("Socket: %d\n", socket);
-	log_info (logTeam,"Se enviará un mensaje CATCH %s %d %d", trainer->actual_objective.name, 
-	trainer->actual_objective.posx, trainer->actual_objective.posy);
+	//printf ("Socket: %d\n", socket);
+	//log_info (logTeam,"Se enviará un mensaje CATCH %s %d %d", trainer->actual_objective.name, 
+	//trainer->actual_objective.posx, trainer->actual_objective.posy);
 	
 	
 

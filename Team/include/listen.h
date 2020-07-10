@@ -27,7 +27,7 @@ extern t_log *logTeam;
 extern Config *config;
 
 extern int ciclos_cpu;
-void* get_opcode (int *socket);
+void* get_opcode (int socket);
 
 void process_request_recv (op_code cod_op, int socket_cliente);
 
