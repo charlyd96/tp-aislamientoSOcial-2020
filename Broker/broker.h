@@ -17,6 +17,9 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <time.h>
+#include <sys/time.h>
+#include <math.h>
+
 /* STRUCTS */
 
 typedef enum {PD, BUDDY} t_tipo_particionado;
@@ -33,6 +36,7 @@ typedef struct {
 	char* ip_broker;
 	char* puerto_broker;
 	int frecuencia_compatacion;
+	char* log_file;
 } t_configuracion;
 
 typedef struct {
@@ -114,8 +118,9 @@ typedef struct {
 	uint32_t id;
 	uint32_t base;
 	uint32_t tamanio;
-	time_t time_creacion;
-	time_t time_ultima_ref;
+	uint32_t buddy_i; //para Buddy System
+	struct timeval time_creacion;
+	struct timeval time_ultima_ref;
 } t_particion;
 
 /* VARIABLES GLOBALES */
@@ -128,7 +133,7 @@ t_config* config_ruta;
 t_log* logBrokerInterno;
 t_log* logBroker;
 
-char* pathConfigBroker = "../broker.config";
+char* pathConfigBroker = "/home/utnso/workspace/tp-2020-1c-aislamientoSOcial/Broker/broker.config";
 int socketServidorBroker;
 int cliente;
 
@@ -145,7 +150,7 @@ t_cola* cola_catch;
 t_cola* cola_caught;
 
 t_list* particiones;
-
+uint32_t buddy_U; //U es el exponente máximo de partición (la memoria completa)
 
 pthread_mutex_t sem_cola_new;
 pthread_mutex_t sem_cola_appeared;
@@ -163,6 +168,7 @@ sem_t mensajes_localized;
 
 sem_t mx_particiones;
 
+sem_t identificador;
 
 /* FUNCIONES */
 
@@ -185,8 +191,8 @@ void atenderMensajeGetPokemon(int socket);
 void atenderMensajeLocalizedPokemon(int socket);
 
 void atenderSuscripcionTeam(int socket);
-void atenderSuscripcionGameBoy(int socket);
 void atenderSuscripcionGameCard(int socket);
+void atenderSuscripcionGameBoy(int socket);
 
 /// PROCESAMIENTO
 int suscribir(int socket, op_code cola);
@@ -208,6 +214,7 @@ void algoritmoFIFO();
 void algoritmoLRU();
 
 void compactarParticiones();
+void liberarParticion(int indice);
 
 int cachearNewPokemon(t_new_pokemon* msg);
 int cachearAppearedPokemon(t_appeared_pokemon* msg);
@@ -216,7 +223,33 @@ int cachearCaughtPokemon(t_caught_pokemon* msg);
 int cachearGetPokemon(t_get_pokemon* msg);
 int cachearLocalizedPokemon(t_localized_pokemon* msg);
 
+int victimaSegunFIFO();
+int victimaSegunLRU();
+// BUDDY
+void partirBuddy(int indice);
+int obtenerHuecoBuddy(int i);
+int buscarHuecoBuddy(int i);
+void eliminarParticionBuddy();
+
+t_new_pokemon descachearNewPokemon(void* stream, uint32_t id);
+t_appeared_pokemon descachearAppearedPokemon(void* stream, uint32_t id);
+t_catch_pokemon descachearCatchPokemon(void* stream, uint32_t id);
+t_caught_pokemon descachearCaughtPokemon(void* stream, uint32_t id);
+t_get_pokemon descachearGetPokemon(void* stream, uint32_t id);
+t_localized_pokemon descachearLocalizedPokemon(void* stream, uint32_t id);
+
+char* fecha_y_hora_actual();
+void dump_cache();
+void controlador_de_seniales(int signal);
+
 /// COMUNICACIÓN
 int devolverID(int socket,uint32_t*id);
+
+void enviarNewPokemonCacheados(int socket, op_code tipo_mensaje);
+void enviarAppearedPokemonCacheados(int socket, op_code tipo_mensaje);
+void enviarCatchPokemonCacheados(int socket, op_code tipo_mensaje);
+void enviarCaughtPokemonCacheados(int socket, op_code tipo_mensaje);
+void enviarGetPokemonCacheados(int socket, op_code tipo_mensaje);
+void enviarLocalizedPokemonCacheados(int socket, op_code tipo_mensaje);
 
 #endif /* BROKER_H_ */
