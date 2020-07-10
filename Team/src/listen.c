@@ -9,18 +9,15 @@
 
 
 
-void * listen_routine_gameboy (void *configuracion)
+void * listen_routine_gameboy (void *retorno)
 {
-	Config *config=configuracion;
 
     int socket= crearSocketServidor (config->team_IP, config->team_port);
-    printf ("Puerto= %s\n",config->team_port);
-    printf ("IP= %s\n",config->team_IP);
     while (1) //Este while en realidad debería llevar como condición, que el proceso Team no haya ganado.
 		{
-		sleep (1);
 		pthread_t thread;
 		int socket_cliente = aceptarCliente (socket);
+		
 		printf ("Socket cliente: %d\n", socket_cliente);
 		pthread_create (&thread, NULL, (void *) get_opcode, &socket_cliente);
 		pthread_detach (thread);
@@ -30,9 +27,10 @@ void * listen_routine_gameboy (void *configuracion)
 
 void * get_opcode (int *socket)
 {
+	int socket_cliente= *socket;
 	op_code cod_op;
-	cod_op=recibirOperacion(*socket);
-	process_request_recv(cod_op, *socket);
+	cod_op=recibirOperacion(socket_cliente);
+	process_request_recv(cod_op, socket_cliente);
 }
 
 void process_request_recv (op_code cod_op, int socket_cliente)
@@ -52,6 +50,7 @@ void process_request_recv (op_code cod_op, int socket_cliente)
 				list_add(mapped_pokemons, pokemon_to_add );
 				sem_post(&poklist_sem);
 				sem_post(&poklist_sem2);
+				printf ("Se recibió un %s\n", mensaje_appeared->nombre_pokemon);
 				break;
 				}
 			case LOCALIZED_POKEMON:{ puts ("recibi localized");break;}
@@ -88,10 +87,11 @@ void * send_catch_routine (void * train)
 	t_catch_pokemon message;
 
 
-	/*int socket = crearSocketCliente (IP,puerto);
+	int socket = crearSocketCliente (IP,puerto);
+	printf ("Socket: %d\n", socket);
 	log_info (logTeam,"Se enviará un mensaje CATCH %s %d %d", trainer->actual_objective.name, 
 	trainer->actual_objective.posx, trainer->actual_objective.posy);
-	puts ("holaaa");
+	
 	
 
 	if (socket != -1)
@@ -103,7 +103,7 @@ void * send_catch_routine (void * train)
 		message.id_mensaje=0;
 
 		enviarCatchPokemon (socket, message);
-		
+	
 
 		recv (socket,&(message.id_mensaje),sizeof(uint32_t),MSG_WAITALL); //Recibir ID
 		close (socket);
@@ -115,7 +115,7 @@ void * send_catch_routine (void * train)
 															
 		return (retorno);
 
-	} else*/
+	} else
 		 
 			log_info (logTeam,"Fallo en la conexion al Broker. Se efectuará acción por defecto");
 			int *retorno=malloc (sizeof (int));

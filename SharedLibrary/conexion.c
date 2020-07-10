@@ -30,6 +30,8 @@ int crearSocketCliente(char* ip, char* puerto){
 	} else if(intentar_conexion == -1){
 		log_error(logger, "No se pudo establecer conexión entre el socket y el servidor");
 		log_destroy(logger);
+		freeaddrinfo(servinfo);
+		return intentar_conexion;
 	}
 
 	freeaddrinfo(servinfo);

@@ -14,7 +14,7 @@
 #include "../include/trainers.h"
 
 
-void liberar_listas (Team *this_team);
+
 
 
 // ============================================================================================================
@@ -35,28 +35,30 @@ t_config* get_config()
 //                               ***** Función parar inicializar a los entrenadores *****
 // ============================================================================================================
 
-void Team_load_trainers_config(Team *this_team)
+void Team_load_trainers_config(void)
 {
     /*  Sólo por estética */
-    t_config *config= this_team->config->team_config;
+    t_config *config_aux= config->team_config;
 
     /*  Devuelve un array de strings, donde cada posición del array es del tipo posX|posY */
-    char ** pos_trainers_to_array = config_get_array_value (config, "POSICIONES_ENTRENADORES");
+    char ** pos_trainers_to_array = config_get_array_value (config_aux, "POSICIONES_ENTRENADORES");
 
     /*  Devuelven un array de strings, donde cada posición del array es del tipo pok1|pok2|pok3...pokN*/
-    char ** pok_in_bag_to_array   = config_get_array_value (config, "POKEMON_ENTRENADORES");
-    char ** trainers_obj_to_array = config_get_array_value (config, "OBJETIVOS_ENTRENADORES");
+    char ** pok_in_bag_to_array   = config_get_array_value (config_aux, "POKEMON_ENTRENADORES");
+    char ** trainers_obj_to_array = config_get_array_value (config_aux, "OBJETIVOS_ENTRENADORES");
 
     /*  Creo lista de entrenadores que va a manejar el Team  */
-    this_team->trainers = list_create();
+    trainers = list_create();
 
     /*  Creo la lista de objetivos globales que va a manejar el Team */
-   global_objective = list_create();
+    global_objective = list_create();
+    aux_global_objective= list_create();
+    t_list *bag_global= list_create();
 
     /*  Creo un puntero a estructura del tipo Trainer para ir creando cada entrenador leído por archivo de configuración.
         Estas estructuras se van apuntando en nodos de una lista definida en la estructura del Team como t_list *trainers     */
     Trainer *entrenadores;
-    uint32_t index=0;
+    int index=0;
 
     /* -------------- Del archivo de configuración hacia lista de entrenadores --------------------- */
 
@@ -77,11 +79,9 @@ void Team_load_trainers_config(Team *this_team)
         {//puts ("if");
         //printf ("%s\n",*(pok_in_bag_to_array + i ));
            // puts (*(pok_in_bag_to_array + i ));
-              list_add(entrenadores->bag, *(pok_in_bag_to_array ));
+              //list_add(entrenadores->bag, *(pok_in_bag_to_array ));
         }
       
-
-
         char **objetivos = string_split(*(trainers_obj_to_array + i), "|" );
         entrenadores->personal_objective = list_create();
         for (int k=0 ; *(objetivos + k) != NULL ; k++)
@@ -90,20 +90,24 @@ void Team_load_trainers_config(Team *this_team)
         sem_init (&(entrenadores->trainer_sem), 0, 0);
         sem_post (&trainer_count);
 
-        entrenadores->config = this_team->config;
+        entrenadores->config = config;
         entrenadores->index= index;
         index++;
         /*  Añado el entrenador creado, ya cada uno con su lista bag y lista de objetivos, a la lista de entrenadores */
-        list_add(this_team->trainers, entrenadores);
+        list_add(trainers, entrenadores);
 
         /*  Añado los objetivos de cada entrenador a la lista de objetivos globales */
-        list_add_all (global_objective, duplicar_lista(entrenadores->personal_objective));
+        list_add_all (global_objective, duplicar_lista(entrenadores->personal_objective)); //Ver si se puede poner un list_duplicate
+        list_add_all (bag_global,entrenadores->bag);
         
         /*  Libero memoria innecesaria generada por la función string_split de las commons  */
         free (posicion);
         //free (mochila);
         free (objetivos);
     }
+
+    remover_objetivos_globales_conseguidos(bag_global);
+    list_destroy(bag_global);
 
     /*  Libero memoria innecesaria generada por la función string_split de las commons  */
    /* free_split (pos_trainers_to_array);
@@ -112,19 +116,20 @@ void Team_load_trainers_config(Team *this_team)
 */
     /* Sólo para testear la correcta elctura desde el archivo de configuraci{on hacia las listas */
     if (PRINT_TEST == 1) //Ver DEFINE en archivo team.h
-    list_iterate(this_team->trainers, _imprimir_lista);
+    list_iterate(trainers, _imprimir_lista);
 
-    config_destroy (config);
+    config_destroy (config_aux);
 }
 
 // ============================================================================================================
 //                               ***** Función parar cargar las configuraciones globales *****
 // ============================================================================================================
 
-void Team_load_global_config(Config *config)
+void Team_load_global_config()
 {
+    ciclos_cpu=0;
     config->reconnection_time    = config_get_int_value(config->team_config, "TIEMPO_RECONEXION");
-    config->cpu_cycle            = config_get_int_value(config->team_config, "RETARDO_CICLO_CPU");
+    config->retardo_cpu          = config_get_int_value(config->team_config, "RETARDO_CICLO_CPU");
     config->planning_algorithm   = string_duplicate(config_get_string_value(config->team_config, "ALGORITMO_PLANIFICACION"));
     config->quantum              = config_get_int_value(config->team_config, "QUANTUM");
     config->initial_estimation   = config_get_int_value(config->team_config, "ESTIMACION_INICIAL");
@@ -138,7 +143,7 @@ void Team_load_global_config(Config *config)
     {
         puts ("\n\n\nShowing the global configurations:");
         printf ("TIEMPO_RECONEXION= %d\n",config->reconnection_time );
-        printf ("RETARDO_CICLO_CPU= %d\n",config->cpu_cycle);
+        printf ("RETARDO_CICLO_CPU= %d\n",config->retardo_cpu);
         printf ("ALGORITMO_PLANIFICACION= %s\n",config->planning_algorithm);
         printf ("QUANTUM= %d\n",config->quantum);
         printf ("ESTIMACION_INICIAL= %d\n",config->initial_estimation);
@@ -159,11 +164,10 @@ void Team_load_global_config(Config *config)
 //                               ***** Funciones parar liberar listas *****
 // ============================================================================================================
 
-void liberar_listas (Team *this_team)
+void liberar_listas ()
 {
-    list_destroy_and_destroy_elements (this_team->trainers, _free_sub_list);
+    list_destroy_and_destroy_elements (trainers, _free_sub_list);
     list_destroy (global_objective);
-    free (this_team);
 }
 
 
@@ -205,4 +209,36 @@ void _imprimir_inventario (void *elemento)
 void _imprimir_objetivos (void *elemento)
 {
     printf ("Objetivos: %s\n",(char *) elemento);
+}
+
+
+void remover_objetivos_globales_conseguidos(t_list *global_bag)
+{
+    char *nombre;
+
+    bool comparar (void *element)
+    {
+        if (!strcmp( (char *)element, nombre))
+        return true; else return false;
+    }
+
+
+    bool comparar_y_borrar (void *element)
+    {
+        for (int i=0; i<global_bag->elements_count; i++)
+        {
+            nombre=list_get(global_bag,i);
+            if (!strcmp( (char *)element, nombre ) )
+            {
+            list_remove_by_condition(global_bag,comparar);
+            return true;
+            }
+        }
+        return false;
+    }
+
+    for (int i=0; i<global_objective->elements_count; i++)
+    {
+    list_remove_by_condition(global_objective,comparar_y_borrar);
+    }
 }
