@@ -876,7 +876,7 @@ void controlador_de_seniales(int signal){
 
 void atenderCliente(int* socket){
 	int socket_cliente = *socket;
-	log_info(logBrokerInterno,"Atender Cliente %d: ", socket_cliente);
+	log_info(logBrokerInterno,"Atender Cliente %d:", socket_cliente);
 	op_code cod_op = recibirOperacion(socket_cliente);
 	switch(cod_op){
 		case NEW_POKEMON:{
@@ -1086,14 +1086,17 @@ void atenderSuscripcionTeam(int socket_cliente){
 	switch(suscribe_team->cola_suscribir){
 		case APPEARED_POKEMON:{
 			enviarAppearedPokemonCacheados(index, suscribe_team->cola_suscribir);
+			recibirACK(index);
 			break;
 		}
 		case CAUGHT_POKEMON:{
 			enviarCaughtPokemonCacheados(index, suscribe_team->cola_suscribir);
+			recibirACK(index);
 			break;
 		}
 		case LOCALIZED_POKEMON:{
 			enviarLocalizedPokemonCacheados(index, suscribe_team->cola_suscribir);
+			recibirACK(index);
 			break;
 		}
 		default:{
@@ -1116,15 +1119,18 @@ void atenderSuscripcionGameCard(int socket_cliente){
 
 	switch(suscribe_gamecard->cola_suscribir){
 		case NEW_POKEMON:{
-			enviarNewPokemonCacheados(socket_cliente, suscribe_gamecard->cola_suscribir);
+			enviarNewPokemonCacheados(index, suscribe_gamecard->cola_suscribir);
+			recibirACK(index);
 			break;
 		}
 		case CATCH_POKEMON:{
-			enviarCatchPokemonCacheados(socket_cliente, suscribe_gamecard->cola_suscribir);
+			enviarCatchPokemonCacheados(index, suscribe_gamecard->cola_suscribir);
+			recibirACK(index);
 			break;
 		}
 		case GET_POKEMON:{
-			enviarGetPokemonCacheados(socket_cliente, suscribe_gamecard->cola_suscribir);
+			enviarGetPokemonCacheados(index, suscribe_gamecard->cola_suscribir);
+			recibirACK(index);
 			break;
 		}
 		default:{
@@ -1148,22 +1154,27 @@ void atenderSuscripcionGameBoy(int socket_cliente){
 	switch(suscribe_gameboy->cola_suscribir){
 		case NEW_POKEMON:{
 			enviarNewPokemonCacheados(index, suscribe_gameboy->cola_suscribir);
+			recibirACK(index);
 			break;
 		}
 		case APPEARED_POKEMON:{
 			enviarAppearedPokemonCacheados(index, suscribe_gameboy->cola_suscribir);
+			recibirACK(index);
 			break;
 		}
 		case CATCH_POKEMON:{
 			enviarCatchPokemonCacheados(index, suscribe_gameboy->cola_suscribir);
+			recibirACK(index);
 			break;
 		}
 		case CAUGHT_POKEMON:{
 			enviarCaughtPokemonCacheados(index, suscribe_gameboy->cola_suscribir);
+			recibirACK(index);
 			break;
 		}
 		case GET_POKEMON:{
 			enviarGetPokemonCacheados(index, suscribe_gameboy->cola_suscribir);
+			recibirACK(index);
 			break;
 		}
 /*		case LOCALIZED_POKEMON:{
@@ -1284,57 +1295,57 @@ void desuscribir(int index,op_code cola){
 }
 
 void encolarNewPokemon(t_new_pokemon* mensaje){
-	t_nodo_cola_new* nodo = malloc(sizeof(t_nodo_cola_new));
-	nodo->mensaje = mensaje;
-	nodo->susc_enviados = list_create();
-	nodo->susc_ack = list_create();
+	nodo_new = malloc(sizeof(t_nodo_cola_new));
+	nodo_new->mensaje = mensaje;
+	nodo_new->susc_enviados = list_create();
+	nodo_new->susc_ack = list_create();
 
-	list_add(cola_new->nodos,nodo);
+	list_add(cola_new->nodos,nodo_new);
 }
 
 void encolarAppearedPokemon(t_appeared_pokemon* mensaje){
-	t_nodo_cola_appeared* nodo = malloc(sizeof(t_nodo_cola_appeared));
-	nodo->mensaje = mensaje;
-	nodo->susc_enviados = list_create();
-	nodo->susc_ack = list_create();
+	nodo_appeared = malloc(sizeof(t_nodo_cola_appeared));
+	nodo_appeared->mensaje = mensaje;
+	nodo_appeared->susc_enviados = list_create();
+	nodo_appeared->susc_ack = list_create();
 
-	list_add(cola_appeared->nodos,nodo);
+	list_add(cola_appeared->nodos,nodo_appeared);
 }
 
 void encolarCatchPokemon(t_catch_pokemon* mensaje){
-	t_nodo_cola_catch* nodo = malloc(sizeof(t_nodo_cola_catch));
-	nodo->mensaje = mensaje;
-	nodo->susc_enviados = list_create();
-	nodo->susc_ack = list_create();
+	nodo_catch = malloc(sizeof(t_nodo_cola_catch));
+	nodo_catch->mensaje = mensaje;
+	nodo_catch->susc_enviados = list_create();
+	nodo_catch->susc_ack = list_create();
 
-	list_add(cola_catch->nodos,nodo);
+	list_add(cola_catch->nodos,nodo_catch);
 }
 
 void encolarCaughtPokemon(t_caught_pokemon* mensaje){
-	t_nodo_cola_caught* nodo = malloc(sizeof(t_nodo_cola_caught));
-	nodo->mensaje = mensaje;
-	nodo->susc_enviados = list_create();
-	nodo->susc_ack = list_create();
+	nodo_caught = malloc(sizeof(t_nodo_cola_caught));
+	nodo_caught->mensaje = mensaje;
+	nodo_caught->susc_enviados = list_create();
+	nodo_caught->susc_ack = list_create();
 
-	list_add(cola_caught->nodos,nodo);
+	list_add(cola_caught->nodos,nodo_caught);
 }
 
 void encolarGetPokemon(t_get_pokemon* mensaje){
-	t_nodo_cola_get* nodo = malloc(sizeof(t_nodo_cola_get));
-	nodo->mensaje = mensaje;
-	nodo->susc_enviados = list_create();
-	nodo->susc_ack = list_create();
+	nodo_get= malloc(sizeof(t_nodo_cola_get));
+	nodo_get->mensaje = mensaje;
+	nodo_get->susc_enviados = list_create();
+	nodo_get->susc_ack = list_create();
 
-	list_add(cola_get->nodos,nodo);
+	list_add(cola_get->nodos,nodo_get);
 }
 
 void encolarLocalizedPokemon(t_localized_pokemon* mensaje){
-	t_nodo_cola_localized* nodo = malloc(sizeof(t_nodo_cola_localized));
-	nodo->mensaje = mensaje;
-	nodo->susc_enviados = list_create();
-	nodo->susc_ack = list_create();
+	nodo_localized = malloc(sizeof(t_nodo_cola_localized));
+	nodo_localized->mensaje = mensaje;
+	nodo_localized->susc_enviados = list_create();
+	nodo_localized->susc_ack = list_create();
 
-	list_add(cola_localized->nodos,nodo);
+	list_add(cola_localized->nodos,nodo_localized);
 }
 
 /* FUNCIONES - COMUNICACIÓN */
@@ -1361,7 +1372,7 @@ void enviarNewPokemonCacheados(int socket, op_code tipo_mensaje){
 	int tam_lista = list_size(particiones);
 	t_particion* particion_buscada;
 
-	for (int i = 0; i < tam_lista ; i++){
+	for(int i = 0; i < tam_lista ; i++){
 		particion_buscada = list_get(particiones, i);
 
 		if(particion_buscada->libre == 0 && particion_buscada->tipo_mensaje == tipo_mensaje){
@@ -1383,6 +1394,8 @@ void enviarNewPokemonCacheados(int socket, op_code tipo_mensaje){
 
 			enviarNewPokemon(socket, descacheado);
 
+			list_add(nodo_new->susc_enviados, socket);
+
 			char* cola = colaParaLogs(particion_buscada->tipo_mensaje);
 
 			// 4. Envío de un mensaje a un suscriptor específico.
@@ -1396,7 +1409,7 @@ void enviarAppearedPokemonCacheados(int socket, op_code tipo_mensaje){
 	int tam_lista = list_size(particiones);
 	t_particion* particion_buscada;
 
-	for (int i = 0; i < tam_lista ; i++){
+	for(int i = 0; i < tam_lista ; i++){
 		particion_buscada = list_get(particiones, i);
 
 		if(particion_buscada->libre == 0 && particion_buscada->tipo_mensaje == tipo_mensaje){
@@ -1416,6 +1429,8 @@ void enviarAppearedPokemonCacheados(int socket, op_code tipo_mensaje){
 
 			enviarAppearedPokemon(socket, descacheado);
 
+			list_add(nodo_appeared->susc_enviados, socket);
+
 			char* cola = colaParaLogs(particion_buscada->tipo_mensaje);
 
 			// 4. Envío de un mensaje a un suscriptor específico.
@@ -1429,7 +1444,7 @@ void enviarCatchPokemonCacheados(int socket, op_code tipo_mensaje){
 	int tam_lista = list_size(particiones);
 	t_particion* particion_buscada;
 
-	for (int i = 0; i < tam_lista ; i++){
+	for(int i = 0; i < tam_lista ; i++){
 		particion_buscada = list_get(particiones, i);
 
 		if(particion_buscada->libre == 0 && particion_buscada->tipo_mensaje == tipo_mensaje){
@@ -1449,6 +1464,8 @@ void enviarCatchPokemonCacheados(int socket, op_code tipo_mensaje){
 
 			enviarCatchPokemon(socket, descacheado);
 
+			list_add(nodo_catch->susc_enviados, socket);
+
 			char* cola = colaParaLogs(particion_buscada->tipo_mensaje);
 
 			// 4. Envío de un mensaje a un suscriptor específico.
@@ -1462,7 +1479,7 @@ void enviarCaughtPokemonCacheados(int socket, op_code tipo_mensaje){
 	int tam_lista = list_size(particiones);
 	t_particion* particion_buscada;
 
-	for (int i = 0; i < tam_lista ; i++) {
+	for(int i = 0; i < tam_lista ; i++) {
 		particion_buscada = list_get(particiones, i);
 
 		if(particion_buscada->libre == 0 && particion_buscada->tipo_mensaje == tipo_mensaje){
@@ -1480,6 +1497,8 @@ void enviarCaughtPokemonCacheados(int socket, op_code tipo_mensaje){
 
 			enviarCaughtPokemon(socket, descacheado);
 
+			list_add(nodo_caught->susc_enviados, socket);
+
 			char* cola = colaParaLogs(particion_buscada->tipo_mensaje);
 
 			// 4. Envío de un mensaje a un suscriptor específico.
@@ -1493,7 +1512,7 @@ void enviarGetPokemonCacheados(int socket, op_code tipo_mensaje){
 	int tam_lista = list_size(particiones);
 	t_particion* particion_buscada;
 
-	for (int i = 0; i < tam_lista ; i++) {
+	for(int i = 0; i < tam_lista ; i++) {
 		particion_buscada = list_get(particiones, i);
 
 		if(particion_buscada->libre == 0 && particion_buscada->tipo_mensaje == tipo_mensaje){
@@ -1512,6 +1531,8 @@ void enviarGetPokemonCacheados(int socket, op_code tipo_mensaje){
 
 			enviarGetPokemon(socket, descacheado);
 
+			list_add(nodo_get->susc_enviados, socket);
+
 			char* cola = colaParaLogs(particion_buscada->tipo_mensaje);
 
 			// 4. Envío de un mensaje a un suscriptor específico.
@@ -1525,7 +1546,7 @@ void enviarLocalizedPokemonCacheados(int socket, op_code tipo_mensaje){
 	int tam_lista = list_size(particiones);
 	t_particion* particion_buscada;
 
-	for (int i = 0; i < tam_lista ; i++) {
+	for(int i = 0; i < tam_lista ; i++) {
 		particion_buscada = list_get(particiones, i);
 
 		if(particion_buscada->libre == 0 && particion_buscada->tipo_mensaje == tipo_mensaje){
@@ -1563,6 +1584,8 @@ void enviarLocalizedPokemonCacheados(int socket, op_code tipo_mensaje){
 			particion_buscada->time_ultima_ref = time_aux;
 
 			enviarLocalizedPokemon(socket, descacheado);
+
+			list_add(nodo_localized->susc_enviados, socket);
 		}
 	}
 }
