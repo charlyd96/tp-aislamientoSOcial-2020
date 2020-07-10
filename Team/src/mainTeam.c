@@ -38,7 +38,7 @@ int main(void)
     						  //crea el hilo de cada entrenador
 
     //liberar semaforos
-    sleep (1); //Para que se imprima el último log
+    usleep (200); //Para que se imprima el último log
     /* Solo para probar la correcta liberación de las listas*/
     if (LIBERAR ==1)
     liberar_listas();
