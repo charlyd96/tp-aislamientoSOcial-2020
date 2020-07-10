@@ -52,7 +52,7 @@ void* trainer_to_catch(void *retorno)
         pthread_mutex_lock (&global_sem);
         //printf ("Lista global: %d\n", list_size (global_objective));
         //printf ("Lista global aux: %d\n", list_size (aux_global_objective));
-        sem_wait (&trainer_count);puts ("pasé bloqueo"); 
+        sem_wait (&trainer_count);
         if (list_size (global_objective) > 0 )
         { 
             pthread_mutex_unlock (&global_sem);
@@ -67,7 +67,8 @@ void* trainer_to_catch(void *retorno)
             void imprimir_estados (void *trainer)
             {
             printf ("Estado %d: %d\t",((Trainer*)trainer)->index,((Trainer*)trainer)->actual_status);   
-            }list_iterate (trainers,imprimir_estados);
+            }
+            //list_iterate (trainers,imprimir_estados);
 
             list_iterate (trainers,calculate_distance);
             //printf ("target= %d\n",target);
@@ -210,6 +211,7 @@ void* trainer_routine (void *train)
 			case OP_EXECUTING_CATCH:
 			{
 				move_trainer_to_objective (train, OP_EXECUTING_CATCH); //Entre paréntesis debería ir "trainer". No sé por qué funciona así
+                
                 if (!strcmp(config->planning_algorithm, "RR"))
                 consumir_cpu(trainer);
 
@@ -678,25 +680,25 @@ void move_trainer_to_objective (Trainer *trainer, Operation op)
     {
         if ( calculate_distance (*Tx+1, *Ty, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
         *Tx=*Tx+1;
-        //log_info (logTeam , "Se movió un entrenador hacia la derecha. Posición: (%d,%d)", *Tx, *Ty);
+        log_info (logTeam , "Se movió un entrenador hacia la derecha. Posición: (%d,%d)", *Tx, *Ty);
         usleep (config->retardo_cpu * 1);
         }
 
         if ( calculate_distance (*Tx, *Ty+1, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
         *Ty=*Ty+1;
-        //log_info (logTeam , "Se movió un entrenador hacia arriba. Posición: (%d,%d)", *Tx, *Ty);
+        log_info (logTeam , "Se movió un entrenador hacia arriba. Posición: (%d,%d)", *Tx, *Ty);
         usleep (config->retardo_cpu * 1);
         }
 
         if ( calculate_distance (*Tx-1, *Ty, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
         *Tx=*Tx-1;
-        //log_info (logTeam , "Se movió un entrenador hacia la izquierda. Posición: (%d,%d)", *Tx, *Ty);
+        log_info (logTeam , "Se movió un entrenador hacia la izquierda. Posición: (%d,%d)", *Tx, *Ty);
         usleep (config->retardo_cpu * 1);
         }
 
         if ( calculate_distance (*Tx, *Ty-1, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
         *Ty=*Ty-1;
-        //log_info (logTeam , "Se movió un entrenador hacia abajo. Posición: (%d,%d)", *Tx, *Ty);
+        log_info (logTeam , "Se movió un entrenador hacia abajo. Posición: (%d,%d)", *Tx, *Ty);
         usleep (config->retardo_cpu * 1);
         }
         
@@ -708,25 +710,25 @@ void move_trainer_to_objective (Trainer *trainer, Operation op)
         if ( calculate_distance (*Tx+1, *Ty, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
         consumir_cpu(trainer);
         *Tx=*Tx+1;
-        //log_info (logTeam , "Se movió un entrenador hacia la derecha. Posición: (%d,%d)", *Tx, *Ty);
+        log_info (logTeam , "Se movió un entrenador hacia la derecha. Posición: (%d,%d)", *Tx, *Ty);
         }
 
         if ( calculate_distance (*Tx, *Ty+1, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
         consumir_cpu(trainer);
         *Ty=*Ty+1;
-        //log_info (logTeam , "Se movió un entrenador hacia arriba. Posición: (%d,%d)", *Tx, *Ty);
+        log_info (logTeam , "Se movió un entrenador hacia arriba. Posición: (%d,%d)", *Tx, *Ty);
         }
 
         if ( calculate_distance (*Tx-1, *Ty, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
         consumir_cpu(trainer);
         *Tx=*Tx-1;
-        //log_info (logTeam , "Se movió un entrenador hacia la izquierda. Posición: (%d,%d)", *Tx, *Ty);
+        log_info (logTeam , "Se movió un entrenador hacia la izquierda. Posición: (%d,%d)", *Tx, *Ty);
         }
 
         if ( calculate_distance (*Tx, *Ty-1, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
         consumir_cpu(trainer);
         *Ty=*Ty-1;
-        //log_info (logTeam , "Se movió un entrenador hacia abajo. Posición: (%d,%d)", *Tx, *Ty);
+        log_info (logTeam , "Se movió un entrenador hacia abajo. Posición: (%d,%d)", *Tx, *Ty);
         }
     }
 }
