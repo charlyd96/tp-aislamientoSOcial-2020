@@ -89,8 +89,8 @@ void * send_catch_routine (void * train)
 
 	int socket = crearSocketCliente (IP,puerto);
 	//printf ("Socket: %d\n", socket);
-	//log_info (logTeam,"Se enviará un mensaje CATCH %s %d %d", trainer->actual_objective.name, 
-	//trainer->actual_objective.posx, trainer->actual_objective.posy);
+	log_info (logTeam,"Se enviará un mensaje CATCH %s %d %d", trainer->actual_objective.name, 
+	trainer->actual_objective.posx, trainer->actual_objective.posy);
 	
 	
 
@@ -103,11 +103,11 @@ void * send_catch_routine (void * train)
 		message.id_mensaje=0;
 
 		enviarCatchPokemon (socket, message);
-	
-
+		
+		puts ("esperando ID");
 		recv (socket,&(message.id_mensaje),sizeof(uint32_t),MSG_WAITALL); //Recibir ID
 		close (socket);
-
+		printf ("\t\t\t\t\t\t\tEl Id devuelto fue: %d\t\t\t\t\t\t\n", message.id_mensaje);
 		int *retorno=malloc (sizeof (int));
 		*retorno=search_caught (message.id_mensaje, &(trainer->trainer_sem) ); //Buscar en la cola caught con el ID correlativo
 																			  //Esta función bloquea a este hilo hasta que 
@@ -125,30 +125,41 @@ void * send_catch_routine (void * train)
 
 }
 
-void* listen_routine_colas (void *con)
+void* listen_routine_colas (void *colaSuscripcion)
 
 {	
-	conexionColas *conexion=con;
 	int socket;
-	socket = crearSocketCliente (conexion->broker_IP,conexion->broker_port);
+	socket = crearSocketCliente (config->broker_IP,config->broker_port);
 
 	while (socket == -1)
 	{
-		sleep (conexion->tiempo_reconexion);
-	    socket = crearSocketCliente (conexion->broker_IP,conexion->broker_port);
+		sleep (config->reconnection_time);
+	    socket = crearSocketCliente (config->broker_IP,config->broker_port);
 		log_info (internalLogTeam, "Falló la conexión al broker");
 	}
 
 	t_suscribe colaAppeared;
 	colaAppeared.tipo_suscripcion=SUSCRIBE_TEAM;
-	colaAppeared.cola_suscribir=conexion->colaSuscripcion;
+	colaAppeared.cola_suscribir=(int)colaSuscripcion;
 	colaAppeared.timeout=0;
 	
-	enviarSuscripcion (socket, colaAppeared);
+	int enviado=enviarSuscripcion (socket, colaAppeared);
+	printf ("Socket de conexión al broker: %d\n",socket);
+	if (enviado != 0)
+	{
+		printf ("Suscripción correcta a la cola %d. Enviado: %d\n",(int)colaSuscripcion,enviado);
+	}
+	else printf ("No se pudo conectar a la cola %d\n",(int)colaSuscripcion);
 
-	op_code cod_op = recibirOperacion(socket);
-
-	process_request_recv(cod_op, socket);
+	while (1)
+	{
+		puts ("Esperando operación");
+		op_code cod_op = recibirOperacion(socket);
+		pthread_t thread;
+		printf ("Operación recibida: %d\n",cod_op);
+		//pthread_create (&thread, NULL, (void *) get_opcode, (int*)socket);
+		//pthread_detach (thread);
+	}
 
 	//Procesar espera de mensajes de cada cola
 

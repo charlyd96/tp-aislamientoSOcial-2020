@@ -68,14 +68,6 @@ typedef enum
 
 
 
-typedef struct
-{
-	char *broker_IP;
-	char *broker_port;
-    u_int32_t tiempo_reconexion;
-	op_code colaSuscripcion;   
-} conexionColas;
-
 extern Config *config;
 
 /* Pokemones en el mapa interno del Team*/
@@ -112,14 +104,14 @@ void* listen_routine_gameboy (void *config);
 
 void send_trainer_to_exec (void);
 
-void subscribe (Config *config) ;
+void subscribe (void) ;
 
 void listen_new_pokemons (void);
 
 
 void imprimir_lista (t_list *get_list);
 
-void enviar_mensajes_get (Config *config, t_list *get_list);
+void enviar_mensajes_get (t_list *get_list);
 
 void* listen_routine_colas (void *conexion);
 #endif /* TEAM_H_ */
