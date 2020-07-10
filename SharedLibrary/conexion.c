@@ -109,6 +109,29 @@ op_code recibirOperacion(int socket_cliente){
 	}
 	return cod_op;
 }
+
+int enviarACK(int socket_destino){
+	t_log* logger = log_create("conexion.log", "CONEXION", 0, LOG_LEVEL_ERROR);
+
+	uint32_t ack = 1;
+	int ack_enviado = send(socket_destino, &ack, sizeof(uint32_t), 0);
+	if(ack_enviado == -1){
+		log_error(logger, "No se pudo enviar el ACK.");
+	}
+	return ack_enviado;
+}
+
+int recibirACK(int socket_origen){
+	t_log* logger = log_create("conexion.log", "CONEXION", 0, LOG_LEVEL_ERROR);
+
+	uint32_t ack_recibido;
+	int ack = recv(socket_origen, &ack_recibido, sizeof(uint32_t), 0);
+	if(ack == -1){
+		log_error(logger, "No se pudo enviar el ACK.");
+	}
+	return ack_recibido;
+}
+
 /**
  * Envía un mensaje por el socket indicado
  *
@@ -397,4 +420,41 @@ t_suscribe* recibirSuscripcion(op_code tipo_suscripcion,int socket_cliente){
 	suscripcion->timeout = timeout;
 
 	return suscripcion;
+}
+
+char* colaParaLogs(op_code cola){
+	char* colaLog;
+
+	switch(cola){
+		case NEW_POKEMON:{
+			colaLog = "NEW_POKEMON";
+			break;
+		}
+		case APPEARED_POKEMON:{
+			colaLog = "APPEARED_POKEMON";
+			break;
+		}
+		case CATCH_POKEMON:{
+			colaLog = "CATCH_POKEMON";
+			break;
+		}
+		case CAUGHT_POKEMON:{
+			colaLog = "CAUGHT_POKEMON";
+			break;
+		}
+		case GET_POKEMON:{
+			colaLog = "GET_POKEMON";
+			break;
+		}
+		case LOCALIZED_POKEMON:{
+			colaLog = "LOCALIZED_POKEMON";
+			break;
+		}
+		default:{
+			colaLog = "NO ASIGNADA";
+			break;
+		}
+	}
+
+	return colaLog;
 }
