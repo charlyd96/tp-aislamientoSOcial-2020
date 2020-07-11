@@ -1611,4 +1611,4 @@ int main(void){
 	log_destroy(logBroker);
 
 	return 0;
-}
+} 

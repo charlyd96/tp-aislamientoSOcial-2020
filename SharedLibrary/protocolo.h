@@ -79,7 +79,7 @@ typedef struct {
 	uint32_t pos_x;
 	uint32_t pos_y;
 	uint32_t id_mensaje_correlativo;
-} t_appeared_pokemon;
+} t_appeared_pokemon; 
 
 typedef struct {
 	uint32_t atrapo_pokemon;
