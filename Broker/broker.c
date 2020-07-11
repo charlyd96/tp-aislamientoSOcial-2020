@@ -1413,7 +1413,7 @@ void enviarAppearedPokemonCacheados(int socket, op_code tipo_mensaje){
 			gettimeofday(&time_aux, NULL);
 			particion_buscada->time_ultima_ref = time_aux;
 
-			enviarAppearedPokemon(socket, descacheado);
+			int enviado = enviarAppearedPokemon(socket, descacheado);
 
 			char* cola = colaParaLogs(particion_buscada->tipo_mensaje);
 
@@ -1424,7 +1424,6 @@ void enviarAppearedPokemonCacheados(int socket, op_code tipo_mensaje){
 				// 4. Envío de un mensaje a un suscriptor específico.
 				log_info(logBroker, "Se envió el Mensaje: %s %s %d %d con ID de Mensaje Correlativo %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.id_mensaje_correlativo);
 				log_info(logBrokerInterno, "Se envió el Mensaje: %s %s %d %d con ID de Mensaje Correlativo %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.id_mensaje_correlativo);
-			}
 			}
 		}
 	}
