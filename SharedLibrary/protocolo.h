@@ -99,4 +99,5 @@ typedef struct{
 	uint32_t id_proceso;
 	uint32_t timeout; //Solo en caso de gameboy
 } t_suscribe;
+
 #endif /* PROTOCOLO_H_ */

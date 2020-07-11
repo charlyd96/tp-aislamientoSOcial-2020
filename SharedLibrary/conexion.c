@@ -127,7 +127,7 @@ int recibirACK(int socket_origen){
 	uint32_t ack_recibido;
 	int ack = recv(socket_origen, &ack_recibido, sizeof(uint32_t), 0);
 	if(ack == -1){
-		log_error(logger, "No se pudo enviar el ACK.");
+		log_error(logger, "No se pudo recibir el ACK.");
 	}
 	return ack_recibido;
 }
