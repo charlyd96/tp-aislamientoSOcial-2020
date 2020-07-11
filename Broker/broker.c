@@ -615,7 +615,7 @@ int cachearCaughtPokemon(t_caught_pokemon* msg){
 
 	void* stream = malloc(largo_stream);
 
-	memcpy(stream, &largo_stream, sizeof(uint32_t));
+	memcpy(stream, &(msg->id_correlativo), sizeof(uint32_t));
 
 	int result = buscarParticionYAlocar(largo_stream,stream,CAUGHT_POKEMON,msg->id_mensaje_correlativo);
 
@@ -1028,7 +1028,7 @@ void atenderMensajeCaughtPokemon(int socket_cliente){
 	list_add(cola_caught->suscriptores, socket_cliente);
 
 	int enviado = devolverID(socket_cliente,&id_mensaje);
-	caught_pokemon->id_mensaje_correlativo = id_mensaje;
+//	caught_pokemon->id_mensaje_correlativo = id_mensaje;
 
 	int cacheado = cachearCaughtPokemon(caught_pokemon);
 }
