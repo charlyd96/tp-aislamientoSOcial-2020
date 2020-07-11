@@ -983,8 +983,6 @@ void atenderMensajeAppearedPokemon(int socket_cliente){
 
 	encolarAppearedPokemon(appeared_pokemon);
 
-	list_add(cola_appeared->suscriptores, socket_cliente);
-
 	int enviado = devolverID(socket_cliente,&id_mensaje);
 //	appeared_pokemon->id_mensaje_correlativo = id_mensaje;
 
@@ -1168,7 +1166,7 @@ void atenderSuscripcionGameBoy(int socket_cliente){
 			break;
 		}
 /*		case LOCALIZED_POKEMON:{
-			enviarLocalizedPokemonCacheados(index, suscribe_gameboy->cola_suscribir);
+			enviarLocalizedPokemonCacheados(socket_cliente, suscribe_gameboy->cola_suscribir);
 			break;
 		} */
 		default:{
@@ -1195,7 +1193,7 @@ int suscribir(int socket, op_code cola){
 		}
 		case APPEARED_POKEMON:{
 			pthread_mutex_lock(&sem_cola_appeared);
-			index= list_add(cola_appeared->suscriptores,&socket);
+			index= list_add(cola_appeared->suscriptores,socket);
 			pthread_mutex_unlock(&sem_cola_appeared);
 			sem_post(&mensajes_appeared);
 			break;
@@ -1414,14 +1412,20 @@ void enviarAppearedPokemonCacheados(int socket, op_code tipo_mensaje){
 			struct timeval time_aux;
 			gettimeofday(&time_aux, NULL);
 			particion_buscada->time_ultima_ref = time_aux;
-			printf ("Socket appeared: %d\n", socket);
+
 			enviarAppearedPokemon(socket, descacheado);
 
 			char* cola = colaParaLogs(particion_buscada->tipo_mensaje);
 
-			// 4. Envío de un mensaje a un suscriptor específico.
-			log_info(logBroker, "Se envió el Mensaje: %s %s %d %d con ID de Mensaje Correlativo %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.id_mensaje_correlativo);
-			log_info(logBrokerInterno, "Se envió el Mensaje: %s %s %d %d con ID de Mensaje Correlativo %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.id_mensaje_correlativo);
+			if(enviado == -1){
+				log_info(logBroker, "NO se envia");
+				log_info(logBrokerInterno, "NO se envia");
+			}else{
+				// 4. Envío de un mensaje a un suscriptor específico.
+				log_info(logBroker, "Se envió el Mensaje: %s %s %d %d con ID de Mensaje Correlativo %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.id_mensaje_correlativo);
+				log_info(logBrokerInterno, "Se envió el Mensaje: %s %s %d %d con ID de Mensaje Correlativo %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.id_mensaje_correlativo);
+			}
+			}
 		}
 	}
 }
@@ -1569,8 +1573,9 @@ void enviarLocalizedPokemonCacheados(int socket, op_code tipo_mensaje){
 }
 
 int main(void){
-	logBroker = log_create("broker.log", "Broker", 0, LOG_LEVEL_INFO);
-	logBrokerInterno = log_create("brokerInterno.log", "Broker Interno", 1, LOG_LEVEL_INFO);
+
+	logBroker = log_create("broker.log", "Broker", 1, LOG_LEVEL_INFO);
+	logBrokerInterno = log_create("brokerInterno.log", "Broker Interno", 0, LOG_LEVEL_INFO);
 
 	inicializarColas();
 	inicializarSemaforos();
