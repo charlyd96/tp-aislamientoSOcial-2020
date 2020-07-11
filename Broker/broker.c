@@ -312,7 +312,7 @@ int buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint32
 
 		// 6. Almacenado de un mensaje dentro de la memoria (indicando posición de inicio de su partición).
 		log_info(logBroker, "Se almacena el Mensaje %s en la Partición con posición de inicio %d (%p).", cola, part_nueva->base, part_nueva->base);
-		log_info(logBrokerInterno, "Se almacena el Mensaje %s en la Partición con posición de inicio %d (%p).", cola, part_nueva->base, part_nueva->base);
+		//log_info(logBrokerInterno, "Se almacena el Mensaje %s en la Partición con posición de inicio %d (%p).", cola, part_nueva->base, part_nueva->base);
 
 		log_info(logBrokerInterno, "ID_MENSAJE %d, asigno partición base %d y tamanio %d",id, part_nueva->base,part_nueva->tamanio);
 	}
@@ -328,13 +328,13 @@ int buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint32
 
 		list_replace(particiones,indice,part_libre);
 		log_info(logBroker, "ID_MENSAJE %d, asigno partición base %d y i %d",id, part_libre->base,part_libre->buddy_i);
-		log_info(logBrokerInterno, "ID_MENSAJE %d, asigno partición base %d y i %d",id, part_libre->base,part_libre->buddy_i);
+		//log_info(logBrokerInterno, "ID_MENSAJE %d, asigno partición base %d y i %d",id, part_libre->base,part_libre->buddy_i);
 
 		char* cola = colaParaLogs(part_libre->tipo_mensaje);
 
 		// 6. Almacenado de un mensaje dentro de la memoria (indicando posición de inicio de su partición).
 		log_info(logBroker, "Se almacena el Mensaje %s en la Partición con posición de inicio %d (%p).", cola, part_libre->base, part_libre->base);
-		log_info(logBrokerInterno, "Se almacena el Mensaje %s en la Partición con posición de inicio %d (%p).", cola, part_libre->base, part_libre->base);
+		//log_info(logBrokerInterno, "Se almacena el Mensaje %s en la Partición con posición de inicio %d (%p).", cola, part_libre->base, part_libre->base);
 	}
 	//-> DESMUTEAR LISTA DE PARTICIONES
 	sem_post(&mx_particiones);
@@ -874,8 +874,8 @@ void controlador_de_seniales(int signal){
 
 /* FUNCIONES - CONEXIÓN */
 
-void atenderCliente(int* socket){
-	int socket_cliente = *socket;
+void atenderCliente(int socket){
+	int socket_cliente = socket;
 	log_info(logBrokerInterno,"Atender Cliente %d: ", socket_cliente);
 	op_code cod_op = recibirOperacion(socket_cliente);
 	switch(cod_op){
@@ -1074,6 +1074,7 @@ void atenderMensajeLocalizedPokemon(int socket_cliente){
 
 void atenderSuscripcionTeam(int socket_cliente){
 	t_suscribe* suscribe_team = recibirSuscripcion(SUSCRIBE_TEAM,socket_cliente);
+	printf ("ID proceso TEAM: %d\n", suscribe_team->id_proceso);
 
 	int index = suscribir(socket_cliente,suscribe_team->cola_suscribir);
 
@@ -1085,15 +1086,15 @@ void atenderSuscripcionTeam(int socket_cliente){
 
 	switch(suscribe_team->cola_suscribir){
 		case APPEARED_POKEMON:{
-			enviarAppearedPokemonCacheados(index, suscribe_team->cola_suscribir);
+			enviarAppearedPokemonCacheados(socket_cliente, suscribe_team->cola_suscribir);
 			break;
 		}
 		case CAUGHT_POKEMON:{
-			enviarCaughtPokemonCacheados(index, suscribe_team->cola_suscribir);
+			enviarCaughtPokemonCacheados(socket_cliente, suscribe_team->cola_suscribir);
 			break;
 		}
 		case LOCALIZED_POKEMON:{
-			enviarLocalizedPokemonCacheados(index, suscribe_team->cola_suscribir);
+			enviarLocalizedPokemonCacheados(socket_cliente, suscribe_team->cola_suscribir);
 			break;
 		}
 		default:{
@@ -1147,23 +1148,23 @@ void atenderSuscripcionGameBoy(int socket_cliente){
 
 	switch(suscribe_gameboy->cola_suscribir){
 		case NEW_POKEMON:{
-			enviarNewPokemonCacheados(index, suscribe_gameboy->cola_suscribir);
+			enviarNewPokemonCacheados(socket_cliente, suscribe_gameboy->cola_suscribir);
 			break;
 		}
 		case APPEARED_POKEMON:{
-			enviarAppearedPokemonCacheados(index, suscribe_gameboy->cola_suscribir);
+			enviarAppearedPokemonCacheados(socket_cliente, suscribe_gameboy->cola_suscribir);
 			break;
 		}
 		case CATCH_POKEMON:{
-			enviarCatchPokemonCacheados(index, suscribe_gameboy->cola_suscribir);
+			enviarCatchPokemonCacheados(socket_cliente, suscribe_gameboy->cola_suscribir);
 			break;
 		}
 		case CAUGHT_POKEMON:{
-			enviarCaughtPokemonCacheados(index, suscribe_gameboy->cola_suscribir);
+			enviarCaughtPokemonCacheados(socket_cliente, suscribe_gameboy->cola_suscribir);
 			break;
 		}
 		case GET_POKEMON:{
-			enviarGetPokemonCacheados(index, suscribe_gameboy->cola_suscribir);
+			enviarGetPokemonCacheados(socket_cliente, suscribe_gameboy->cola_suscribir);
 			break;
 		}
 /*		case LOCALIZED_POKEMON:{
@@ -1413,7 +1414,7 @@ void enviarAppearedPokemonCacheados(int socket, op_code tipo_mensaje){
 			struct timeval time_aux;
 			gettimeofday(&time_aux, NULL);
 			particion_buscada->time_ultima_ref = time_aux;
-
+			printf ("Socket appeared: %d\n", socket);
 			enviarAppearedPokemon(socket, descacheado);
 
 			char* cola = colaParaLogs(particion_buscada->tipo_mensaje);
@@ -1568,7 +1569,7 @@ void enviarLocalizedPokemonCacheados(int socket, op_code tipo_mensaje){
 }
 
 int main(void){
-	logBroker = log_create("broker.log", "Broker", 1, LOG_LEVEL_INFO);
+	logBroker = log_create("broker.log", "Broker", 0, LOG_LEVEL_INFO);
 	logBrokerInterno = log_create("brokerInterno.log", "Broker Interno", 1, LOG_LEVEL_INFO);
 
 	inicializarColas();
@@ -1589,7 +1590,7 @@ int main(void){
 			cliente = aceptarCliente(socketServidorBroker);
 
 			pthread_t hiloCliente;
-			pthread_create(&hiloCliente, NULL, (void*)atenderCliente, &cliente);
+			pthread_create(&hiloCliente, NULL, (void*)atenderCliente, (int*)cliente);
 			pthread_detach(hiloCliente);
 		}
 
