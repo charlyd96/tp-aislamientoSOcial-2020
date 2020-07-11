@@ -54,6 +54,9 @@ void Team_load_trainers_config(void)
     global_objective = list_create();
     aux_global_objective= list_create();
     t_list *bag_global= list_create();
+    
+    ID_caught= list_create();
+    pthread_mutex_init(&ID_caught_sem, NULL);
 
     /*  Creo un puntero a estructura del tipo Trainer para ir creando cada entrenador leído por archivo de configuración.
         Estas estructuras se van apuntando en nodos de una lista definida en la estructura del Team como t_list *trainers     */

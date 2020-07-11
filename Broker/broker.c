@@ -615,8 +615,8 @@ int cachearCaughtPokemon(t_caught_pokemon* msg){
 
 	void* stream = malloc(largo_stream);
 
-	memcpy(stream, &largo_stream, sizeof(uint32_t));
-
+	memcpy(stream, &(msg->atrapo_pokemon), sizeof(uint32_t));
+	
 	int result = buscarParticionYAlocar(largo_stream,stream,CAUGHT_POKEMON,msg->id_mensaje_correlativo);
 
 	return result;
@@ -1030,7 +1030,7 @@ void atenderMensajeCaughtPokemon(int socket_cliente){
 	list_add(cola_caught->suscriptores, socket_cliente);
 
 	int enviado = devolverID(socket_cliente,&id_mensaje);
-	caught_pokemon->id_mensaje_correlativo = id_mensaje;
+	//caught_pokemon->id_mensaje_correlativo = id_mensaje;
 
 	int cacheado = cachearCaughtPokemon(caught_pokemon);
 }
@@ -1086,7 +1086,7 @@ void atenderSuscripcionTeam(int socket_cliente){
 
 	switch(suscribe_team->cola_suscribir){
 		case APPEARED_POKEMON:{
-			enviarAppearedPokemonCacheados(socket_cliente, suscribe_team->cola_suscribir);
+			enviarAppearedPokemonCacheados(socket_cliente, suscribe_team->cola_suscribir);	
 			break;
 		}
 		case CAUGHT_POKEMON:{
@@ -1354,7 +1354,7 @@ int devolverID(int socket,uint32_t* id_mensaje){
 
 	int enviado = send(socket, stream, sizeof(uint32_t), 0);
 
-	//log_info(logBrokerInterno,"ID mensaje asignado %d", id);
+	log_info(logBrokerInterno,"ID mensaje asignado %d", id);
 	return enviado;
 }
 

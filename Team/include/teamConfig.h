@@ -19,6 +19,9 @@ extern sem_t trainer_count;
 
 extern t_list *global_objective;
 
+extern t_list *ID_caught;
+extern pthread_mutex_t ID_caught_sem;
+
 t_log *internalLogTeam;
 t_log *logTeam;
 

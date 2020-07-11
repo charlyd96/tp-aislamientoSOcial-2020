@@ -16,9 +16,9 @@
 //        ***** Es un subrutina invocada por un hilo creado en la función Trainer_handler_create ****
 // ============================================================================================================
 
-void* trainer_to_catch(void *retorno)
+void* trainer_to_catch()
 {
-    int index=0, count=-1;
+    int index=0;
     int target=-1;
     u_int32_t distance_min= 100000  ; //Arreglar esta hardcodeada trucha
     mapPokemons *actual_pokemon;
@@ -83,7 +83,6 @@ void* trainer_to_catch(void *retorno)
                 trainer->actual_operation= OP_EXECUTING_CATCH;        
                 printf ("El entrenador %d atrapará a un %s ubicado en (%d,%d)\n", trainer->index,trainer->actual_objective.name,actual_pokemon->posx,actual_pokemon->posy);
                 send_trainer_to_ready (trainers, index, OP_EXECUTING_CATCH); 
-                count=-1;
                 index=-1;
                 distance_min= 100000  ; //Arreglar esta hardcodeada trucha
                 target=-1;
@@ -95,11 +94,8 @@ void* trainer_to_catch(void *retorno)
                 pthread_mutex_lock (&auxglobal_sem);                
                 if (list_size (aux_global_objective) > 0 ) 
                 {
-
                     pthread_mutex_unlock (&auxglobal_sem);
-               
                     sem_wait (&trainer_count);
-                    
                 }
                 else 
                 {

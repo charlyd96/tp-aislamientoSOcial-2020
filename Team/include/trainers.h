@@ -119,7 +119,7 @@ typedef struct
 
 void * trainer_routine (void *trainer);
 
-void * trainer_to_catch (void *dato);
+void * trainer_to_catch (void);
 
 void send_trainer_to_ready (t_list *lista, int index, Operation op);
 

@@ -98,16 +98,13 @@ int Trainer_handler_create(void);
 /*  Inicializa el proceso Team   */
 void Team_Init(void);
 
-
-
-void* listen_routine_gameboy (void *config);
+void* listen_routine_gameboy (void);
 
 void send_trainer_to_exec (void);
 
 void subscribe (void) ;
 
 void listen_new_pokemons (void);
-
 
 void imprimir_lista (t_list *get_list);
 

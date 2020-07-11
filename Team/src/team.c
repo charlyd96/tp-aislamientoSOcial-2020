@@ -31,7 +31,7 @@ void Team_Init(void)
 
     ReadyQueue= list_create  ();                 //*********Mejorar la ubicación de esta instrucción***************//
     mapped_pokemons = list_create();             //*********Mejorar la ubicación de esta instrucción***************//
-    cola_caught = list_create();
+    
     
     /*Lista de entrenadores en deadlock*/
     deadlock_list = list_create();
@@ -45,8 +45,7 @@ void Team_Init(void)
     sem_init (&poklist_sem2, 0, 1);          //*********Mejorar la ubicación de esta instrucción***************//
     sem_init (&qr_sem1, 0, 0);               //*********Mejorar la ubicación de esta instrucción***************//
     sem_init (&qr_sem2, 0, 1);
-    sem_init (&qcaught1_sem,0,0);
-    sem_init (&qcaught1_sem,0,1);
+
 
 }
 
@@ -177,7 +176,7 @@ int Trainer_handler_create ()
 
     void *resultado;
     pthread_t thread;
-    pthread_create ( &thread, NULL, trainer_to_catch, resultado); 
+    pthread_create ( &thread, NULL, (void*)trainer_to_catch, resultado); 
     pthread_join (thread, &resultado); //hacerlo join y llamar a un nuevo hilo 
 
     while (list_size (deadlock_list)>0)
@@ -240,26 +239,22 @@ int Trainer_handler_create ()
 void listen_new_pokemons ()
 {
     pthread_t thread; //OJO. Esta variable se está perdiendo
-    pthread_create (&thread, NULL, listen_routine_gameboy , NULL);
+    pthread_create (&thread, NULL, (void*)listen_routine_gameboy , NULL);
     pthread_detach (thread);
-}
+} 
 
 
 void subscribe ()
 {
-/* --------Ver de sacar estos mallocs y mandar la estructura como parámetro-----------------*/
-
-
 	pthread_t thread1; //OJO. Esta variable se está perdiendo
 	pthread_create (&thread1, NULL, listen_routine_colas , (int*)APPEARED_POKEMON);
-	pthread_detach (thread);
+	pthread_detach (thread1);
 
 	pthread_t thread2; //OJO. Esta variable se está perdiendo
-	pthread_create (&thread1, NULL, listen_routine_colas , (int*)LOCALIZED_POKEMON);
-	pthread_detach (thread);
+	pthread_create (&thread2, NULL, listen_routine_colas , (int*)LOCALIZED_POKEMON);
+	pthread_detach (thread2);
   
 	pthread_t thread3; //OJO. Esta variable se está perdiendo
-	pthread_create (&thread1, NULL, listen_routine_colas , (int*)CAUGHT_POKEMON);
-	pthread_detach (thread);
-
+	pthread_create (&thread3, NULL, listen_routine_colas , (int*)CAUGHT_POKEMON);
+	pthread_detach (thread3);
 }
