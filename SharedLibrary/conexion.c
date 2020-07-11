@@ -159,7 +159,7 @@ int enviarNewPokemon(int socket_cliente, t_new_pokemon mensaje){
 }
 int enviarSuscripcion(int nro_socket,t_suscribe suscripcion){
 
-	uint32_t bytes_enviar = sizeof(op_code) + sizeof(op_code);
+	uint32_t bytes_enviar = sizeof(op_code) + sizeof(op_code) + sizeof(uint32_t);
 	if(suscripcion.tipo_suscripcion == SUSCRIBE_GAMEBOY) bytes_enviar += sizeof(uint32_t);
 	uint32_t offset = 0;
 	void* stream = malloc(bytes_enviar);
@@ -168,6 +168,9 @@ int enviarSuscripcion(int nro_socket,t_suscribe suscripcion){
 	offset += sizeof(op_code);
 	memcpy(stream + offset, &(suscripcion.cola_suscribir), sizeof(op_code));
 	offset += sizeof(op_code);
+	memcpy(stream + offset, &(suscripcion.id_proceso), sizeof(uint32_t));
+	offset += sizeof(uint32_t);
+
 	if(suscripcion.tipo_suscripcion == SUSCRIBE_GAMEBOY){
 		memcpy(stream + offset, &(suscripcion.timeout), sizeof(uint32_t));
 		offset += sizeof(uint32_t);
@@ -408,16 +411,19 @@ t_caught_pokemon* recibirCaughtPokemon(int socket_cliente){
 t_suscribe* recibirSuscripcion(op_code tipo_suscripcion,int socket_cliente){
 	op_code cola_suscribir;
 	uint32_t timeout = 0;
+	uint32_t id_proceso = 0;
 
 	recv(socket_cliente, &cola_suscribir, sizeof(op_code), MSG_WAITALL);
 	if(tipo_suscripcion == SUSCRIBE_GAMEBOY){
 		recv(socket_cliente, &timeout, sizeof(uint32_t), MSG_WAITALL);
 	}
-
+	recv(socket_cliente, &id_proceso, sizeof(uint32_t), MSG_WAITALL);
+	
 	t_suscribe* suscripcion = malloc(sizeof(t_suscribe));
 	suscripcion->tipo_suscripcion = tipo_suscripcion;
 	suscripcion->cola_suscribir = cola_suscribir;
 	suscripcion->timeout = timeout;
+	suscripcion->id_proceso = id_proceso;
 
 	return suscripcion;
 }

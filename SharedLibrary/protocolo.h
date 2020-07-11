@@ -96,6 +96,7 @@ typedef struct {
 typedef struct{
 	op_code tipo_suscripcion;
 	op_code cola_suscribir;
+	uint32_t id_proceso;
 	uint32_t timeout; //Solo en caso de gameboy
 } t_suscribe;
 #endif /* PROTOCOLO_H_ */
