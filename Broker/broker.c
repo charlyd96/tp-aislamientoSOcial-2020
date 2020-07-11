@@ -874,8 +874,8 @@ void controlador_de_seniales(int signal){
 
 /* FUNCIONES - CONEXIÓN */
 
-void atenderCliente(int* socket){
-	int socket_cliente = *socket;
+void atenderCliente(int socket){
+	int socket_cliente = socket;
 	log_info(logBrokerInterno,"Atender Cliente %d: ", socket_cliente);
 	op_code cod_op = recibirOperacion(socket_cliente);
 	switch(cod_op){
@@ -983,8 +983,6 @@ void atenderMensajeAppearedPokemon(int socket_cliente){
 
 	encolarAppearedPokemon(appeared_pokemon);
 
-	list_add(cola_appeared->suscriptores, socket_cliente);
-
 	int enviado = devolverID(socket_cliente,&id_mensaje);
 //	appeared_pokemon->id_mensaje_correlativo = id_mensaje;
 
@@ -1085,15 +1083,15 @@ void atenderSuscripcionTeam(int socket_cliente){
 
 	switch(suscribe_team->cola_suscribir){
 		case APPEARED_POKEMON:{
-			enviarAppearedPokemonCacheados(index, suscribe_team->cola_suscribir);
+			enviarAppearedPokemonCacheados(socket_cliente, suscribe_team->cola_suscribir);
 			break;
 		}
 		case CAUGHT_POKEMON:{
-			enviarCaughtPokemonCacheados(index, suscribe_team->cola_suscribir);
+			enviarCaughtPokemonCacheados(socket_cliente, suscribe_team->cola_suscribir);
 			break;
 		}
 		case LOCALIZED_POKEMON:{
-			enviarLocalizedPokemonCacheados(index, suscribe_team->cola_suscribir);
+			enviarLocalizedPokemonCacheados(socket_cliente, suscribe_team->cola_suscribir);
 			break;
 		}
 		default:{
@@ -1147,27 +1145,27 @@ void atenderSuscripcionGameBoy(int socket_cliente){
 
 	switch(suscribe_gameboy->cola_suscribir){
 		case NEW_POKEMON:{
-			enviarNewPokemonCacheados(index, suscribe_gameboy->cola_suscribir);
+			enviarNewPokemonCacheados(socket_cliente, suscribe_gameboy->cola_suscribir);
 			break;
 		}
 		case APPEARED_POKEMON:{
-			enviarAppearedPokemonCacheados(index, suscribe_gameboy->cola_suscribir);
+			enviarAppearedPokemonCacheados(socket_cliente, suscribe_gameboy->cola_suscribir);
 			break;
 		}
 		case CATCH_POKEMON:{
-			enviarCatchPokemonCacheados(index, suscribe_gameboy->cola_suscribir);
+			enviarCatchPokemonCacheados(socket_cliente, suscribe_gameboy->cola_suscribir);
 			break;
 		}
 		case CAUGHT_POKEMON:{
-			enviarCaughtPokemonCacheados(index, suscribe_gameboy->cola_suscribir);
+			enviarCaughtPokemonCacheados(socket_cliente, suscribe_gameboy->cola_suscribir);
 			break;
 		}
 		case GET_POKEMON:{
-			enviarGetPokemonCacheados(index, suscribe_gameboy->cola_suscribir);
+			enviarGetPokemonCacheados(socket_cliente, suscribe_gameboy->cola_suscribir);
 			break;
 		}
 /*		case LOCALIZED_POKEMON:{
-			enviarLocalizedPokemonCacheados(index, suscribe_gameboy->cola_suscribir);
+			enviarLocalizedPokemonCacheados(socket_cliente, suscribe_gameboy->cola_suscribir);
 			break;
 		} */
 		default:{
@@ -1194,7 +1192,7 @@ int suscribir(int socket, op_code cola){
 		}
 		case APPEARED_POKEMON:{
 			pthread_mutex_lock(&sem_cola_appeared);
-			index= list_add(cola_appeared->suscriptores,&socket);
+			index= list_add(cola_appeared->suscriptores,socket);
 			pthread_mutex_unlock(&sem_cola_appeared);
 			sem_post(&mensajes_appeared);
 			break;
@@ -1414,13 +1412,25 @@ void enviarAppearedPokemonCacheados(int socket, op_code tipo_mensaje){
 			gettimeofday(&time_aux, NULL);
 			particion_buscada->time_ultima_ref = time_aux;
 
-			enviarAppearedPokemon(socket, descacheado);
+			int tam_lista_suscriptores = list_size(cola_appeared->suscriptores);
+
+			log_info(logBroker, "Tamaño lista suscriptores APPEARED: %d", tam_lista_suscriptores);
+
+			for(int j = 0; j <= tam_lista_suscriptores; j++){
+			int socket_suscriptor = list_get(cola_appeared->suscriptores, j);
+			int enviado = enviarAppearedPokemon(socket_suscriptor, descacheado);
 
 			char* cola = colaParaLogs(particion_buscada->tipo_mensaje);
 
-			// 4. Envío de un mensaje a un suscriptor específico.
-			log_info(logBroker, "Se envió el Mensaje: %s %s %d %d con ID de Mensaje Correlativo %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.id_mensaje_correlativo);
-			log_info(logBrokerInterno, "Se envió el Mensaje: %s %s %d %d con ID de Mensaje Correlativo %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.id_mensaje_correlativo);
+			if(enviado == -1){
+				log_info(logBroker, "NO se envia");
+				log_info(logBrokerInterno, "NO se envia");
+			}else{
+				// 4. Envío de un mensaje a un suscriptor específico.
+				log_info(logBroker, "Se envió el Mensaje: %s %s %d %d con ID de Mensaje Correlativo %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.id_mensaje_correlativo);
+				log_info(logBrokerInterno, "Se envió el Mensaje: %s %s %d %d con ID de Mensaje Correlativo %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.id_mensaje_correlativo);
+			}
+			}
 		}
 	}
 }
@@ -1569,7 +1579,7 @@ void enviarLocalizedPokemonCacheados(int socket, op_code tipo_mensaje){
 
 int main(void){
 	logBroker = log_create("broker.log", "Broker", 1, LOG_LEVEL_INFO);
-	logBrokerInterno = log_create("brokerInterno.log", "Broker Interno", 1, LOG_LEVEL_INFO);
+	logBrokerInterno = log_create("brokerInterno.log", "Broker Interno", 0, LOG_LEVEL_INFO);
 
 	inicializarColas();
 	inicializarSemaforos();
@@ -1589,7 +1599,7 @@ int main(void){
 			cliente = aceptarCliente(socketServidorBroker);
 
 			pthread_t hiloCliente;
-			pthread_create(&hiloCliente, NULL, (void*)atenderCliente, &cliente);
+			pthread_create(&hiloCliente, NULL, (void*)atenderCliente, (int*)cliente);
 			pthread_detach(hiloCliente);
 		}
 

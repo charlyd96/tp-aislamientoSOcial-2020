@@ -181,7 +181,7 @@ void inicializarMemoria();
 void inicializatSemaforos();
 
 /// CONEXIÓN
-void atenderCliente(int* socket_cliente);
+void atenderCliente(int socket_cliente);
 
 void atenderMensajeNewPokemon(int socket);
 void atenderMensajeAppearedPokemon(int socket);
