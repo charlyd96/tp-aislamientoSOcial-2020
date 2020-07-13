@@ -44,9 +44,19 @@ t_list *aux_global_objective;
 //sem_t auxglobal_sem2;
 pthread_mutex_t auxglobal_sem;
 
+t_list *new_global_objective;
+pthread_mutex_t new_global_sem;
+
+t_list *aux_new_global_objective;
+pthread_mutex_t aux_new_global_sem;
+
 t_list *mapped_pokemons;
 sem_t poklist_sem;
 sem_t poklist_sem2;
+
+t_list *mapped_pokemons_aux;
+sem_t poklistAux_sem1;
+sem_t poklistAux_sem2;
 
 
 extern t_log *internalLogTeam;

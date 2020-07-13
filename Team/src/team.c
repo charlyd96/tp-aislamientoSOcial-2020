@@ -28,23 +28,27 @@ void Team_Init(void)
     
     Team_load_trainers_config();
 
-
     ReadyQueue= list_create  ();                 //*********Mejorar la ubicación de esta instrucción***************//
+    sem_init (&qr_sem1, 0, 0);               //*********Mejorar la ubicación de esta instrucción***************//
+    sem_init (&qr_sem2, 0, 1);
+   
     mapped_pokemons = list_create();             //*********Mejorar la ubicación de esta instrucción***************//
-    
-    
+    sem_init (&poklist_sem, 0, 0);           //*********Mejorar la ubicación de esta instrucción***************//
+    sem_init (&poklist_sem2, 0, 1);          //*********Mejorar la ubicación de esta instrucción***************//
+
+    mapped_pokemons_aux = list_create();
+    sem_init (&poklistAux_sem1, 0, 0);
+    sem_init (&poklistAux_sem2, 0, 1);
+
+
     /*Lista de entrenadores en deadlock*/
     deadlock_list = list_create();
     sem_init (&deadlock_sem1, 0, 0);
-    sem_init (&deadlock_sem2, 0, 1);
-    pthread_mutex_init(&global_sem, NULL);
-    pthread_mutex_init (&auxglobal_sem, NULL);
-
+    sem_init (&deadlock_sem2, 0, 1); //Verificar si es necesario el esquema productor/consumidor
+    
     sem_init (&resolviendo_deadlock, 0, 0);
-    sem_init (&poklist_sem, 0, 0);           //*********Mejorar la ubicación de esta instrucción***************//
-    sem_init (&poklist_sem2, 0, 1);          //*********Mejorar la ubicación de esta instrucción***************//
-    sem_init (&qr_sem1, 0, 0);               //*********Mejorar la ubicación de esta instrucción***************//
-    sem_init (&qr_sem2, 0, 1);
+
+
 
 
 }
@@ -84,9 +88,13 @@ void enviar_mensajes_get (t_list* GET_list)
         mensaje_get.nombre_pokemon=(char *)element;
         mensaje_get.id_mensaje=0;
         int socket = crearSocketCliente (config->broker_IP,config->broker_port);
+        if (socket != -1)
+        {
         int enviado= enviarGetPokemon (socket, mensaje_get);
-        printf ("Se envió GET %s al broker. Enviado=%d. Socket= %d\n",mensaje_get.nombre_pokemon,enviado,socket);
+        log_info(internalLogTeam, "Se envió GET %s al broker. Enviado=%d. Socket= %d\n",mensaje_get.nombre_pokemon,enviado,socket);
         close (socket); 
+        }
+        else log_info(internalLogTeam, "No se pudo enviar GET %s al broker.\n",mensaje_get.nombre_pokemon);
     }
 
 	list_iterate(GET_list,get_send );

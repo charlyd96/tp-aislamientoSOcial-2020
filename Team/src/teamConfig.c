@@ -52,9 +52,19 @@ void Team_load_trainers_config(void)
 
     /*  Creo la lista de objetivos globales que va a manejar el Team */
     global_objective = list_create();
+    pthread_mutex_init(&global_sem, NULL);
+
     aux_global_objective= list_create();
+    pthread_mutex_init (&auxglobal_sem, NULL);
+  
+    new_global_objective=list_create();
+    pthread_mutex_init(&new_global_sem, NULL);
+
+    aux_new_global_objective=list_create();
+    pthread_mutex_init(&aux_new_global_sem, NULL);
+
     t_list *bag_global= list_create();
-    
+
     ID_caught= list_create();
     pthread_mutex_init(&ID_caught_sem, NULL);
 
@@ -100,7 +110,7 @@ void Team_load_trainers_config(void)
         list_add(trainers, entrenadores);
 
         /*  Añado los objetivos de cada entrenador a la lista de objetivos globales */
-        list_add_all (global_objective, duplicar_lista(entrenadores->personal_objective)); //Ver si se puede poner un list_duplicate
+        list_add_all (global_objective, list_duplicate(entrenadores->personal_objective)); //Ver si se puede poner un list_duplicate. Ya se cambió. Antes estaba duplicar_lista
         list_add_all (bag_global,entrenadores->bag);
         
         /*  Libero memoria innecesaria generada por la función string_split de las commons  */
@@ -111,6 +121,7 @@ void Team_load_trainers_config(void)
 
     remover_objetivos_globales_conseguidos(bag_global);
     list_destroy(bag_global);
+    new_global_objective = list_duplicate(global_objective);
 
     /*  Libero memoria innecesaria generada por la función string_split de las commons  */
    /* free_split (pos_trainers_to_array);

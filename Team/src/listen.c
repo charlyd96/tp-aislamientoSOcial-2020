@@ -77,8 +77,7 @@ int send_catch (Trainer *trainer)
 int send_catch (Trainer *trainer)
 {	
 	trainer->actual_status = BLOCKED_WAITING_REPLY;
-	sem_post(&using_cpu); //Disponibilizar la CPU para otro entrenador
-	
+		
 	char *IP= trainer->config->broker_IP;
 	char *puerto= trainer->config->broker_port;
 	t_catch_pokemon message;
@@ -96,7 +95,7 @@ int send_catch (Trainer *trainer)
 		message.id_mensaje=0;
 
 		enviarCatchPokemon (socket, message);
-		
+		sem_post(&using_cpu); //Disponibilizar la CPU para otro entrenador
 		puts ("esperando ID");
 		recv (socket,&(message.id_mensaje),sizeof(uint32_t),MSG_WAITALL); //Recibir ID
 		close (socket);
@@ -106,9 +105,9 @@ int send_catch (Trainer *trainer)
 								 												  //Buscar en la cola caught con el ID correlativo
 		return (resultado);														  //Esta función bloquea a este hilo hasta que 
 																			 	  //el planificador de la CPU lo habilite nuevamente 																	
-	}
-	else	
+	}	
 	log_info (logTeam,"Fallo en la conexion al Broker. Se efectuará acción por defecto");
+	sem_post(&using_cpu); //Disponibilizar la CPU para otro entrenador
 	return (DEFAULT_CATCH);
 		 
 }
@@ -140,15 +139,31 @@ void* listen_routine_colas (void *colaSuscripcion)
 
 		case LOCALIZED_POKEMON:
 		{
-		//*****PROCESAR LOCALIZED POKEMON ******
-		//pthread_t thread;
-		//pthread_create (&thread, NULL, (void *) get_opcode, (int*)socket);
-		//pthread_detach (thread);	
-		break;
+			while(1)
+			{
+				/*t_localized_pokemon enviar_mensaje_localized;
+				enviar_mensaje_localized.nombre_pokemon= "Pikachu";
+				enviar_mensaje_localized.cant_pos=3;
+				enviar_mensaje_localized.posiciones="[1|2,1|2,1|2]";
+				enviar_mensaje_localized.id_mensaje_correlativo=0;
+				sleep (3);
+				puts ("voy a mandar el localized");
+				printf ("Enviado: %d\n",enviarLocalizedPokemon(socket_cliente,enviar_mensaje_localized));
+				op_code cod_op = recibirOperacion(socket_cliente);
+				if (cod_op==OP_UNKNOWN)
+				socket_cliente = reintentar_conexion((op_code) colaSuscripcion);
+
+				t_localized_pokemon* mensaje_localized= recibirLocalizedPokemon(socket_cliente);
+				enviarACK(socket_cliente);*/
+				//log_info (internalLogTeam, "Mensaje recibido: %s %d %d",colaParaLogs((int)cod_op),mensaje_caught->atrapo_pokemon, mensaje_caught->id_mensaje_correlativo);
+				pthread_t thread;
+				//pthread_create (&thread, NULL, (void *) procesar_caught, (int*)mensaje_caught->id_mensaje_correlativo);
+				//pthread_detach (thread);					
+			} break;
 		}
 
 		case CAUGHT_POKEMON:
-		{								
+		{		sleep(10);						
 			while(1)
 			{
 				op_code cod_op = recibirOperacion(socket_cliente);
@@ -159,7 +174,7 @@ void* listen_routine_colas (void *colaSuscripcion)
 				enviarACK(socket_cliente);
 				log_info (internalLogTeam, "Mensaje recibido: %s %d %d",colaParaLogs((int)cod_op),mensaje_caught->atrapo_pokemon, mensaje_caught->id_mensaje_correlativo);
 				pthread_t thread;
-				pthread_create (&thread, NULL, (void *) procesar_caught, (int*)mensaje_caught->id_mensaje_correlativo);
+				pthread_create (&thread, NULL, (void *) procesar_caught, mensaje_caught);
 				pthread_detach (thread);					
 			} break;
 		}
@@ -177,23 +192,28 @@ void* listen_routine_colas (void *colaSuscripcion)
 
 
 
-int procesar_caught (void *id)
-{
-	uint32_t id_corr = (uint32_t) id;
+int procesar_caught (void *mensaje)
+{	
+	t_caught_pokemon *mensaje_caught = mensaje;
+	uint32_t id_corr = mensaje_caught->id_mensaje_correlativo;
+	uint32_t resultado = mensaje_caught->atrapo_pokemon;
 
 	bool compare_id_corr (void *element)
 	{
 		internal_caught *nodoCaught = element;
 		if (id_corr  ==  nodoCaught->id)
 		{
-		*(nodoCaught->resultado)=true;
-		sem_post(nodoCaught->trainer_sem);
-		return (true);	
+			if (resultado==1)
+			*(nodoCaught->resultado)=true;
+			else *(nodoCaught->resultado)=false;
+			sem_post(nodoCaught->trainer_sem);
+			return (true);	
 		}
 		else return (false);
 	}
-
+	pthread_mutex_lock (&ID_caught_sem); 
 	void *nodo= list_remove_by_condition(ID_caught, compare_id_corr);
+	pthread_mutex_unlock (&ID_caught_sem);
 	if (nodo !=NULL)
 	free(nodo);
 }
@@ -270,15 +290,46 @@ char* colaParaLogs(op_code cola){
 void procesar_appeared(void *msg)
 {
 	t_appeared_pokemon *mensaje_appeared = msg;
-	mapPokemons *pokemon_to_add = malloc (sizeof(mapPokemons));
-	pokemon_to_add-> name = mensaje_appeared->nombre_pokemon;
-	pokemon_to_add-> posx = mensaje_appeared->pos_x;
-	pokemon_to_add-> posy= mensaje_appeared->pos_y;
-	//pokemon_to_add->cantidad = 1;
-	sem_wait(&poklist_sem2);
-	list_add(mapped_pokemons, pokemon_to_add );
-	sem_post(&poklist_sem);
-	sem_post(&poklist_sem2);
+	nuevo_pokemon operacion = tratar_nuevo_pokemon (mensaje_appeared->nombre_pokemon);
+
+	switch (operacion)
+	{
+		case GUARDAR:
+		{
+			mapPokemons *pokemon_to_add = malloc (sizeof(mapPokemons));
+			pokemon_to_add-> name = string_duplicate (mensaje_appeared->nombre_pokemon);
+			pokemon_to_add-> posx = mensaje_appeared->pos_x;
+			pokemon_to_add-> posy= mensaje_appeared->pos_y;
+			sem_wait(&poklist_sem2);
+			list_add(mapped_pokemons, pokemon_to_add );
+			sem_post(&poklist_sem);
+			sem_post(&poklist_sem2);
+			liberar_appeared(mensaje_appeared);
+			break;
+		}
+
+		case GUARDAR_AUX:
+		{
+			mapPokemons *pokemon_to_add = malloc (sizeof(mapPokemons));
+			pokemon_to_add-> name = string_duplicate (mensaje_appeared->nombre_pokemon);
+			pokemon_to_add-> posx = mensaje_appeared->pos_x;
+			pokemon_to_add-> posy= mensaje_appeared->pos_y;
+			sem_wait(&poklistAux_sem2); //Verificar si es necesario el esquema de productor consumidor
+			list_add(mapped_pokemons_aux, pokemon_to_add );
+			sem_post(&poklistAux_sem1);
+			sem_post(&poklistAux_sem2);
+			liberar_appeared(mensaje_appeared);
+			break;
+		}
+
+		case DESCARTAR:
+		{
+			liberar_appeared(mensaje_appeared);
+			break;
+		}
+		default: log_error (internalLogTeam, "Operación desconocida al recibir appeared");
+	}
+	
 }
 
 int informarID(uint32_t id, sem_t *trainer_sem)
@@ -297,4 +348,48 @@ int informarID(uint32_t id, sem_t *trainer_sem)
 
 	sem_wait(trainer_sem); //Bloqueo al entrenador
 	return(resultado);
+}
+
+nuevo_pokemon tratar_nuevo_pokemon (char *nombre_pokemon)
+{
+	char *a_lista_auxiliar=NULL;
+	bool buscar (void *nombre)
+	{
+		if (!strcmp( (char*)nombre,nombre_pokemon))
+		{
+			return true;
+		} else return false;
+	}
+	pthread_mutex_lock(&new_global_sem);
+	a_lista_auxiliar= list_remove_by_condition(new_global_objective, buscar); //Busco si el pokemon recibido está en la lista de objetivos globales
+	pthread_mutex_unlock(&new_global_sem);
+	printf ("\n\n\nPuntero=%p\n\n\n",a_lista_auxiliar);
+	if (a_lista_auxiliar!=NULL) //Si está en la lista global, lo muevo a la auxiliar
+	{
+		pthread_mutex_lock(&aux_new_global_sem);
+		list_add(aux_new_global_objective, a_lista_auxiliar);
+		pthread_mutex_unlock(&aux_new_global_sem);
+		return (GUARDAR); //Guardar en el mapa principal
+	}
+	else //Su no está en la lista global, lo busco en la lista global auxiliar
+	{
+		pthread_mutex_lock(&aux_new_global_sem);
+		if ( list_any_satisfy(aux_new_global_objective, buscar) )
+		{
+			pthread_mutex_unlock(&aux_new_global_sem);
+			return (GUARDAR_AUX);
+		}
+		else
+		{
+			pthread_mutex_unlock(&aux_new_global_sem);
+			return DESCARTAR;
+		} 
+	} 
+}
+
+void liberar_appeared (t_appeared_pokemon *mensaje)
+
+{
+	free (mensaje->nombre_pokemon);
+	free (mensaje);
 }
