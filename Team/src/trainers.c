@@ -46,16 +46,16 @@ void* trainer_to_catch()
 
     while (1)
     {      
-         // Este semáforo bloquea el proceso de planificación si no hay entrenadores para mandar a ready
-                        // Se le deberá hacer el post una vez que el entrenador reciba el caught y pueda volver a ser  planificado
-        pthread_mutex_lock (&global_sem);
+         
+                        
+        sem_wait (&trainer_count); // Este semáforo bloquea el proceso de planificación si no hay entrenadores para mandar a ready
+        
         printf ("Lista global: %d\n", list_size (global_objective));
         printf ("Lista global aux: %d\n", list_size (aux_global_objective));
-        sem_wait (&trainer_count);
+        pthread_mutex_lock (&global_sem);
         if (list_size (global_objective) > 0 )
         { 
-            pthread_mutex_unlock (&global_sem);
-                        
+            pthread_mutex_unlock (&global_sem);            
             sem_wait(&poklist_sem); //Para evitar espera activa si no hay pokemones en el mapa. Revisar este comentario.
             sem_wait(&poklist_sem2); //Para evitar espera activa si no hay pokemones en el mapa. En realidad es por productor consumidor
             actual_pokemon =  list_remove (mapped_pokemons, 0);
@@ -85,7 +85,6 @@ void* trainer_to_catch()
                 index=-1;
                 distance_min= 100000  ; //Arreglar esta hardcodeada trucha
                 target=-1;
-
             }
         } 
         else 
@@ -95,14 +94,6 @@ void* trainer_to_catch()
                 if (list_size (aux_global_objective) > 0 ) 
                 {
                     pthread_mutex_unlock (&auxglobal_sem);
-                    puts ("me voy a bloquear");
-                            printf ("Lista global: %d\n", list_size (global_objective));
-        printf ("Lista global aux: %d\n", list_size (aux_global_objective));
-        void imprimir_estados (void *trainer)
-            {
-            printf ("Estado %d: %d\t",((Trainer*)trainer)->index,((Trainer*)trainer)->actual_status);   
-            }
-            list_iterate (trainers,imprimir_estados);
                     sem_wait (&trainer_count);
                     puts ("me bloquee");
                 }
@@ -218,15 +209,42 @@ void nuevos_pokemones_CAUGHT_NO (char *nombre_pokemon)
         else return (false);
     }
 	pthread_mutex_lock(&aux_new_global_sem);
-    mapPokemons *nuevo_pokemon = list_remove_by_condition(mapped_pokemons_aux, buscar);
+    mapPokemons *nuevo_pokemon = list_remove_by_condition(mapped_pokemons_aux, buscar); //Busco el pokemon en el mapa auxiliar
     pthread_mutex_unlock(&aux_new_global_sem);
 
-    if (nuevo_pokemon!=NULL)
+    if (nuevo_pokemon!=NULL) //Si se encontró un pokemon en el mapa auxiliar, moverlo al mapa principal
     mover_pokemon_al_mapa(nuevo_pokemon);
+    else //Si no se encontró un pokemon en el mapa auxiliar, mover el nombre pokemon pendiente de la lista auxiliar a la lista global de pendientes
+    {
+    mover_de_aux_a_global(nombre_pokemon);
+    }
+
 }
+
+void mover_de_aux_a_global(char *name)
+{
+    bool buscar (void * element)
+    {
+        if (!strcmp(name,(char*)element))
+        return (true);
+        else return (false);
+    }
+    pthread_mutex_lock(&aux_new_global_sem);
+    list_remove_by_condition(aux_new_global_objective,buscar);
+    pthread_mutex_unlock(&aux_new_global_sem);
+
+
+    pthread_mutex_lock(&new_global_sem);
+    list_add(new_global_objective, name);
+	pthread_mutex_unlock(&new_global_sem);
+
+}
+
+
 
 void mover_pokemon_al_mapa (mapPokemons *nuevo_pokemon)
 {
+    puts ("agregando pokemon al mapa");
     sem_wait(&poklist_sem2);
     list_add(mapped_pokemons, nuevo_pokemon );
     sem_post(&poklist_sem);

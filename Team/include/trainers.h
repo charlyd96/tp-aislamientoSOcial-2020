@@ -163,5 +163,6 @@ void mover_pokemon_al_mapa (mapPokemons *nuevo_pokemon);
 
 void remover_pokemones_en_mapa_auxiliar(char *nombre_pokemon);
 
+void mover_de_aux_a_global(char *name);
 
 #endif /* INCLUDE_TRAINERS_H_ */

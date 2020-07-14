@@ -82,7 +82,7 @@ t_list*  Team_GET_generate ()
 void enviar_mensajes_get (t_list* GET_list)
 {
 	
-    void get_send (void *element)
+    void send_get (void *element)
     {
         t_get_pokemon mensaje_get;
         mensaje_get.nombre_pokemon=(char *)element;
@@ -91,14 +91,15 @@ void enviar_mensajes_get (t_list* GET_list)
         if (socket != -1)
         {
         int enviado= enviarGetPokemon (socket, mensaje_get);
-        log_info(internalLogTeam, "Se envió GET %s al broker. Enviado=%d. Socket= %d\n",mensaje_get.nombre_pokemon,enviado,socket);
+        log_info(internalLogTeam, "Se envió GET %s al broker. Enviado=%d. Socket= %d",mensaje_get.nombre_pokemon,enviado,socket);
+        recv (socket,&(mensaje_get.id_mensaje),sizeof(uint32_t),MSG_WAITALL); //Recibir ID
+		printf ("\t\t\t\t\t\t\tEl Id devuelto fue: %d. Pertenece al pokemon %s\t\t\t\t\t\t\n", mensaje_get.id_mensaje, mensaje_get.nombre_pokemon);
+        informarIDlocalized(mensaje_get.id_mensaje);
         close (socket); 
         }
         else log_info(internalLogTeam, "No se pudo enviar GET %s al broker.\n",mensaje_get.nombre_pokemon);
     }
-
-	list_iterate(GET_list,get_send );
-   // list_destroy_and_destroy_elements (GET_list, free); //OJO. Me destruye los elementos de la lista. Pierdo global_objective
+	list_iterate(GET_list,send_get );
 }
 
 

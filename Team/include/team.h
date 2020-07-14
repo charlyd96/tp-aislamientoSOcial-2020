@@ -30,6 +30,10 @@ extern t_list *cola_caught;
 extern sem_t qcaught1_sem;
 extern sem_t qcaught2_sem;
 
+
+extern t_list *ID_localized;
+
+
 extern t_list *deadlock_list;
 extern sem_t deadlock_sem1;
 extern sem_t deadlock_sem2;
@@ -121,4 +125,7 @@ void imprimir_lista (t_list *get_list);
 void enviar_mensajes_get (t_list *get_list);
 
 void* listen_routine_colas (void *conexion);
+
+void informarIDlocalized(uint32_t id);
+
 #endif /* TEAM_H_ */

@@ -41,7 +41,8 @@ extern t_log *logTeam;
 
 extern Config *config;
 
-t_list *ID_caught;
+t_list *ID_localized;
+pthread_mutex_t ID_localized_sem;
 
 extern int ciclos_cpu;
 void* get_opcode (int socket);
@@ -62,7 +63,10 @@ char* colaParaLogs(op_code cola);
 
 nuevo_pokemon tratar_nuevo_pokemon (char *nombre_pokemon);
 
-int informarID(uint32_t id, sem_t *trainer_sem);
+int informarIDcaught(uint32_t id, sem_t *trainer_sem);
+
+void informarIDlocalized(uint32_t id);
+
 
 void liberar_appeared (t_appeared_pokemon *mensaje);
 #endif /* INCLUDE_LISTEN_H_ */

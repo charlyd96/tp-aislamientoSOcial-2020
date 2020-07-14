@@ -65,6 +65,10 @@ void Team_load_trainers_config(void)
 
     t_list *bag_global= list_create();
 
+    ID_localized = list_create();
+
+    pthread_mutex_init(&ID_localized_sem, NULL);
+
     ID_caught= list_create();
     pthread_mutex_init(&ID_caught_sem, NULL);
 
