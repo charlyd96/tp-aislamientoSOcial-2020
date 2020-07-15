@@ -932,7 +932,7 @@ void atenderCliente(int socket){
 			break;
 		}
 		case SUSCRIBE_GAMECARD:{
-		//	atenderSuscripcionGameCard(socket_cliente);
+			atenderSuscripcionGameCard(socket_cliente);
 			break;
 		}
 		case SUSCRIBE_GAMEBOY:{
@@ -961,6 +961,15 @@ void atenderMensajeNewPokemon(int socket_cliente){
 	new_pokemon->id_mensaje = id_mensaje;
 
 	int cacheado = cachearNewPokemon(new_pokemon);
+
+	/*Acá habría que enviar sólo si NO es Game Boy, vamos a consultar porque también
+	hay un log del Game Boy como que recibe mensaje, en este caso si se lo enviamos también*/
+	int tam_lista_suscriptores = list_size(cola_new->suscriptores);
+	
+	for(int j = 0; j < tam_lista_suscriptores; j++){
+		t_suscriptor* suscriptor = list_get(cola_new->suscriptores, j);
+		enviarNewPokemon(suscriptor->socket_suscriptor, *new_pokemon);
+	}
 }
 
 void atenderMensajeAppearedPokemon(int socket_cliente){
@@ -985,6 +994,15 @@ void atenderMensajeAppearedPokemon(int socket_cliente){
 //	appeared_pokemon->id_mensaje_correlativo = id_mensaje;
 
 	int cacheado = cachearAppearedPokemon(appeared_pokemon);
+
+	/*Acá habría que enviar sólo si NO es Game Boy, vamos a consultar porque también
+	hay un log del Game Boy como que recibe mensaje, en este caso si se lo enviamos también*/
+	int tam_lista_suscriptores = list_size(cola_appeared->suscriptores);
+	
+	for(int j = 0; j < tam_lista_suscriptores; j++){
+		t_suscriptor* suscriptor = list_get(cola_appeared->suscriptores, j);
+		enviarAppearedPokemon(suscriptor->socket_suscriptor, *appeared_pokemon);
+	}
 }
 
 void atenderMensajeCatchPokemon(int socket_cliente){
@@ -1002,6 +1020,15 @@ void atenderMensajeCatchPokemon(int socket_cliente){
 	catch_pokemon->id_mensaje = id_mensaje;
 
 	int cacheado = cachearCatchPokemon(catch_pokemon);
+
+	/*Acá habría que enviar sólo si NO es Game Boy, vamos a consultar porque también
+	hay un log del Game Boy como que recibe mensaje, en este caso si se lo enviamos también*/
+	int tam_lista_suscriptores = list_size(cola_catch->suscriptores);
+	
+	for(int j = 0; j < tam_lista_suscriptores; j++){
+		t_suscriptor* suscriptor = list_get(cola_catch->suscriptores, j);
+		enviarCatchPokemon(suscriptor->socket_suscriptor, *catch_pokemon);
+	}
 }
 
 void atenderMensajeCaughtPokemon(int socket_cliente){
@@ -1026,11 +1053,15 @@ void atenderMensajeCaughtPokemon(int socket_cliente){
 
 	int cacheado = cachearCaughtPokemon(caught_pokemon);
 
+	/*Acá habría que enviar sólo si NO es Game Boy, vamos a consultar porque también
+	hay un log del Game Boy como que recibe mensaje, en este caso si se lo enviamos también*/
 	int tam_lista_suscriptores = list_size(cola_caught->suscriptores);
 	
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_caught->suscriptores, j);
 		enviarCaughtPokemon(suscriptor->socket_suscriptor, *caught_pokemon);
+		/*int ack = recibirACK(socket);
+		log_info(logBrokerInterno, "ACK Nuevo Mensaje %d", ack);*/
 	}
 }
 
@@ -1048,6 +1079,15 @@ void atenderMensajeGetPokemon(int socket_cliente){
 	get_pokemon->id_mensaje = id_mensaje;
 
 	int cacheado = cachearGetPokemon(get_pokemon);
+
+	/*Acá habría que enviar sólo si NO es Game Boy, vamos a consultar porque también
+	hay un log del Game Boy como que recibe mensaje, en este caso si se lo enviamos también*/
+	int tam_lista_suscriptores = list_size(cola_get->suscriptores);
+	
+	for(int j = 0; j < tam_lista_suscriptores; j++){
+		t_suscriptor* suscriptor = list_get(cola_get->suscriptores, j);
+		enviarGetPokemon(suscriptor->socket_suscriptor, *get_pokemon);
+	}
 }
 
 void atenderMensajeLocalizedPokemon(int socket_cliente){
@@ -1065,6 +1105,15 @@ void atenderMensajeLocalizedPokemon(int socket_cliente){
 //	localized_pokemon->id_mensaje_correlativo = id_mensaje;
 
 	int cacheado = cachearLocalizedPokemon(localized_pokemon);
+
+	/*Acá habría que enviar sólo si NO es Game Boy, vamos a consultar porque también
+	hay un log del Game Boy como que recibe mensaje, en este caso si se lo enviamos también*/
+	int tam_lista_suscriptores = list_size(cola_localized->suscriptores);
+	
+	for(int j = 0; j < tam_lista_suscriptores; j++){
+		t_suscriptor* suscriptor = list_get(cola_localized->suscriptores, j);
+		enviarLocalizedPokemon(suscriptor->socket_suscriptor, *localized_pokemon);
+	}
 }
 
 void atenderSuscripcionTeam(int socket_cliente){
@@ -1105,10 +1154,14 @@ void atenderSuscripcionTeam(int socket_cliente){
 	}
 } 
 
-/*void atenderSuscripcionGameCard(int socket_cliente){
+void atenderSuscripcionGameCard(int socket_cliente){
 	t_suscribe* suscribe_gamecard = recibirSuscripcion(SUSCRIBE_GAMECARD,socket_cliente);
+	
+	t_suscriptor* suscriptor = malloc(sizeof(t_suscriptor));
+	suscriptor->socket_suscriptor = socket_cliente;
+	suscriptor->id_suscriptor = suscribe_gamecard->id_proceso;
 
-	int index = suscribir(socket_cliente,suscribe_gamecard->cola_suscribir);
+	suscribir(suscriptor, suscribe_gamecard->cola_suscribir);
 
 	char* cola = colaParaLogs(suscribe_gamecard->cola_suscribir);
 
@@ -1137,12 +1190,16 @@ void atenderSuscripcionTeam(int socket_cliente){
 			break;
 		}
 	}
-} */
+}
 
 void atenderSuscripcionGameBoy(int socket_cliente){
 	t_suscribe* suscribe_gameboy = recibirSuscripcion(SUSCRIBE_GAMEBOY,socket_cliente);
 
-	int index = suscribir(socket_cliente,suscribe_gameboy->cola_suscribir);
+	t_suscriptor* suscriptor = malloc(sizeof(t_suscriptor));
+	suscriptor->socket_suscriptor = socket_cliente;
+	suscriptor->id_suscriptor = 0;
+
+	suscribir(suscriptor, suscribe_gameboy->cola_suscribir);
 
 	char* cola = colaParaLogs(suscribe_gameboy->cola_suscribir);
 
@@ -1358,7 +1415,7 @@ int devolverID(int socket,uint32_t* id_mensaje){
 
 	int enviado = send(socket, stream, sizeof(uint32_t), 0);
 
-	log_info(logBrokerInterno,"ID mensaje asignado %d", id);
+	log_info(logBrokerInterno,"ID de Mensaje asignado %d", id);
 	return enviado;
 }
 
@@ -1653,7 +1710,6 @@ void confirmacionDeRecepcionGameCard(int socket, t_suscribe* suscribe_gamecard){
 }
 
 int main(void){
-
 	logBroker = log_create("broker.log", "Broker", 1, LOG_LEVEL_INFO);
 	logBrokerInterno = log_create("brokerInterno.log", "Broker Interno", 1, LOG_LEVEL_INFO);
 
