@@ -40,9 +40,14 @@ typedef struct {
 } t_configuracion;
 
 typedef struct {
+	uint32_t socket_suscriptor;
+	uint32_t id_suscriptor;
+} t_suscriptor;
+
+typedef struct {
 	t_list* nodos;
 	t_list* suscriptores;
-}t_cola;
+} t_cola;
 
 typedef struct {
 	t_list* susc_enviados;
@@ -202,7 +207,7 @@ void atenderSuscripcionGameCard(int socket);
 void atenderSuscripcionGameBoy(int socket);
 
 /// PROCESAMIENTO
-int suscribir(int socket, op_code cola);
+int suscribir(t_suscriptor* suscriptor, op_code cola);
 void desuscribir(int index, op_code cola);
 
 void encolarNewPokemon(t_new_pokemon* msg);
