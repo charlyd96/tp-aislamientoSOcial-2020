@@ -109,6 +109,10 @@ void Team_load_trainers_config(void)
 
         entrenadores->config = config;
         entrenadores->index= index;
+        entrenadores->rafagaEjecutada=0;
+        entrenadores->rafagaEstimada=config->initial_estimation;
+        entrenadores->rafagaRemanente=0;
+        
         index++;
         /*  Añado el entrenador creado, ya cada uno con su lista bag y lista de objetivos, a la lista de entrenadores */
         list_add(trainers, entrenadores);
@@ -155,6 +159,16 @@ void Team_load_global_config()
     config->broker_port          = string_duplicate (config_get_string_value(config->team_config, "PUERTO_BROKER"));
     config->team_IP              = string_duplicate (config_get_string_value(config->team_config, "IP_TEAM"));
     config->team_port            = string_duplicate (config_get_string_value(config->team_config, "PUERTO_TEAM"));
+
+    if (!strcmp (config->planning_algorithm, "FIFO"))
+    algoritmo=FIFO;
+    else if (!strcmp (config->planning_algorithm, "RR"))
+    algoritmo=RR;
+    else if (!strcmp (config->planning_algorithm, "SJF-SD"))
+    algoritmo=SJFSD;
+    else if (!strcmp (config->planning_algorithm, "SJF-CD"))
+    algoritmo=SJFCD;
+    else exit (BAD_SCHEDULING_ALGORITHM);
 
     /* Just to test the correct reading from the configurations file to the globals configurations*/
     if (PRINT_TEST == 1)

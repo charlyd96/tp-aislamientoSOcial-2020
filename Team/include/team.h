@@ -30,6 +30,7 @@ extern t_list *cola_caught;
 extern sem_t qcaught1_sem;
 extern sem_t qcaught2_sem;
 
+uint32_t ID_proceso;
 
 extern t_list *ID_localized;
 
@@ -73,11 +74,12 @@ sem_t qr_sem1;
 sem_t qr_sem2;
 
 
-/* Errores para identificar estado en la ejecución de los hilos - para RR y SJF */
+/* Errores para identificar estado en la ejecución de los hilos - para RR y SJF - específico de cada ráfaga*/
 typedef enum
 {
     FINISHED,       //Finalizo su ráfaga de ejecución correctamente
-    PENDING,        //Fue desalojado por el planificador y aún tiene instrucciones por ejecutar
+    PENDING,        //Fue desalojado por el planificador y aún tiene instrucciones por ejecutar de la ŕafaga
+    EXECUTING       //Se encuentra ejecutando su ráfaga
 } exec_error;
 
 

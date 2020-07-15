@@ -153,24 +153,18 @@ void* listen_routine_colas (void *colaSuscripcion)
 		{
 			while(0)
 			{
-				/*t_localized_pokemon enviar_mensaje_localized;
-				enviar_mensaje_localized.nombre_pokemon= "Pikachu";
-				enviar_mensaje_localized.cant_pos=3;
-				enviar_mensaje_localized.posiciones="[1|2,1|2,1|2]";
-				enviar_mensaje_localized.id_mensaje_correlativo=0;
-				sleep (3);
-				puts ("voy a mandar el localized");
-				printf ("Enviado: %d\n",enviarLocalizedPokemon(socket_cliente,enviar_mensaje_localized));
 				op_code cod_op = recibirOperacion(socket_cliente);
 				if (cod_op==OP_UNKNOWN)
 				socket_cliente = reintentar_conexion((op_code) colaSuscripcion);
-
+				else 
+				{
 				t_localized_pokemon* mensaje_localized= recibirLocalizedPokemon(socket_cliente);
-				enviarACK(socket_cliente);*/
+				enviarACK(socket_cliente);
 				//log_info (internalLogTeam, "Mensaje recibido: %s %d %d",colaParaLogs((int)cod_op),mensaje_caught->atrapo_pokemon, mensaje_caught->id_mensaje_correlativo);
 				pthread_t thread;
 				//pthread_create (&thread, NULL, (void *) procesar_caught, (int*)mensaje_caught->id_mensaje_correlativo);
-				//pthread_detach (thread);					
+				//pthread_detach (thread);	
+				}				
 			} break;
 		}
 
@@ -210,11 +204,10 @@ int reintentar_conexion(op_code colaSuscripcion)
 	t_suscribe colaAppeared;
 	colaAppeared.tipo_suscripcion=SUSCRIBE_TEAM;
 	colaAppeared.cola_suscribir=(int)colaSuscripcion;
-	colaAppeared.id_proceso= 35;
+	colaAppeared.id_proceso= ID_proceso;
 	colaAppeared.timeout=0;
 	int enviado=enviarSuscripcion (socket_cliente, colaAppeared);
 	
-
 	while (socket_cliente == -1 || enviado==0)
 		{
 			log_info (internalLogTeam, "Falló la conexión al broker con la cola %s",colaParaLogs(colaSuscripcion));

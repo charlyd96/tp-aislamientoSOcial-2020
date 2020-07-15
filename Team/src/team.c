@@ -155,13 +155,59 @@ void RR_exec (void)
             {
             send_trainer_to_ready(trainers, trainer->index,trainer->actual_operation);
             }
+            else trainer->ejecucion = FINISHED;
+
             ciclos_cpu=0;
        }
 }
+/*
+void SJFSD_exec (void)
+{
+    int sizeReady=0;
+    int sizeReadyaAnt=0; 
+       while (1) //Este while debería ser "mientras team no haya ganado"
+       {
+            sem_wait ( &qr_sem1 );
+            sem_wait ( &qr_sem2 );
+            sizeReady=list_size(ReadyQueue);
+            if (sizeReady != sizeReadyAnt+1) //Se le suma uno porque el list_remove saca el entrenador que está por ejecutar
+            ordenar_lista_ready();
+            
+            Trainer* trainer= list_remove (ReadyQueue, 0);       
+            trainer->actual_status= EXEC; //Verificar si esto puede salir de la zona crítica
+            sem_post ( &qr_sem2 );
+            sizeReadyAnt=sizeReady;
+            sem_post ( &(trainer->trainer_sem) );
+            sem_wait (&using_cpu);
+            actualizar_estimacion(trainer);
+        }                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm                                                                                                                                                                                                   
 
 
+ordenar_lista_ready()
+{
 
+    
+    list_sort(ReadyQueue,comparador) //No necesito proteger esta zona crítica, porque ya se protegió antes del llamado a la función
 
+}
+
+{
+    actualizar_estimacion()
+    bool comparador (void *tr1, void *tr2)
+    {
+        Trainer *trainer1=tr1;
+        Trainer *trainer2=tr2;
+        trainer1->rafagaEjecutada;
+        trainer1->rafagaEstimada;
+
+    }
+    
+    
+    return ()
+
+}
+
+*/
 // ============================================================================================================
 //    ***** Función que  crea un hilo por cada uno de los entrenadores existente en la lista del Team*****
 //                  ***** Recibe una estructura Team y devuelve un código de error *****

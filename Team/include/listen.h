@@ -36,6 +36,8 @@ extern t_list *mapped_pokemons;
 t_list *ID_caught;
 pthread_mutex_t ID_caught_sem;
 
+extern uint32_t ID_proceso;
+
 extern t_log *internalLogTeam;
 extern t_log *logTeam;
 

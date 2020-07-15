@@ -44,6 +44,17 @@ typedef struct {
 
 } Config;
 
+
+typedef enum
+{
+    FIFO,
+    RR,
+    SJFSD,
+    SJFCD
+} planificacion;
+
+planificacion algoritmo;
+
 extern t_list *trainers;
 
 Config *config;

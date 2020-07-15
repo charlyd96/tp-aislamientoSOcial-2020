@@ -110,7 +110,7 @@ void* trainer_to_catch()
 }
 
 /* Productor hacia cola Ready */
-void send_trainer_to_ready (t_list *lista, int index, Operation op)
+void send_trainer_to_ready (t_list *lista, int index, Operation op) //Eliminar el switch, es innecesario.
 
 {
     switch (op)
@@ -272,11 +272,19 @@ void remover_pokemones_en_mapa_auxiliar(char *nombre_pokemon)
 void send_trainer_to_exec (void)
 {
     pthread_t thread;
-    if (!strcmp(config->planning_algorithm, "FIFO"))
-    pthread_create(&thread, NULL, (void*)fifo_exec,NULL);
 
-    if (!strcmp(config->planning_algorithm, "RR"))
-    pthread_create(&thread, NULL, (void*)RR_exec,NULL);
+    switch (algoritmo)
+    {
+        case FIFO:
+        {
+        pthread_create(&thread, NULL, (void*)fifo_exec,NULL);
+        }
+
+        case RR:
+        {
+        pthread_create(&thread, NULL, (void*)RR_exec,NULL);
+        }
+    }
 
     /*
     if (!strcmp(config->planning_algorithm, "SJF"))
@@ -839,19 +847,32 @@ u_int32_t calculate_distance (u_int32_t Tx, u_int32_t Ty, u_int32_t Px, u_int32_
 
 void consumir_cpu(Trainer *trainer)
 {
-    if (ciclos_cpu >= config->quantum)
-    {
-        trainer->actual_status=READY;
-        trainer->ejecucion= PENDING;
-        sem_post(&using_cpu);
-        sem_wait(&trainer->trainer_sem);
-        trainer->ejecucion= FINISHED;
-        usleep (config->retardo_cpu * 1); //Uso usleep para que no sea tan lenta la ejecución
-    } 
-    else
-    {
-        usleep (config->retardo_cpu * 1); //Uso usleep para que no sea tan lenta la ejecución
-        trainer->ejecucion= FINISHED;
+   switch (algoritmo)
+   {
+        case RR:
+        {
+            if (ciclos_cpu >= config->quantum)
+            {
+                trainer->actual_status=READY;
+                trainer->ejecucion= PENDING;
+                sem_post(&using_cpu);
+                sem_wait(&trainer->trainer_sem);
+                trainer->ejecucion= EXECUTING;
+                usleep (config->retardo_cpu * 1); //Uso usleep para que no sea tan lenta la ejecución
+            } 
+            else
+            {
+                usleep (config->retardo_cpu * 1); //Uso usleep para que no sea tan lenta la ejecución
+                trainer->ejecucion= EXECUTING;
+            }
+            ciclos_cpu++;
+
+        }
+
+        case SJFSD:
+        {
+            trainer->rafagaEjecutada++;
+        }
+
     }
-    ciclos_cpu++;
 }

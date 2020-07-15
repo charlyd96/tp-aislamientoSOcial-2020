@@ -85,7 +85,13 @@ typedef struct
     /* Objetivo actual a ser capturado*/
     mapPokemons actual_objective;
 
+    /* Entrenador con el cual deberá realizar el intercambio */
     Deadlock objetivo;
+
+    /* Para los algoritmos SJF-SD y SJF-CD */
+    float rafagaEstimada;
+    float rafagaEjecutada;
+    float rafagaRemanente;
 
     /*Identificador del entrenador*/
     int index;
@@ -97,14 +103,13 @@ typedef struct
 
 } Trainer;
 
+
+extern planificacion algoritmo;
+
 /* Error list for debugging */
 typedef enum{
-    TRAINER_CREATED,
+    BAD_SCHEDULING_ALGORITHM,
     TRAINER_CREATION_FAILED,
-    TRAINER_DELETED,
-    TRAINER_DELETION_FAILED,
-    TRAINER_OBJECTIVES,
-    TRAINER_NO_OBJECTIVES,
     RECOVERY_DEADLOCK_ERROR,
     RECURSIVE_RECOVERY_SUCESS
 } trainer_error;
