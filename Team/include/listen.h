@@ -23,16 +23,28 @@ typedef struct
     sem_t *trainer_sem;
 } internal_caught;  
 
+
+typedef enum 
+{
+    GUARDAR,
+    GUARDAR_AUX,
+    DESCARTAR
+
+} nuevo_pokemon;  
+
 extern t_list *mapped_pokemons;
 t_list *ID_caught;
 pthread_mutex_t ID_caught_sem;
+
+extern uint32_t ID_proceso;
 
 extern t_log *internalLogTeam;
 extern t_log *logTeam;
 
 extern Config *config;
 
-t_list *ID_caught;
+t_list *ID_localized;
+pthread_mutex_t ID_localized_sem;
 
 extern int ciclos_cpu;
 void* get_opcode (int socket);
@@ -41,7 +53,7 @@ void process_request_recv (op_code cod_op, int socket);
 
 int send_catch (Trainer *trainer);
 
-int procesar_caught(void *id_corr);
+int procesar_caught(void *mensaje_caught);
 
 void * send_catch_routine (void * train);
 
@@ -51,5 +63,12 @@ void procesar_appeared (void *mensaje);
 
 char* colaParaLogs(op_code cola);
 
-int informarID(uint32_t id, sem_t *trainer_sem);
+nuevo_pokemon tratar_nuevo_pokemon (char *nombre_pokemon);
+
+int informarIDcaught(uint32_t id, sem_t *trainer_sem);
+
+void informarIDlocalized(uint32_t id);
+
+
+void liberar_appeared (t_appeared_pokemon *mensaje);
 #endif /* INCLUDE_LISTEN_H_ */

@@ -7,7 +7,8 @@
 
 #include "../include/team.h"
 
-int main(void)
+int main(int argc, char **argv)
+
 {
       /*void* routine(void *dato)
 {
@@ -18,9 +19,13 @@ int main(void)
    pthread_t thread;
    pthread_create(&thread,NULL,routine,NULL);
    pthread_detach(thread);*/
-
-   
-   internalLogTeam= log_create ("internalLogTeam.log", "Team", 1,LOG_LEVEL_INFO);
+   if (argc!=2)
+   {
+       puts ("No se proporcionó el número de ID de proceso");
+       exit(-1);
+   }
+    ID_proceso = atoi(argv[1]);
+    internalLogTeam= log_create ("internalLogTeam.log", "Team", 1,LOG_LEVEL_INFO);
     logTeam= log_create ("logTeam.log", "Team", 1,LOG_LEVEL_INFO);
     Team_Init (); //Obtiene configuraciones y entrenadores, los localiza y define el objetivo global
 

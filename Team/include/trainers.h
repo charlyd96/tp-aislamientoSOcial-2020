@@ -85,7 +85,13 @@ typedef struct
     /* Objetivo actual a ser capturado*/
     mapPokemons actual_objective;
 
+    /* Entrenador con el cual deberá realizar el intercambio */
     Deadlock objetivo;
+
+    /* Para los algoritmos SJF-SD y SJF-CD */
+    float rafagaEstimada;
+    float rafagaEjecutada;
+    float rafagaRemanente;
 
     /*Identificador del entrenador*/
     int index;
@@ -97,14 +103,13 @@ typedef struct
 
 } Trainer;
 
+
+extern planificacion algoritmo;
+
 /* Error list for debugging */
 typedef enum{
-    TRAINER_CREATED,
+    BAD_SCHEDULING_ALGORITHM,
     TRAINER_CREATION_FAILED,
-    TRAINER_DELETED,
-    TRAINER_DELETION_FAILED,
-    TRAINER_OBJECTIVES,
-    TRAINER_NO_OBJECTIVES,
     RECOVERY_DEADLOCK_ERROR,
     RECURSIVE_RECOVERY_SUCESS
 } trainer_error;
@@ -123,13 +128,13 @@ void * trainer_to_catch (void);
 
 void send_trainer_to_ready (t_list *lista, int index, Operation op);
 
-void mover_objetivo_a_lista_auxiliar (mapPokemons *actual_pokemon);
+void mover_objetivo_a_lista_auxiliar (char *name);
 
 void move_trainer_to_objective (Trainer *train, Operation operacion);
 
 u_int32_t calculate_distance (u_int32_t Tx, u_int32_t Ty, u_int32_t Px, u_int32_t Py );
 
-void remover_objetivo_global_auxiliar(char *name_pokemon);
+void remover_objetivo_global_auxiliar (char *name_pokemon);
 
 int send_catch (Trainer *trainer);
 
@@ -154,5 +159,15 @@ void consumir_cpu(Trainer *trainer);
 void fifo_exec (void);
 
 void RR_exec (void);
+
+void nuevos_pokemones_CAUGHT_SI (char *nombre_pokemon);
+
+void nuevos_pokemones_CAUGHT_NO (char *nombre_pokemon);
+
+void mover_pokemon_al_mapa (mapPokemons *nuevo_pokemon);
+
+void remover_pokemones_en_mapa_auxiliar(char *nombre_pokemon);
+
+void mover_de_aux_a_global(char *name);
 
 #endif /* INCLUDE_TRAINERS_H_ */

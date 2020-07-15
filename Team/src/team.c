@@ -28,23 +28,27 @@ void Team_Init(void)
     
     Team_load_trainers_config();
 
-
     ReadyQueue= list_create  ();                 //*********Mejorar la ubicación de esta instrucción***************//
+    sem_init (&qr_sem1, 0, 0);               //*********Mejorar la ubicación de esta instrucción***************//
+    sem_init (&qr_sem2, 0, 1);
+   
     mapped_pokemons = list_create();             //*********Mejorar la ubicación de esta instrucción***************//
-    
-    
+    sem_init (&poklist_sem, 0, 0);           //*********Mejorar la ubicación de esta instrucción***************//
+    sem_init (&poklist_sem2, 0, 1);          //*********Mejorar la ubicación de esta instrucción***************//
+
+    mapped_pokemons_aux = list_create();
+    sem_init (&poklistAux_sem1, 0, 0);
+    sem_init (&poklistAux_sem2, 0, 1);
+
+
     /*Lista de entrenadores en deadlock*/
     deadlock_list = list_create();
     sem_init (&deadlock_sem1, 0, 0);
-    sem_init (&deadlock_sem2, 0, 1);
-    pthread_mutex_init(&global_sem, NULL);
-    pthread_mutex_init (&auxglobal_sem, NULL);
-
+    sem_init (&deadlock_sem2, 0, 1); //Verificar si es necesario el esquema productor/consumidor
+    
     sem_init (&resolviendo_deadlock, 0, 0);
-    sem_init (&poklist_sem, 0, 0);           //*********Mejorar la ubicación de esta instrucción***************//
-    sem_init (&poklist_sem2, 0, 1);          //*********Mejorar la ubicación de esta instrucción***************//
-    sem_init (&qr_sem1, 0, 0);               //*********Mejorar la ubicación de esta instrucción***************//
-    sem_init (&qr_sem2, 0, 1);
+
+
 
 
 }
@@ -78,19 +82,24 @@ t_list*  Team_GET_generate ()
 void enviar_mensajes_get (t_list* GET_list)
 {
 	
-    void get_send (void *element)
+    void send_get (void *element)
     {
         t_get_pokemon mensaje_get;
         mensaje_get.nombre_pokemon=(char *)element;
         mensaje_get.id_mensaje=0;
         int socket = crearSocketCliente (config->broker_IP,config->broker_port);
+        if (socket != -1)
+        {
         int enviado= enviarGetPokemon (socket, mensaje_get);
-        printf ("Se envió GET %s al broker. Enviado=%d. Socket= %d\n",mensaje_get.nombre_pokemon,enviado,socket);
+        log_info(internalLogTeam, "Se envió GET %s al broker. Enviado=%d. Socket= %d",mensaje_get.nombre_pokemon,enviado,socket);
+        recv (socket,&(mensaje_get.id_mensaje),sizeof(uint32_t),MSG_WAITALL); //Recibir ID
+		printf ("\t\t\t\t\t\t\tEl Id devuelto fue: %d. Pertenece al pokemon %s\t\t\t\t\t\t\n", mensaje_get.id_mensaje, mensaje_get.nombre_pokemon);
+        informarIDlocalized(mensaje_get.id_mensaje);
         close (socket); 
+        }
+        else log_info(internalLogTeam, "No se pudo enviar GET %s al broker.\n",mensaje_get.nombre_pokemon);
     }
-
-	list_iterate(GET_list,get_send );
-   // list_destroy_and_destroy_elements (GET_list, free); //OJO. Me destruye los elementos de la lista. Pierdo global_objective
+	list_iterate(GET_list,send_get );
 }
 
 
@@ -146,13 +155,59 @@ void RR_exec (void)
             {
             send_trainer_to_ready(trainers, trainer->index,trainer->actual_operation);
             }
+            else trainer->ejecucion = FINISHED;
+
             ciclos_cpu=0;
        }
 }
+/*
+void SJFSD_exec (void)
+{
+    int sizeReady=0;
+    int sizeReadyaAnt=0; 
+       while (1) //Este while debería ser "mientras team no haya ganado"
+       {
+            sem_wait ( &qr_sem1 );
+            sem_wait ( &qr_sem2 );
+            sizeReady=list_size(ReadyQueue);
+            if (sizeReady != sizeReadyAnt+1) //Se le suma uno porque el list_remove saca el entrenador que está por ejecutar
+            ordenar_lista_ready();
+            
+            Trainer* trainer= list_remove (ReadyQueue, 0);       
+            trainer->actual_status= EXEC; //Verificar si esto puede salir de la zona crítica
+            sem_post ( &qr_sem2 );
+            sizeReadyAnt=sizeReady;
+            sem_post ( &(trainer->trainer_sem) );
+            sem_wait (&using_cpu);
+            actualizar_estimacion(trainer);
+        }                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm                                                                                                                                                                                                   
 
 
+ordenar_lista_ready()
+{
 
+    
+    list_sort(ReadyQueue,comparador) //No necesito proteger esta zona crítica, porque ya se protegió antes del llamado a la función
 
+}
+
+{
+    actualizar_estimacion()
+    bool comparador (void *tr1, void *tr2)
+    {
+        Trainer *trainer1=tr1;
+        Trainer *trainer2=tr2;
+        trainer1->rafagaEjecutada;
+        trainer1->rafagaEstimada;
+
+    }
+    
+    
+    return ()
+
+}
+
+*/
 // ============================================================================================================
 //    ***** Función que  crea un hilo por cada uno de los entrenadores existente en la lista del Team*****
 //                  ***** Recibe una estructura Team y devuelve un código de error *****

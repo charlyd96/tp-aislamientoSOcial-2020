@@ -30,6 +30,11 @@ extern t_list *cola_caught;
 extern sem_t qcaught1_sem;
 extern sem_t qcaught2_sem;
 
+uint32_t ID_proceso;
+
+extern t_list *ID_localized;
+
+
 extern t_list *deadlock_list;
 extern sem_t deadlock_sem1;
 extern sem_t deadlock_sem2;
@@ -44,9 +49,19 @@ t_list *aux_global_objective;
 //sem_t auxglobal_sem2;
 pthread_mutex_t auxglobal_sem;
 
+t_list *new_global_objective;
+pthread_mutex_t new_global_sem;
+
+t_list *aux_new_global_objective;
+pthread_mutex_t aux_new_global_sem;
+
 t_list *mapped_pokemons;
 sem_t poklist_sem;
 sem_t poklist_sem2;
+
+t_list *mapped_pokemons_aux;
+sem_t poklistAux_sem1;
+sem_t poklistAux_sem2;
 
 
 extern t_log *internalLogTeam;
@@ -59,11 +74,12 @@ sem_t qr_sem1;
 sem_t qr_sem2;
 
 
-/* Errores para identificar estado en la ejecución de los hilos - para RR y SJF */
+/* Errores para identificar estado en la ejecución de los hilos - para RR y SJF - específico de cada ráfaga*/
 typedef enum
 {
     FINISHED,       //Finalizo su ráfaga de ejecución correctamente
-    PENDING,        //Fue desalojado por el planificador y aún tiene instrucciones por ejecutar
+    PENDING,        //Fue desalojado por el planificador y aún tiene instrucciones por ejecutar de la ŕafaga
+    EXECUTING       //Se encuentra ejecutando su ráfaga
 } exec_error;
 
 
@@ -111,4 +127,7 @@ void imprimir_lista (t_list *get_list);
 void enviar_mensajes_get (t_list *get_list);
 
 void* listen_routine_colas (void *conexion);
+
+void informarIDlocalized(uint32_t id);
+
 #endif /* TEAM_H_ */
