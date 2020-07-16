@@ -416,7 +416,7 @@ void eliminarParticionBuddy(){
 				part_liberar->buddy_i = part_liberar->buddy_i + 1;
 				list_remove(particiones,indice_victima + 1);
 				// 8. Asociación de bloques (para buddy system), indicar que particiones se asociaron (indicar posición inicio de ambas particiones).
-				log_info(logBroker, "Asociación de Particiones: Partición %p con Partición %p.", part_liberar->base, part_der->base);
+				log_info(logBroker, "Asociación de Particiones: Partición %d con Partición %d.", part_liberar->base, part_der->base);
 				log_info(logBrokerInterno,"Se consolida con particion buddy indice %d, i %d",indice_victima+1,i_aux);
 				huboConsolidacion = true;
 				i_aux++;
@@ -431,7 +431,7 @@ void eliminarParticionBuddy(){
 				part_liberar->buddy_i = part_liberar->buddy_i + 1;
 				list_remove(particiones,indice_victima -1);
 				// 8. Asociación de bloques (para buddy system), indicar que particiones se asociaron (indicar posición inicio de ambas particiones).
-				log_info(logBroker, "Asociación de Particiones: Partición %p con Partición %p.", part_liberar->base, part_izq->base);
+				log_info(logBroker, "Asociación de Particiones: Partición %d con Partición %d.", part_liberar->base, part_izq->base);
 				log_info(logBrokerInterno,"Se consolida con particion indice %d",indice_victima-1);
 				huboConsolidacion = true;
 				indice_victima = indice_victima -1;
@@ -1199,7 +1199,7 @@ void atenderSuscripcionGameBoy(int socket_cliente){
 	suscriptor->socket_suscriptor = socket_cliente;
 	suscriptor->id_suscriptor = 0;
 
-	suscribir(suscriptor, suscribe_gameboy->cola_suscribir);
+	int index = suscribir(suscriptor, suscribe_gameboy->cola_suscribir);
 
 	char* cola = colaParaLogs(suscribe_gameboy->cola_suscribir);
 
@@ -1302,6 +1302,9 @@ void desuscribir(int index,op_code cola){
 			sem_wait(&mensajes_new); // No se puede sacar si la Cola de Mensajes está vacía
 			pthread_mutex_lock(&sem_cola_new);
 			list_remove(cola_new->suscriptores,index);
+			// 2. Suscripción de un proceso a una cola de mensajes.
+			log_info(logBroker, "Finaliza la suscripción de Game Boy de la cola NEW_POKEMON");
+			log_info(logBrokerInterno, "Finaliza la suscripción de Game Boy de la cola NEW_POKEMON");
 			pthread_mutex_unlock(&sem_cola_new);
 			break;
 		}
@@ -1309,6 +1312,9 @@ void desuscribir(int index,op_code cola){
 			sem_wait(&mensajes_appeared);
 			pthread_mutex_lock(&sem_cola_appeared);
 			list_remove(cola_appeared->suscriptores,index);
+			// 2. Suscripción de un proceso a una cola de mensajes.
+			log_info(logBroker, "Finaliza la suscripción de Game Boy de la cola APPEARED_POKEMON");
+			log_info(logBrokerInterno, "Finaliza la suscripción de Game Boy de la cola APPEARED_POKEMON");
 			pthread_mutex_unlock(&sem_cola_appeared);
 			break;
 		}
@@ -1316,6 +1322,9 @@ void desuscribir(int index,op_code cola){
 			sem_wait(&mensajes_catch);
 			pthread_mutex_lock(&sem_cola_catch);
 			list_remove(cola_catch->suscriptores,index);
+			// 2. Suscripción de un proceso a una cola de mensajes.
+			log_info(logBroker, "Finaliza la suscripción de Game Boy de la cola CATCH_POKEMON");
+			log_info(logBrokerInterno, "Finaliza la suscripción de Game Boy de la cola CATCH_POKEMON");
 			pthread_mutex_unlock(&sem_cola_catch);
 			break;
 		}
@@ -1323,6 +1332,9 @@ void desuscribir(int index,op_code cola){
 			sem_wait(&mensajes_caught);
 			pthread_mutex_lock(&sem_cola_caught);
 			list_remove(cola_caught->suscriptores,index);
+			// 2. Suscripción de un proceso a una cola de mensajes.
+			log_info(logBroker, "Finaliza la suscripción de Game Boy de la cola CAUGHT_POKEMON");
+			log_info(logBrokerInterno, "Finaliza la suscripción de Game Boy de la cola CAUGHT_POKEMON");
 			pthread_mutex_unlock(&sem_cola_caught);
 			break;
 		}
@@ -1330,6 +1342,9 @@ void desuscribir(int index,op_code cola){
 			sem_wait(&mensajes_get);
 			pthread_mutex_lock(&sem_cola_get);
 			list_remove(cola_get->suscriptores,index);
+			// 2. Suscripción de un proceso a una cola de mensajes.
+			log_info(logBroker, "Finaliza la suscripción de Game Boy de la cola GET_POKEMON");
+			log_info(logBrokerInterno, "Finaliza la suscripción de Game Boy de la cola GET_POKEMON");
 			pthread_mutex_unlock(&sem_cola_get);
 			break;
 		}
@@ -1337,6 +1352,9 @@ void desuscribir(int index,op_code cola){
 			sem_wait(&mensajes_localized);
 			pthread_mutex_lock(&sem_cola_localized);
 			list_remove(cola_localized->suscriptores,index);
+			// 2. Suscripción de un proceso a una cola de mensajes.
+			log_info(logBroker, "Finaliza la suscripción de Game Boy de la cola LOCALIZED_POKEMON");
+			log_info(logBrokerInterno, "Finaliza la suscripción de Game Boy de la cola LOCALIZED_POKEMON");
 			pthread_mutex_unlock(&sem_cola_localized);
 			break;
 		}
