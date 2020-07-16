@@ -205,7 +205,6 @@ bool comparar_listas (t_list *lista1, t_list *lista2)
     if (list_size(lista1) != list_size(lista2))
     return false;
 
-
     int flag=0;
     t_list *listaDuplicada = duplicar_lista(lista2);
     void buscar_iguales (void *nombre1)

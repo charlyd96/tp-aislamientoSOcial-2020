@@ -99,6 +99,8 @@ void inicializarSemaforos(){
 	sem_init(&mensajes_caught, 0, 0);
 	sem_init(&mensajes_get, 0, 0);
 	sem_init(&mensajes_localized, 0, 0);
+
+	sem_init(&identificador, 0, (unsigned int) 1);
 }
 
 void inicializarMemoria(){
@@ -436,6 +438,135 @@ int cachearLocalizedPokemon(t_localized_pokemon* msg){
 	return result;
 }
 
+t_new_pokemon* descachearNewPokemon(void* stream, uint32_t id){
+	t_new_pokemon* mensaje_a_enviar = malloc(sizeof(t_new_pokemon*));
+	uint32_t largo_nombre = strlen(mensaje_a_enviar->nombre_pokemon) + 1;
+
+	memcpy(&largo_nombre, stream, sizeof(largo_nombre));
+	stream += sizeof(largo_nombre);
+	memcpy(&(mensaje_a_enviar->nombre_pokemon), stream, sizeof(uint32_t));
+	stream += sizeof(uint32_t);
+	memcpy(&(mensaje_a_enviar->pos_x), stream, sizeof(uint32_t));
+	stream += sizeof(uint32_t);
+	memcpy(&(mensaje_a_enviar->pos_y), stream, sizeof(uint32_t));
+	stream += sizeof(uint32_t);
+	memcpy(&(mensaje_a_enviar->cantidad), stream, sizeof(uint32_t));
+	stream += sizeof(uint32_t);
+
+	mensaje_a_enviar->id_mensaje = id;
+
+	memcpy(&(mensaje_a_enviar->id_mensaje), stream, sizeof(uint32_t));
+	stream += sizeof(uint32_t);
+
+	return mensaje_a_enviar;
+}
+
+t_appeared_pokemon* descachearAppearedPokemon(void* stream, uint32_t id){
+	t_appeared_pokemon* mensaje_a_enviar = malloc(sizeof(t_appeared_pokemon*));
+	uint32_t largo_nombre = strlen(mensaje_a_enviar->nombre_pokemon);
+
+	memcpy(&largo_nombre, stream, sizeof(largo_nombre));
+	stream += sizeof(largo_nombre);
+	memcpy(&(mensaje_a_enviar->nombre_pokemon), stream, sizeof(uint32_t));
+	stream += sizeof(uint32_t);
+	memcpy(&(mensaje_a_enviar->pos_x), stream, sizeof(uint32_t));
+	stream += sizeof(uint32_t);
+	memcpy(&(mensaje_a_enviar->pos_y), stream, sizeof(uint32_t));
+	stream += sizeof(uint32_t);
+
+	mensaje_a_enviar->id_mensaje_correlativo = id;
+
+	memcpy(&(mensaje_a_enviar->id_mensaje_correlativo), stream, sizeof(uint32_t));
+	stream += sizeof(uint32_t);
+
+	return mensaje_a_enviar;
+}
+
+t_catch_pokemon* descachearCatchPokemon(void* stream, uint32_t id){
+	t_catch_pokemon* mensaje_a_enviar = malloc(sizeof(t_catch_pokemon*));
+	uint32_t largo_nombre = strlen(mensaje_a_enviar->nombre_pokemon);
+
+	memcpy(&largo_nombre, stream, sizeof(largo_nombre));
+	stream += sizeof(largo_nombre);
+	memcpy(&(mensaje_a_enviar->nombre_pokemon), stream, sizeof(uint32_t));
+	stream += sizeof(uint32_t);
+	memcpy(&(mensaje_a_enviar->pos_x), stream, sizeof(uint32_t));
+	stream += sizeof(uint32_t);
+	memcpy(&(mensaje_a_enviar->pos_y), stream, sizeof(uint32_t));
+	stream += sizeof(uint32_t);
+
+	mensaje_a_enviar->id_mensaje = id;
+
+	memcpy(&(mensaje_a_enviar->id_mensaje), stream, sizeof(uint32_t));
+	stream += sizeof(uint32_t);
+
+	return mensaje_a_enviar;
+}
+
+t_caught_pokemon* descachearCaughtPokemon(void* stream, uint32_t id){
+	t_caught_pokemon* mensaje_a_enviar = malloc(sizeof(t_caught_pokemon*));
+
+	memcpy(&(mensaje_a_enviar->atrapo_pokemon), stream, sizeof(uint32_t));
+	stream += sizeof(uint32_t);
+
+	mensaje_a_enviar->id_mensaje_correlativo = id;
+
+	memcpy(&(mensaje_a_enviar->id_mensaje_correlativo), stream, sizeof(uint32_t));
+	stream += sizeof(uint32_t);
+
+	return mensaje_a_enviar;
+}
+
+t_get_pokemon* descachearGetPokemon(void* stream, uint32_t id){
+	t_get_pokemon* mensaje_a_enviar = malloc(sizeof(t_catch_pokemon*));
+	uint32_t largo_nombre = strlen(mensaje_a_enviar->nombre_pokemon);
+
+	memcpy(&largo_nombre, stream, sizeof(largo_nombre));
+	stream += sizeof(largo_nombre);
+	memcpy(&(mensaje_a_enviar->nombre_pokemon), stream, sizeof(uint32_t));
+	stream += sizeof(uint32_t);
+
+	mensaje_a_enviar->id_mensaje = id;
+
+	memcpy(&(mensaje_a_enviar->id_mensaje), stream, sizeof(uint32_t));
+	stream += sizeof(uint32_t);
+
+	return mensaje_a_enviar;
+}
+
+t_localized_pokemon* descachearLocalizedPokemon(void* stream, uint32_t id){
+	t_localized_pokemon* mensaje_a_enviar = malloc(sizeof(t_localized_pokemon*));
+	uint32_t largo_nombre = strlen(mensaje_a_enviar->nombre_pokemon);
+
+	memcpy(&largo_nombre, stream, sizeof(largo_nombre));
+	stream += sizeof(largo_nombre);
+	memcpy(&(mensaje_a_enviar->nombre_pokemon), stream, sizeof(uint32_t));
+	stream += sizeof(uint32_t);
+	memcpy(&(mensaje_a_enviar->cant_pos), stream, sizeof(uint32_t));
+	stream += sizeof(uint32_t);
+
+	uint32_t pos_x, pos_y;
+	char** pos_list = string_get_string_as_array(mensaje_a_enviar->posiciones);
+
+	for(int i = 1; i <= mensaje_a_enviar->cant_pos; i++){
+		char** pos_pair = string_split(pos_list[i],"|");
+		pos_x = atoi(pos_pair[0]);
+		pos_y = atoi(pos_pair[1]);
+
+		memcpy(&(pos_x), stream, sizeof(uint32_t));
+		stream += sizeof(uint32_t);
+		memcpy(&(pos_y), stream, sizeof(uint32_t));
+		stream += sizeof(uint32_t);
+	}
+
+	mensaje_a_enviar->id_mensaje_correlativo = id;
+
+	memcpy(&(mensaje_a_enviar->id_mensaje_correlativo), stream, sizeof(uint32_t));
+	stream += sizeof(uint32_t);
+
+	return mensaje_a_enviar;
+}
+
 /* FUNCIONES - CONEXIÓN */
 
 void atenderCliente(int* socket){
@@ -596,7 +727,22 @@ void atenderSuscripcionTeam(int socket_cliente){
 	// 2. Suscripción de un proceso a una cola de mensajes.
 	log_info(logBroker, "Se suscribe un Team a la Cola de Mensajes %d", suscribe_team->cola_suscribir);
 
-	//enviar mensajes cacheados (recorrer la lista de particiones)
+	switch(suscribe_team->cola_suscribir){
+		case APPEARED_POKEMON:{
+
+			break;
+		}
+		case CAUGHT_POKEMON:{
+			break;
+		}
+		case LOCALIZED_POKEMON:{
+			break;
+		}
+		default:{
+			log_info(logBrokerInterno, "No se pudo enviar mensajes cacheados.");
+			break;
+		}
+	}
 }
 
 void atenderSuscripcionGameBoy(int socket_cliente){
@@ -606,6 +752,17 @@ void atenderSuscripcionGameBoy(int socket_cliente){
 
 	// 2. Suscripción de un proceso a una cola de mensajes.
 	log_info(logBroker, "Se suscribe el Game Boy a la Cola de Mensajes %d", suscribe_gameboy->cola_suscribir);
+
+	switch(suscribe_gameboy->cola_suscribir){
+		case NEW_POKEMON:{
+			enviarNewPokemonCacheados(socket_cliente, suscribe_gameboy->cola_suscribir);
+			break;
+		}
+		default:{
+			log_info(logBrokerInterno, "No se pudo enviar mensajes cacheados.");
+			break;
+		}
+	}
 
 	sleep(suscribe_gameboy->timeout);
 	desuscribir(index,suscribe_gameboy->cola_suscribir);
@@ -618,6 +775,23 @@ void atenderSuscripcionGameCard(int socket_cliente){
 
 	// 2. Suscripción de un proceso a una cola de mensajes.
 	log_info(logBroker, "Se suscribe un Game Card a la Cola de Mensajes %d", suscribe_gamecard->cola_suscribir);
+
+	switch(suscribe_gamecard->cola_suscribir){
+		case NEW_POKEMON:{
+			enviarNewPokemonCacheados(socket_cliente, suscribe_gamecard->cola_suscribir);
+			break;
+		}
+		case CATCH_POKEMON:{
+			break;
+		}
+		case GET_POKEMON:{
+			break;
+		}
+		default:{
+			log_info(logBrokerInterno, "No se pudo enviar mensajes cacheados.");
+			break;
+		}
+	}
 }
 
 /* FUNCIONES - PROCESAMIENTO */
@@ -675,7 +849,6 @@ int suscribir(int socket, op_code cola){
 }
 //A optimizar / rediseñar
 void desuscribir(int index,op_code cola){
-
 	switch(cola){
 		case NEW_POKEMON:{
 			sem_wait(&mensajes_new); // No se puede sacar si la Cola de Mensajes está vacía
@@ -781,8 +954,10 @@ void encolarLocalizedPokemon(t_localized_pokemon* mensaje){
 /* FUNCIONES - COMUNICACIÓN */
 
 int devolverID(int socket,uint32_t* id_mensaje){
-	uint32_t id = ID_MENSAJE ++; //Sincronizar obviously
+	uint32_t id = ID_MENSAJE ++;
+
 	(*id_mensaje) = ID_MENSAJE;
+
 	void*stream = malloc(sizeof(uint32_t));
 
 	memcpy(stream, &(id), sizeof(uint32_t));
@@ -793,6 +968,114 @@ int devolverID(int socket,uint32_t* id_mensaje){
 	return enviado;
 }
 
+void enviarNewPokemonCacheados(int socket, op_code tipo_mensaje){
+	int tam_lista = list_size(particiones);
+	t_particion* particion_buscada;
+
+	for (int i = 0; i < tam_lista ; i++) {
+		particion_buscada = list_get(particiones, i);
+
+		if(particion_buscada->libre == 0 && particion_buscada->tipo_mensaje == tipo_mensaje){
+			void* stream = malloc(particion_buscada->tamanio);
+
+			t_new_pokemon* descacheado = descachearNewPokemon(stream, particion_buscada->id);
+
+			enviarNewPokemon(socket, (*descacheado));
+			log_info(logBrokerInterno, "Mensaje enviado %s", descacheado->nombre_pokemon);
+		}
+	}
+}
+
+void enviarAppearedPokemonCacheados(int socket, op_code tipo_mensaje){
+	int tam_lista = list_size(particiones);
+	t_particion* particion_buscada;
+
+	for (int i = 0; i < tam_lista ; i++) {
+		particion_buscada = list_get(particiones, i);
+
+		if(particion_buscada->libre == 0 && particion_buscada->tipo_mensaje == tipo_mensaje){
+			void* stream = malloc(particion_buscada->tamanio);
+
+			t_appeared_pokemon* descacheado = descachearAppearedPokemon(stream);
+
+			enviarAppearedPokemon(socket, (*descacheado));
+			log_info(logBrokerInterno, "Mensaje enviado %s", descacheado->nombre_pokemon);
+		}
+	}
+}
+
+void enviarCatchPokemonCacheados(int socket, op_code tipo_mensaje){
+	int tam_lista = list_size(particiones);
+	t_particion* particion_buscada;
+
+	for (int i = 0; i < tam_lista ; i++) {
+		particion_buscada = list_get(particiones, i);
+
+		if(particion_buscada->libre == 0 && particion_buscada->tipo_mensaje == tipo_mensaje){
+			void* stream = malloc(particion_buscada->tamanio);
+
+			t_catch_pokemon* descacheado = descachearCatchPokemon(stream);
+
+			enviarCatchPokemon(socket, (*descacheado));
+			log_info(logBrokerInterno, "Mensaje enviado %s", descacheado->nombre_pokemon);
+		}
+	}
+}
+
+void enviarCaughtPokemonCacheados(int socket, op_code tipo_mensaje){
+	int tam_lista = list_size(particiones);
+	t_particion* particion_buscada;
+
+	for (int i = 0; i < tam_lista ; i++) {
+		particion_buscada = list_get(particiones, i);
+
+		if(particion_buscada->libre == 0 && particion_buscada->tipo_mensaje == tipo_mensaje){
+			void* stream = malloc(particion_buscada->tamanio);
+
+			t_caught_pokemon* descacheado = descachearCaughtPokemon(stream);
+
+			enviarCaughtPokemon(socket, (*descacheado));
+			log_info(logBrokerInterno, "Mensaje enviado");
+		}
+	}
+}
+
+void enviarGetPokemonCacheados(int socket, op_code tipo_mensaje){
+	int tam_lista = list_size(particiones);
+	t_particion* particion_buscada;
+
+	for (int i = 0; i < tam_lista ; i++) {
+		particion_buscada = list_get(particiones, i);
+
+		if(particion_buscada->libre == 0 && particion_buscada->tipo_mensaje == tipo_mensaje){
+			void* stream = malloc(particion_buscada->tamanio);
+
+			t_get_pokemon* descacheado = descachearGetPokemon(stream);
+
+			enviarGetPokemon(socket, (*descacheado));
+			log_info(logBrokerInterno, "Mensaje enviado %s", descacheado->nombre_pokemon);
+		}
+	}
+}
+
+void enviarLocalizedPokemonCacheados(int socket, op_code tipo_mensaje){
+	int tam_lista = list_size(particiones);
+	t_particion* particion_buscada;
+
+	for (int i = 0; i < tam_lista ; i++) {
+		particion_buscada = list_get(particiones, i);
+
+		if(particion_buscada->libre == 0 && particion_buscada->tipo_mensaje == tipo_mensaje){
+			void* stream = malloc(particion_buscada->tamanio);
+
+			t_localized_pokemon* descacheado = descachearLocalizedPokemon(stream);
+
+			enviarLocalizedPokemon(socket, (*descacheado));
+			log_info(logBrokerInterno, "Mensaje enviado %s", descacheado->nombre_pokemon);
+		}
+	}
+}
+
 int main(void){
 	logBroker = log_create("broker.log", "Broker", 1, LOG_LEVEL_INFO);
 	logBrokerInterno = log_create("brokerInterno.log", "Broker Interno", 1, LOG_LEVEL_INFO);
@@ -800,30 +1083,35 @@ int main(void){
 	inicializarColas();
 	inicializarSemaforos();
 	inicializarMemoria();
+
 	sem_init(&mx_particiones,0,(unsigned int) 1);
 
 	socketServidorBroker = crearSocketServidor(config_broker->ip_broker, config_broker->puerto_broker);
 
-
 	if(socketServidorBroker != -1){
+
 		log_info(logBrokerInterno,"Socket Servidor %d.", socketServidorBroker);
+
 		while(1){
 			log_info(logBrokerInterno,"While de aceptar cliente");
 			cliente = aceptarCliente(socketServidorBroker);
 
 			pthread_t hiloCliente;
 			pthread_create(&hiloCliente, NULL, (void*)atenderCliente, &cliente);
-
 			pthread_detach(hiloCliente);
 		}
+
 		close(socketServidorBroker);
+
 		log_info(logBrokerInterno, "Se cerró el Socket Servidor %d.", socketServidorBroker);
 	}else{
 		log_info(logBrokerInterno,"No se pudo crear el Servidor Broker.");
 	}
 
 	sem_destroy(&mx_particiones);
+
 	log_destroy(logBrokerInterno);
 	log_destroy(logBroker);
+
 	return 0;
 }
