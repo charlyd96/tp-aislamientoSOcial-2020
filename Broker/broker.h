@@ -219,7 +219,7 @@ void encolarLocalizedPokemon(t_localized_pokemon* msg);
 
 /// MEMORIA
 int buscarParticionLibre(uint32_t largo_stream);
-int buscarParticionYAlocar(int largo_stream, void* stream, op_code tipo_msg, uint32_t id);
+void buscarParticionYAlocar(int largo_stream, void* stream, op_code tipo_msg, uint32_t id);
 void eliminarParticion();
 
 void algoritmoFIFO();
@@ -228,12 +228,12 @@ void algoritmoLRU();
 void compactarParticiones();
 void liberarParticion(int indice);
 
-int cachearNewPokemon(t_new_pokemon* msg);
-int cachearAppearedPokemon(t_appeared_pokemon* msg);
-int cachearCatchPokemon(t_catch_pokemon* msg);
-int cachearCaughtPokemon(t_caught_pokemon* msg);
-int cachearGetPokemon(t_get_pokemon* msg);
-int cachearLocalizedPokemon(t_localized_pokemon* msg);
+void cachearNewPokemon(t_new_pokemon* msg);
+void cachearAppearedPokemon(t_appeared_pokemon* msg);
+void cachearCatchPokemon(t_catch_pokemon* msg);
+void cachearCaughtPokemon(t_caught_pokemon* msg);
+void cachearGetPokemon(t_get_pokemon* msg);
+void cachearLocalizedPokemon(t_localized_pokemon* msg);
 
 int victimaSegunFIFO();
 int victimaSegunLRU();
@@ -243,11 +243,11 @@ int obtenerHuecoBuddy(int i);
 int buscarHuecoBuddy(int i);
 void eliminarParticionBuddy();
 
-t_new_pokemon descachearNewPokemon(void* stream, uint32_t id);
+t_new_pokemon* descachearNewPokemon(void* stream, uint32_t id);
 t_appeared_pokemon descachearAppearedPokemon(void* stream, uint32_t id);
 t_catch_pokemon descachearCatchPokemon(void* stream, uint32_t id);
 t_caught_pokemon descachearCaughtPokemon(void* stream, uint32_t id);
-t_get_pokemon descachearGetPokemon(void* stream, uint32_t id);
+t_get_pokemon* descachearGetPokemon(void* stream, uint32_t id);
 t_localized_pokemon descachearLocalizedPokemon(void* stream, uint32_t id);
 
 char* fecha_y_hora_actual();

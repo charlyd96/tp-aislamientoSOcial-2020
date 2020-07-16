@@ -123,6 +123,7 @@ void inicializarMemoria(){
 	particionInicial->tamanio = config_broker->tam_memoria;
 
 	list_add(particiones,particionInicial);
+	free(particionInicial);
 }
 
 /* FUNCIONES - MEMORIA */
@@ -204,6 +205,7 @@ void partirBuddy(int indice){
 		list_replace(particiones,indice,buddy_der);
 		list_add_in_index(particiones,indice,buddy_izq);
 	}
+	free(buddy_der);
 }
 /**
  * algoritmo recursivo para buscar una partición buddy adecuada.
@@ -231,7 +233,7 @@ int obtenerHuecoBuddy(int i){
  * el campo "id" de la partición depende del tipo de mensaje puede referirse al id_mensaje o id_mensaje_correlativo
  * Esta funcion es para reutilizar en cada cachearTalMensaje()
  */
-int buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint32_t id){
+void buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint32_t id){
 	sem_wait(&mx_particiones);
 	int indice = -1;
 
@@ -338,7 +340,6 @@ int buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint32
 	}
 	//-> DESMUTEAR LISTA DE PARTICIONES
 	sem_post(&mx_particiones);
-	return 1;
 }
 
 void liberarParticion(int indice_victima){
@@ -530,9 +531,11 @@ void compactarParticiones(){
 	espacio_libre->base    = offset;
 	espacio_libre->tamanio = config_broker->tam_memoria - offset;
 	list_add(particiones,espacio_libre);
+
+	free(espacio_libre);
 }
 
-int cachearNewPokemon(t_new_pokemon* msg){
+void cachearNewPokemon(t_new_pokemon* msg){
 	uint32_t largo_nombre = strlen(msg->nombre_pokemon); //Sin el \0
 	uint32_t largo_stream = 4*sizeof(uint32_t) + largo_nombre;
 
@@ -553,12 +556,12 @@ int cachearNewPokemon(t_new_pokemon* msg){
 	memcpy(stream + offset, &(msg->cantidad), sizeof(uint32_t));
 	offset += sizeof(uint32_t);
 
-	int result = buscarParticionYAlocar(largo_stream,stream,NEW_POKEMON,msg->id_mensaje);
+	buscarParticionYAlocar(largo_stream,stream,NEW_POKEMON,msg->id_mensaje);
+	free(stream);
 
-	return result;
 }
 
-int cachearAppearedPokemon(t_appeared_pokemon* msg){
+void cachearAppearedPokemon(t_appeared_pokemon* msg){
 	uint32_t largo_nombre = strlen(msg->nombre_pokemon); //Sin el \0
 	uint32_t largo_stream = 3 * sizeof(uint32_t) + largo_nombre;
 
@@ -577,12 +580,11 @@ int cachearAppearedPokemon(t_appeared_pokemon* msg){
 	memcpy(stream + offset, &(msg->pos_y), sizeof(uint32_t));
 	offset += sizeof(uint32_t);
 
-	int result = buscarParticionYAlocar(largo_stream,stream,APPEARED_POKEMON,msg->id_mensaje_correlativo);
-
-	return result;
+	buscarParticionYAlocar(largo_stream,stream,APPEARED_POKEMON,msg->id_mensaje_correlativo);
+	free(stream);
 }
 
-int cachearCatchPokemon(t_catch_pokemon* msg){
+void cachearCatchPokemon(t_catch_pokemon* msg){
 	uint32_t largo_nombre = strlen(msg->nombre_pokemon); //Sin el \0
 	uint32_t largo_stream = 3 * sizeof(uint32_t) + largo_nombre;
 
@@ -601,12 +603,12 @@ int cachearCatchPokemon(t_catch_pokemon* msg){
 	memcpy(stream + offset, &(msg->pos_y), sizeof(uint32_t));
 	offset += sizeof(uint32_t);
 
-	int result = buscarParticionYAlocar(largo_stream,stream,CATCH_POKEMON,msg->id_mensaje);
+	buscarParticionYAlocar(largo_stream,stream,CATCH_POKEMON,msg->id_mensaje);
 
-	return result;
+	free(stream);
 }
 
-int cachearCaughtPokemon(t_caught_pokemon* msg){
+void cachearCaughtPokemon(t_caught_pokemon* msg){
 	uint32_t largo_stream = sizeof(uint32_t);
 
 	if(largo_stream < config_broker->tam_minimo_particion){
@@ -617,12 +619,13 @@ int cachearCaughtPokemon(t_caught_pokemon* msg){
 
 	memcpy(stream, &(msg->atrapo_pokemon), sizeof(uint32_t));
 	
-	int result = buscarParticionYAlocar(largo_stream,stream,CAUGHT_POKEMON,msg->id_mensaje_correlativo);
+	buscarParticionYAlocar(largo_stream,stream,CAUGHT_POKEMON,msg->id_mensaje_correlativo);
 
-	return result;
+	free(stream);
+
 }
 
-int cachearGetPokemon(t_get_pokemon* msg){
+void cachearGetPokemon(t_get_pokemon* msg){
 	uint32_t largo_nombre = strlen(msg->nombre_pokemon); //Sin el \0
 	uint32_t largo_stream = sizeof(uint32_t) + largo_nombre;
 
@@ -637,12 +640,12 @@ int cachearGetPokemon(t_get_pokemon* msg){
 	offset += sizeof(uint32_t);
 	memcpy(stream + offset, msg->nombre_pokemon, largo_nombre);	//Copio "pikachu" sin el \0
 
-	int result = buscarParticionYAlocar(largo_stream,stream,GET_POKEMON,msg->id_mensaje);
+	buscarParticionYAlocar(largo_stream,stream,GET_POKEMON,msg->id_mensaje);
 
-	return result;
+	free(stream);
 }
 
-int cachearLocalizedPokemon(t_localized_pokemon* msg){
+void cachearLocalizedPokemon(t_localized_pokemon* msg){
 	uint32_t largo_nombre = strlen(msg->nombre_pokemon); //Sin el \0
 	uint32_t largo_stream = 2 * sizeof(uint32_t) + largo_nombre + 2* sizeof(uint32_t) * msg->cant_pos;
 
@@ -672,32 +675,32 @@ int cachearLocalizedPokemon(t_localized_pokemon* msg){
 		offset += sizeof(uint32_t);
 	}
 
-	int result = buscarParticionYAlocar(largo_stream,stream,LOCALIZED_POKEMON,msg->id_mensaje_correlativo);
+	buscarParticionYAlocar(largo_stream,stream,LOCALIZED_POKEMON,msg->id_mensaje_correlativo);
 
-	return result;
+	free(stream);
 }
 
-t_new_pokemon descachearNewPokemon(void* stream, uint32_t id){
-	t_new_pokemon mensaje_a_enviar;
+t_new_pokemon* descachearNewPokemon(void* stream, uint32_t id){
+	t_new_pokemon * mensaje_a_enviar = malloc(sizeof(t_new_pokemon));
 	uint32_t largo_nombre = 0;
 	uint32_t offset = 0;
 
 	memcpy(&largo_nombre, stream + offset, sizeof(uint32_t));
 	offset += sizeof(uint32_t);
 
-	mensaje_a_enviar.nombre_pokemon = malloc(largo_nombre + 1);
-	*(mensaje_a_enviar.nombre_pokemon + largo_nombre) = '\0';
+	mensaje_a_enviar->nombre_pokemon = malloc(largo_nombre + 1);
+	*(mensaje_a_enviar->nombre_pokemon + largo_nombre) = '\0';
 
-	memcpy(mensaje_a_enviar.nombre_pokemon, stream + offset, largo_nombre);
+	memcpy(mensaje_a_enviar->nombre_pokemon, stream + offset, largo_nombre);
 	offset += largo_nombre;
-	memcpy(&(mensaje_a_enviar.pos_x), stream + offset, sizeof(uint32_t));
+	memcpy(&(mensaje_a_enviar->pos_x), stream + offset, sizeof(uint32_t));
 	offset += sizeof(uint32_t);
-	memcpy(&(mensaje_a_enviar.pos_y), stream + offset, sizeof(uint32_t));
+	memcpy(&(mensaje_a_enviar->pos_y), stream + offset, sizeof(uint32_t));
 	offset += sizeof(uint32_t);
-	memcpy(&(mensaje_a_enviar.cantidad), stream + offset, sizeof(uint32_t));
+	memcpy(&(mensaje_a_enviar->cantidad), stream + offset, sizeof(uint32_t));
 	offset += sizeof(uint32_t);
 
-	mensaje_a_enviar.id_mensaje = id;
+	mensaje_a_enviar->id_mensaje = id;
 
 	return mensaje_a_enviar;
 }
@@ -760,21 +763,21 @@ t_caught_pokemon descachearCaughtPokemon(void* stream, uint32_t id){
 	return mensaje_a_enviar;
 }
 
-t_get_pokemon descachearGetPokemon(void* stream, uint32_t id){
-	t_get_pokemon mensaje_a_enviar;
+t_get_pokemon* descachearGetPokemon(void* stream, uint32_t id){
+	t_get_pokemon* mensaje_a_enviar = malloc(sizeof(t_get_pokemon));
 	uint32_t largo_nombre = 0;
 	uint32_t offset = 0;
 
 	memcpy(&largo_nombre, stream + offset, sizeof(uint32_t));
 	offset += sizeof(uint32_t);
 
-	mensaje_a_enviar.nombre_pokemon = malloc(largo_nombre + 1);
-	*(mensaje_a_enviar.nombre_pokemon + largo_nombre) = '\0';
+	mensaje_a_enviar->nombre_pokemon = malloc(largo_nombre + 1);
+	*(mensaje_a_enviar->nombre_pokemon + largo_nombre) = '\0';
 
-	memcpy(mensaje_a_enviar.nombre_pokemon, stream + offset, largo_nombre);
+	memcpy(mensaje_a_enviar->nombre_pokemon, stream + offset, largo_nombre);
 	offset += largo_nombre;
 
-	mensaje_a_enviar.id_mensaje = id;
+	mensaje_a_enviar->id_mensaje = id;
 
 	return mensaje_a_enviar;
 }
@@ -957,10 +960,11 @@ void atenderMensajeNewPokemon(int socket_cliente){
 
 	encolarNewPokemon(new_pokemon);
 
-	int enviado = devolverID(socket_cliente,&id_mensaje);
+	devolverID(socket_cliente,&id_mensaje);
+
 	new_pokemon->id_mensaje = id_mensaje;
 
-	int cacheado = cachearNewPokemon(new_pokemon);
+	cachearNewPokemon(new_pokemon);
 
 	/*Acá habría que enviar sólo si NO es Game Boy, vamos a consultar porque también
 	hay un log del Game Boy como que recibe mensaje, en este caso si se lo enviamos también*/
@@ -990,10 +994,10 @@ void atenderMensajeAppearedPokemon(int socket_cliente){
 
 	encolarAppearedPokemon(appeared_pokemon);
 
-	int enviado = devolverID(socket_cliente,&id_mensaje);
+	devolverID(socket_cliente,&id_mensaje);
 //	appeared_pokemon->id_mensaje_correlativo = id_mensaje;
 
-	int cacheado = cachearAppearedPokemon(appeared_pokemon);
+	cachearAppearedPokemon(appeared_pokemon);
 
 	/*Acá habría que enviar sólo si NO es Game Boy, vamos a consultar porque también
 	hay un log del Game Boy como que recibe mensaje, en este caso si se lo enviamos también*/
@@ -1016,10 +1020,10 @@ void atenderMensajeCatchPokemon(int socket_cliente){
 
 	encolarCatchPokemon(catch_pokemon);
 
-	int enviado = devolverID(socket_cliente,&id_mensaje);
+	devolverID(socket_cliente,&id_mensaje);
 	catch_pokemon->id_mensaje = id_mensaje;
 
-	int cacheado = cachearCatchPokemon(catch_pokemon);
+	cachearCatchPokemon(catch_pokemon);
 
 	/*Acá habría que enviar sólo si NO es Game Boy, vamos a consultar porque también
 	hay un log del Game Boy como que recibe mensaje, en este caso si se lo enviamos también*/
@@ -1048,10 +1052,10 @@ void atenderMensajeCaughtPokemon(int socket_cliente){
 
 	encolarCaughtPokemon(caught_pokemon);
 
-	int enviado = devolverID(socket_cliente,&id_mensaje);
+	devolverID(socket_cliente,&id_mensaje);
 	//caught_pokemon->id_mensaje_correlativo = id_mensaje;
 
-	int cacheado = cachearCaughtPokemon(caught_pokemon);
+	cachearCaughtPokemon(caught_pokemon);
 
 	/*Acá habría que enviar sólo si NO es Game Boy, vamos a consultar porque también
 	hay un log del Game Boy como que recibe mensaje, en este caso si se lo enviamos también*/
@@ -1075,10 +1079,10 @@ void atenderMensajeGetPokemon(int socket_cliente){
 
 	encolarGetPokemon(get_pokemon);
 
-	int enviado = devolverID(socket_cliente,&id_mensaje);
+	devolverID(socket_cliente,&id_mensaje);
 	get_pokemon->id_mensaje = id_mensaje;
 
-	int cacheado = cachearGetPokemon(get_pokemon);
+	cachearGetPokemon(get_pokemon);
 
 	/*Acá habría que enviar sólo si NO es Game Boy, vamos a consultar porque también
 	hay un log del Game Boy como que recibe mensaje, en este caso si se lo enviamos también*/
@@ -1101,10 +1105,10 @@ void atenderMensajeLocalizedPokemon(int socket_cliente){
 
 	encolarLocalizedPokemon(localized_pokemon);
 
-	int enviado = devolverID(socket_cliente,&id_mensaje);
+	devolverID(socket_cliente,&id_mensaje);
 //	localized_pokemon->id_mensaje_correlativo = id_mensaje;
 
-	int cacheado = cachearLocalizedPokemon(localized_pokemon);
+	cachearLocalizedPokemon(localized_pokemon);
 
 	/*Acá habría que enviar sólo si NO es Game Boy, vamos a consultar porque también
 	hay un log del Game Boy como que recibe mensaje, en este caso si se lo enviamos también*/
@@ -1241,6 +1245,8 @@ void atenderSuscripcionGameBoy(int socket_cliente){
 	sleep(suscribe_gameboy->timeout);
 	desuscribir(index,suscribe_gameboy->cola_suscribir);
 	close(socket_cliente);
+	free(suscriptor);
+	free(suscribe_gameboy);
 }
 
 /* FUNCIONES - PROCESAMIENTO */
@@ -1434,7 +1440,12 @@ int devolverID(int socket,uint32_t* id_mensaje){
 
 	int enviado = send(socket, stream, sizeof(uint32_t), 0);
 
-	log_info(logBrokerInterno,"ID de Mensaje asignado %d", id);
+	if(enviado != -1){
+		log_info(logBrokerInterno,"Se asignó y envió el ID_MENSAJE %d",id_mensaje);
+	}else{
+		log_info(logBrokerInterno,"No se pudo enviar el ID_MENSAJE %d",id_mensaje);
+	}
+	free(stream);
 	return enviado;
 }
 
@@ -1449,20 +1460,16 @@ void enviarNewPokemonCacheados(int socket, op_code tipo_mensaje){
 			void* stream = malloc(particion_buscada->tamanio);
 			memcpy(stream, cache + particion_buscada->base, particion_buscada->tamanio);
 
-			t_new_pokemon descacheado = descachearNewPokemon(stream, particion_buscada->id);
+			t_new_pokemon* descacheado = descachearNewPokemon(stream, particion_buscada->id);
 
-			log_info(logBrokerInterno, "Descacheado nombre %s", descacheado.nombre_pokemon);
-			log_info(logBrokerInterno, "Descacheado pos x %d", descacheado.pos_x);
-			log_info(logBrokerInterno, "Descacheado pos y %d", descacheado.pos_y);
-			log_info(logBrokerInterno, "Descacheado cantidad %d", descacheado.cantidad);
-			log_info(logBrokerInterno, "Descacheado id mensaje x %d", descacheado.id_mensaje);
+			log_info(logBrokerInterno, "Descacheado id mensaje NEW %d", descacheado->id_mensaje);
 
 			//Actualizo time ultima ref
 			struct timeval time_aux;
 			gettimeofday(&time_aux, NULL);
 			particion_buscada->time_ultima_ref = time_aux;
 
-			int enviado = enviarNewPokemon(socket, descacheado);
+			int enviado = enviarNewPokemon(socket, *descacheado);
 
 			int ack = recibirACK(socket);
 			log_info(logBrokerInterno, "ACK %d", ack);
@@ -1476,9 +1483,11 @@ void enviarNewPokemonCacheados(int socket, op_code tipo_mensaje){
 				log_error(logBrokerInterno, "NO se envió el Mensaje.");
 			}else{
 				// 4. Envío de un mensaje a un suscriptor específico.
-				log_info(logBroker, "Se envió el Mensaje: %s %s %d %d %d con ID de Mensaje %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.cantidad, descacheado.id_mensaje);
-				log_info(logBrokerInterno, "Se envió el Mensaje: %s %s %d %d %d con ID de Mensaje %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.cantidad, descacheado.id_mensaje);
+				log_info(logBroker, "Se envió el Mensaje: %s %s %d %d %d con ID de Mensaje %d.", cola, descacheado->nombre_pokemon, descacheado->pos_x, descacheado->pos_y, descacheado->cantidad, descacheado->id_mensaje);
+				log_info(logBrokerInterno, "Se envió el Mensaje: %s %s %d %d %d con ID de Mensaje %d->", cola, descacheado->nombre_pokemon, descacheado->pos_x, descacheado->pos_y, descacheado->cantidad, descacheado->id_mensaje);
 			}
+			free(descacheado);
+			free(stream);
 		}
 	}
 }
@@ -1522,6 +1531,7 @@ void enviarAppearedPokemonCacheados(int socket, op_code tipo_mensaje){
 				log_info(logBroker, "Se envió el Mensaje: %s %s %d %d con ID de Mensaje Correlativo %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.id_mensaje_correlativo);
 				log_info(logBrokerInterno, "Se envió el Mensaje: %s %s %d %d con ID de Mensaje Correlativo %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.id_mensaje_correlativo);
 			}
+			free(stream);
 		}
 	}
 }
@@ -1565,6 +1575,7 @@ void enviarCatchPokemonCacheados(int socket, op_code tipo_mensaje){
 				log_info(logBroker, "Se envió el Mensaje: %s %s %d %d con ID de Mensaje %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.id_mensaje);
 				log_info(logBrokerInterno, "Se envió el Mensaje: %s %s %d %d con ID de Mensaje %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.id_mensaje);
 			}
+			free(stream);
 		}
 	}
 }
@@ -1606,6 +1617,7 @@ void enviarCaughtPokemonCacheados(int socket, op_code tipo_mensaje){
 				log_info(logBroker, "Se envió el Mensaje: %s %d con ID de Mensaje Correlativo %d.", cola, descacheado.atrapo_pokemon, descacheado.id_mensaje_correlativo);
 				log_info(logBrokerInterno, "Se envió el Mensaje: %s %d con ID de Mensaje Correlativo %d.", cola, descacheado.atrapo_pokemon, descacheado.id_mensaje_correlativo);
 			}
+			free(stream);
 		}
 	}
 }
@@ -1621,17 +1633,17 @@ void enviarGetPokemonCacheados(int socket, op_code tipo_mensaje){
 			void* stream = malloc(particion_buscada->tamanio);
 			memcpy(stream, cache + particion_buscada->base, particion_buscada->tamanio);
 
-			t_get_pokemon descacheado = descachearGetPokemon(stream, particion_buscada->id);
+			t_get_pokemon* descacheado = descachearGetPokemon(stream, particion_buscada->id);
 
-			log_info(logBrokerInterno, "Descacheado nombre %s", descacheado.nombre_pokemon);
-			log_info(logBrokerInterno, "Descacheado id %d", descacheado.id_mensaje);
+			log_info(logBrokerInterno, "Descacheado nombre %s", descacheado->nombre_pokemon);
+			log_info(logBrokerInterno, "Descacheado id %d", descacheado->id_mensaje);
 
 			//Actualizo time ultima ref
 			struct timeval time_aux;
 			gettimeofday(&time_aux, NULL);
 			particion_buscada->time_ultima_ref = time_aux;
 
-			int enviado = enviarGetPokemon(socket, descacheado);
+			int enviado = enviarGetPokemon(socket, *descacheado);
 
 			int ack = recibirACK(socket);
 			log_info(logBrokerInterno, "ACK %d", ack);
@@ -1645,9 +1657,10 @@ void enviarGetPokemonCacheados(int socket, op_code tipo_mensaje){
 				log_error(logBrokerInterno, "NO se envió el Mensaje.");
 			}else{
 				// 4. Envío de un mensaje a un suscriptor específico.
-				log_info(logBroker, "Se envió el Mensaje: %s %s con ID de Mensaje %d.", cola, descacheado.nombre_pokemon, descacheado.id_mensaje);
-				log_info(logBrokerInterno, "Se envió el Mensaje: %s %s con ID de Mensaje %d.", cola, descacheado.nombre_pokemon, descacheado.id_mensaje);
+				log_info(logBroker, "Se envió el Mensaje: %s %s con ID de Mensaje %d.", cola, descacheado->nombre_pokemon, descacheado->id_mensaje);
+				log_info(logBrokerInterno, "Se envió el Mensaje: %s %s con ID de Mensaje %d.", cola, descacheado->nombre_pokemon, descacheado->id_mensaje);
 			}
+			free(stream);
 		}
 	}
 }
@@ -1765,6 +1778,7 @@ int main(void){
 
 	log_destroy(logBrokerInterno);
 	log_destroy(logBroker);
-
+	//destruir particiones
+	list_destroy(particiones);
 	return 0;
 } 

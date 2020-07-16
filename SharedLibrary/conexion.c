@@ -83,7 +83,7 @@ int crearSocketServidor(char* ip, char* puerto){
 	listen(socket_servidor, SOMAXCONN);
 
 	freeaddrinfo(servinfo);
-
+	log_destroy(logger);
 	return socket_servidor;
 }
 
@@ -120,6 +120,7 @@ int enviarACK(int socket_destino){
 	if(ack_enviado == -1){
 		log_error(logger, "No se pudo enviar el ACK.");
 	}
+	log_destroy(logger);
 	return ack_enviado;
 }
 
@@ -132,6 +133,7 @@ int recibirACK(int socket_origen){
 		log_error(logger, "No se pudo recibir el ACK."); //Creo que debería decir "No se pudo recibir el ACK". Firma: Charly :D
 														//Tratar al mensaje como que no fue recibido por el proceso. Reenviar luego de la reconexión.
 	}
+	log_destroy(logger);
 	return ack_recibido;
 }
 
