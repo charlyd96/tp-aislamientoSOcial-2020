@@ -66,6 +66,7 @@ endif
 
 OBJECTS := \
 	$(OBJDIR)/gameCard.o \
+	$(OBJDIR)/strings.o \
 
 RESOURCES := \
 
@@ -125,6 +126,9 @@ $(OBJECTS): | $(OBJDIR)
 endif
 
 $(OBJDIR)/gameCard.o: gameCard.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/strings.o: strings.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 

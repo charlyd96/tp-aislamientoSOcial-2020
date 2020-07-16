@@ -26,6 +26,8 @@
 #include <sys/mman.h>
 #include <math.h>
 
+#include "strings.h"
+
 
 char* pathGamecardConfig = "gameCard.config";
 
@@ -90,10 +92,15 @@ void atender_getPokemon(int socket);
 void atender_catchPokemon(int socket);
 void leer_FS_metadata (t_configuracion *config_gamecard);
 void crear_metadata (char *directorio,t_block* info_blocks);
-void* concatenar_bloques (char *path_pokemon , t_new_pokemon *mensaje);
+void* concatenar_bloques(int largo_texto, char ** lista_bloques);
 t_block* crear_blocks(t_new_pokemon* new_pokemon);
 void bloques_disponibles(int cantidad, t_list* bloques);
 char* get_bitmap();
 char* escribir_bloque(int block_number, int block_size, char* texto, int* largo_texto);
 int cantidad_bloques(int largo_texto, int block_size);
+char* agregar_pokemon(char *buffer, t_new_pokemon* new_pokemon);
+char* editar_posicion(char* texto,int cantidad, char* posicion_texto);
+char* concatenar_lista_char(int largo_texto, char ** lista);
+t_block* actualizar_datos (char* texto,char ** lista_bloques);
+
 #endif /* GAMECARD_H_ */
