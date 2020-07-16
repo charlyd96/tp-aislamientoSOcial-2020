@@ -123,7 +123,7 @@ void inicializarMemoria(){
 	particionInicial->tamanio = config_broker->tam_memoria;
 
 	list_add(particiones,particionInicial);
-	free(particionInicial);
+	//free(particionInicial);
 }
 
 /* FUNCIONES - MEMORIA */
