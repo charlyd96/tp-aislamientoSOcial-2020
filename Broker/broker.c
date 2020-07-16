@@ -1240,6 +1240,7 @@ void atenderSuscripcionGameBoy(int socket_cliente){
 
 	sleep(suscribe_gameboy->timeout);
 	desuscribir(index,suscribe_gameboy->cola_suscribir);
+	close(socket_cliente);
 }
 
 /* FUNCIONES - PROCESAMIENTO */
