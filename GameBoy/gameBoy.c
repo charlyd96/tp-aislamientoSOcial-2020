@@ -375,7 +375,10 @@ t_error_codes enviarMensajeAModulo(process_code proc, op_code ope, t_buffer* buf
 		logInfo("Conexión a %s %s:%s en socket %d",nombreModulo,ipServidor,puertoServidor,gameBoyBroker);
 		t_paquete* paquete = malloc(sizeof(t_paquete));
 		paquete->codigo_operacion = ope;
+		paquete->tipo_proceso = P_GAMEBOY;
+		paquete->id_proceso = (uint32_t)config_get_int_value(config,"ID_PROCESO");
 		paquete->buffer = buffer;
+
 		int tamanio_a_enviar;
 		void* mensajeSerializado = serializarPaquete(paquete, &tamanio_a_enviar);
 		int enviado = send(gameBoyBroker, mensajeSerializado, tamanio_a_enviar, 0);
@@ -393,7 +396,7 @@ t_error_codes enviarMensajeAModulo(process_code proc, op_code ope, t_buffer* buf
 
 			recv(gameBoyBroker,&id_o_ack,sizeof(uint32_t),MSG_WAITALL);
 			if(strcmp("BROKER",nombreModulo) == 0){
-				logInfoAux("Se recibió el ID: %d",id_o_ack);
+				logInfoAux("Se recibió el ID_MENSAJE: %d",id_o_ack);
 			}else{
 				logInfoAux("Se recibió ACK: %d",id_o_ack);
 			}

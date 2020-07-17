@@ -978,7 +978,7 @@ void atenderMensajeNewPokemon(int socket_cliente){
 	
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_new->suscriptores, j);
-		enviarNewPokemon(suscriptor->socket_suscriptor, *new_pokemon);
+		enviarNewPokemon(suscriptor->socket_suscriptor, *new_pokemon,P_BROKER,0);
 	}
 }
 
@@ -1011,7 +1011,7 @@ void atenderMensajeAppearedPokemon(int socket_cliente){
 	
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_appeared->suscriptores, j);
-		enviarAppearedPokemon(suscriptor->socket_suscriptor, *appeared_pokemon);
+		enviarAppearedPokemon(suscriptor->socket_suscriptor, *appeared_pokemon,P_BROKER,0);
 	}
 }
 
@@ -1037,7 +1037,7 @@ void atenderMensajeCatchPokemon(int socket_cliente){
 	
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_catch->suscriptores, j);
-		enviarCatchPokemon(suscriptor->socket_suscriptor, *catch_pokemon);
+		enviarCatchPokemon(suscriptor->socket_suscriptor, *catch_pokemon,P_BROKER,0);
 	}
 }
 
@@ -1069,7 +1069,7 @@ void atenderMensajeCaughtPokemon(int socket_cliente){
 	
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_caught->suscriptores, j);
-		enviarCaughtPokemon(suscriptor->socket_suscriptor, *caught_pokemon);
+		enviarCaughtPokemon(suscriptor->socket_suscriptor, *caught_pokemon,P_BROKER,0);
 		/*int ack = recibirACK(socket);
 		log_info(logBrokerInterno, "ACK Nuevo Mensaje %d", ack);*/
 	}
@@ -1096,7 +1096,7 @@ void atenderMensajeGetPokemon(int socket_cliente){
 	
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_get->suscriptores, j);
-		enviarGetPokemon(suscriptor->socket_suscriptor, *get_pokemon);
+		enviarGetPokemon(suscriptor->socket_suscriptor, *get_pokemon,P_BROKER,0);
 	}
 }
 
@@ -1122,7 +1122,7 @@ void atenderMensajeLocalizedPokemon(int socket_cliente){
 	
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_localized->suscriptores, j);
-		enviarLocalizedPokemon(suscriptor->socket_suscriptor, *localized_pokemon);
+		enviarLocalizedPokemon(suscriptor->socket_suscriptor, *localized_pokemon,P_BROKER,0);
 	}
 }
 
@@ -1475,7 +1475,7 @@ void enviarNewPokemonCacheados(int socket, op_code tipo_mensaje){
 			gettimeofday(&time_aux, NULL);
 			particion_buscada->time_ultima_ref = time_aux;
 
-			int enviado = enviarNewPokemon(socket, *descacheado);
+			int enviado = enviarNewPokemon(socket, *descacheado,P_BROKER,0);
 
 			int ack = recibirACK(socket);
 			log_info(logBrokerInterno, "ACK %d", ack);
@@ -1520,7 +1520,7 @@ void enviarAppearedPokemonCacheados(int socket, op_code tipo_mensaje){
 			gettimeofday(&time_aux, NULL);
 			particion_buscada->time_ultima_ref = time_aux;
 
-			int enviado = enviarAppearedPokemon(socket, descacheado);
+			int enviado = enviarAppearedPokemon(socket, descacheado,P_BROKER,0);
 
 			int ack = recibirACK(socket);
 			log_info(logBrokerInterno, "ACK %d", ack);
@@ -1564,7 +1564,7 @@ void enviarCatchPokemonCacheados(int socket, op_code tipo_mensaje){
 			gettimeofday(&time_aux, NULL);
 			particion_buscada->time_ultima_ref = time_aux;
 
-			int enviado = enviarCatchPokemon(socket, descacheado);
+			int enviado = enviarCatchPokemon(socket, descacheado,P_BROKER,0);
 
 			int ack = recibirACK(socket);
 			log_info(logBrokerInterno, "ACK %d", ack);
@@ -1606,7 +1606,7 @@ void enviarCaughtPokemonCacheados(int socket, op_code tipo_mensaje){
 			log_info(logBrokerInterno, "Descacheado atrapo pokemon %d", descacheado.atrapo_pokemon);
 			log_info(logBrokerInterno, "Descacheado id correlativo %d", descacheado.id_mensaje_correlativo);
 
-			int enviado = enviarCaughtPokemon(socket, descacheado);
+			int enviado = enviarCaughtPokemon(socket, descacheado,P_BROKER,0);
 
 			int ack = recibirACK(socket);
 			log_info(logBrokerInterno, "ACK %d", ack);
@@ -1649,7 +1649,7 @@ void enviarGetPokemonCacheados(int socket, op_code tipo_mensaje){
 			gettimeofday(&time_aux, NULL);
 			particion_buscada->time_ultima_ref = time_aux;
 
-			int enviado = enviarGetPokemon(socket, *descacheado);
+			int enviado = enviarGetPokemon(socket, *descacheado,P_BROKER,0);
 
 			int ack = recibirACK(socket);
 			log_info(logBrokerInterno, "ACK %d", ack);
@@ -1712,7 +1712,7 @@ void enviarLocalizedPokemonCacheados(int socket, op_code tipo_mensaje){
 			gettimeofday(&time_aux, NULL);
 			particion_buscada->time_ultima_ref = time_aux;
 
-			enviarLocalizedPokemon(socket, descacheado);
+			enviarLocalizedPokemon(socket, descacheado,P_BROKER,0);
 
 			list_add(nodo_localized->susc_enviados, socket);
 

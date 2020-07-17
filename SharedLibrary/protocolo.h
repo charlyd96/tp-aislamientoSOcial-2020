@@ -30,6 +30,7 @@ typedef enum {
 } op_code;
 
 typedef enum {
+	P_GAMEBOY,
 	P_BROKER,
 	P_TEAM,
 	P_GAMECARD,
