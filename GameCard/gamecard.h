@@ -29,7 +29,7 @@
 #include "strings.h"
 
 
-char* pathGamecardConfig = "gameCard.config";
+char* pathGamecardConfig = "/home/utnso/workspace/tp-2020-1c-aislamientoSOcial/GameCard/gameCard.config";
 
 typedef struct{
 	char* directory;
@@ -41,6 +41,7 @@ typedef struct{
 typedef struct{
 	int tiempo_reintento_conexion;
 	int tiempo_reintento_operacion;
+	int tiempo_retardo_operacion;
 	char* punto_montaje;
 	char* ip_gamecard;
 	char* puerto_gamecard;

@@ -14,8 +14,10 @@ int main(void){
 	logInterno = log_create("gamecardInterno.log", "GamecardInterno", 1, LOG_LEVEL_INFO);
 	crear_config_gamecard();
 	leer_FS_metadata(config_gamecard);
-	int socketServidorGamecard = crearSocketServidor(config_gamecard->ip_gamecard, config_gamecard->puerto_gamecard);
+	printf("ip %s:%s",config_gamecard->ip_gamecard,config_gamecard->puerto_gamecard);
 
+	int socketServidorGamecard = crearSocketServidor(config_gamecard->ip_gamecard, config_gamecard->puerto_gamecard);
+	printf("%d",socketServidorGamecard);
 	if(socketServidorGamecard == -1){
 		log_info(logGamecard, "No se pudo crear el Servidor GameCard");
 	}else{
@@ -49,6 +51,7 @@ void crear_config_gamecard(){
 
 	config_gamecard->tiempo_reintento_conexion = config_get_int_value(config_ruta, "TIEMPO_DE_REINTENTO_CONEXION");
 	config_gamecard->tiempo_reintento_operacion = config_get_int_value(config_ruta, "TIEMPO_DE_REINTENTO_OPERACION");
+	config_gamecard->tiempo_retardo_operacion = config_get_int_value(config_ruta, "TIEMPO_RETARDO_OPERACION");
 	config_gamecard->punto_montaje = string_duplicate (config_get_string_value(config_ruta, "PUNTO_MONTAJE_TALLGRASS"));
 	config_gamecard->ip_gamecard = string_duplicate (config_get_string_value(config_ruta, "IP_GAMECARD"));
 	config_gamecard->puerto_gamecard = string_duplicate (config_get_string_value(config_ruta, "PUERTO_GAMECARD"));
@@ -58,7 +61,7 @@ void crear_config_gamecard(){
 
 void leer_FS_metadata (t_configuracion *config_gamecard){
 	char *pathMetadata = string_from_format ("%s/Metadata/Metadata.bin", config_gamecard->punto_montaje);
-	if(existe_archivo(pathMetadata)){			
+	if(existe_archivo(pathMetadata)){
 		FS_config =malloc (sizeof (t_FS_config));
 		FSmetadata = config_create (pathMetadata);
 
@@ -69,7 +72,7 @@ void leer_FS_metadata (t_configuracion *config_gamecard){
 		log_info (logInterno, "Se leyó correctamente el archivo Metadata del File System");			
 	}
 	else {
-		config_destroy (FSmetadata);
+		//config_destroy (FSmetadata);
 		log_error (logGamecard, "No se pudo leer el archivo Metadata del File System");
 		exit (FILE_FSMETADATA_ERROR);
 	}
@@ -124,14 +127,37 @@ void atender_newPokemon(int socket){
 
 		//Se puede pasarle una estrucura t_metadata en vez de la ruta al metadata. Esto está asociado al comentario de la línea 212
 		t_config *data_config = config_create (pathMetadata);
+
+		bool archivoAbierto = strcmp(config_get_string_value(data_config,"OPEN"),"Y") == 0;
+		printf("open %d\n",archivoAbierto);
+
+		//Si el archivo está abierto, espero y reintento luego del delay
+		while(archivoAbierto == true){
+			sleep(config_gamecard->tiempo_reintento_operacion);
+			archivoAbierto = strcmp(config_get_string_value(data_config,"OPEN"),"Y") == 0;
+			printf("open %d\n",archivoAbierto);
+		}
+		//Seteo OPEN=Y en el archivo
+		config_set_value(data_config,"OPEN","Y");
+		config_save(data_config);
+
+		//Retardo simulando IO
+		sleep(config_gamecard->tiempo_retardo_operacion);
+
+		//Realizo las operaciones
 		char **lista_bloques=config_get_array_value(data_config, "BLOCKS");
 		int largo_texto = config_get_int_value(data_config, "SIZE");
 		char *buffer=concatenar_bloques(largo_texto, lista_bloques); //Apunta buffer a todos los datos del archivo concatenados
-		config_destroy(data_config);
 
 		char* nuevo_buffer = agregar_pokemon(buffer, new_pokemon);
 
 		t_block* info_block = actualizar_datos(nuevo_buffer, lista_bloques);
+
+		//Cierro archivo
+		config_set_value(data_config,"OPEN","N");
+		config_save(data_config);
+
+		config_destroy(data_config);
 
 		}
 	else{ //Si no existe, creo el directorio del pokemon
@@ -254,7 +280,7 @@ void bloques_disponibles(int cantidad,t_list* blocks){
 	perror("Error  mapping \n");
 	exit(1);
 	}
-	printf("cant:%d\n",cantidad,newchar);
+	printf("cant:%d %c\n",cantidad,newchar);
 
 	printf("\nfile contents before:\n%s \n", addr); /* write current file contents */
 
