@@ -1441,9 +1441,9 @@ int devolverID(int socket,uint32_t* id_mensaje){
 	int enviado = send(socket, stream, sizeof(uint32_t), 0);
 
 	if(enviado != -1){
-		log_info(logBrokerInterno,"Se asignó y envió el ID_MENSAJE %d",id_mensaje);
+		log_info(logBrokerInterno,"Se asignó y envió el ID_MENSAJE %d",*id_mensaje);
 	}else{
-		log_info(logBrokerInterno,"No se pudo enviar el ID_MENSAJE %d",id_mensaje);
+		log_info(logBrokerInterno,"No se pudo enviar el ID_MENSAJE %d",*id_mensaje);
 	}
 	free(stream);
 	return enviado;
@@ -1754,7 +1754,6 @@ int main(void){
 	socketServidorBroker = crearSocketServidor(config_broker->ip_broker, config_broker->puerto_broker);
 
 	if(socketServidorBroker != -1){
-
 		log_info(logBrokerInterno,"Socket Servidor %d.", socketServidorBroker);
 
 		signal(SIGUSR1, &controlador_de_seniales);
