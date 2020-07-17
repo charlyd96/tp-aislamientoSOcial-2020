@@ -240,8 +240,6 @@ void mover_de_aux_a_global(char *name)
 
 }
 
-
-
 void mover_pokemon_al_mapa (mapPokemons *nuevo_pokemon)
 {
     puts ("agregando pokemon al mapa");
@@ -278,11 +276,20 @@ void send_trainer_to_exec (void)
         case FIFO:
         {
         pthread_create(&thread, NULL, (void*)fifo_exec,NULL);
+        break;
         }
 
         case RR:
         {
         pthread_create(&thread, NULL, (void*)RR_exec,NULL);
+        break;
+        }
+
+        case SJFSD:
+        {
+            puts ("aqui");
+        pthread_create(&thread, NULL, (void*)SJFSD_exec,NULL);
+
         }
     }
 
@@ -330,9 +337,8 @@ void* trainer_routine (void *train)
 			{
 				move_trainer_to_objective (train, OP_EXECUTING_CATCH); //Entre paréntesis debería ir "trainer". No sé por qué funciona así
                 
-                if (!strcmp(config->planning_algorithm, "RR"))
-                consumir_cpu(trainer);
 
+                consumir_cpu(trainer);
 				int result= send_catch (trainer);
                 
 				if (result == 1 )
@@ -781,36 +787,8 @@ void move_trainer_to_objective (Trainer *trainer, Operation op)
         }    
 
     }
-    
-    while ( ( (*Tx != *Px) || (*Ty!=*Py) ) && !strcmp (config->planning_algorithm, "FIFO") )
-    {
-        if ( calculate_distance (*Tx+1, *Ty, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
-        *Tx=*Tx+1;
-        log_info (logTeam , "El entrenador %d se movió hacia la derecha. Posición: (%d,%d)",trainer->index, *Tx, *Ty);
-        usleep (config->retardo_cpu * 1);
-        }
 
-        if ( calculate_distance (*Tx, *Ty+1, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
-        *Ty=*Ty+1;
-        log_info (logTeam , "El entrenador %d se movió hacia arriba. Posición: (%d,%d)",trainer->index, *Tx, *Ty);
-        usleep (config->retardo_cpu * 1);
-        }
-
-        if ( calculate_distance (*Tx-1, *Ty, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
-        *Tx=*Tx-1;
-        log_info (logTeam , "El entrenador %d se movió hacia la izquierda. Posición: (%d,%d)",trainer->index, *Tx, *Ty);
-        usleep (config->retardo_cpu * 1);
-        }
-
-        if ( calculate_distance (*Tx, *Ty-1, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
-        *Ty=*Ty-1;
-        log_info (logTeam , "El entrenador %d se movió hacia abajo. Posición: (%d,%d)",trainer->index, *Tx, *Ty);
-        usleep (config->retardo_cpu * 1);
-        }
-        
-    }
-
-    while ( ( (*Tx != *Px) || (*Ty!=*Py) ) && !strcmp (config->planning_algorithm, "RR") )
+    while ( (*Tx != *Px) || (*Ty!=*Py) )
     {
  
         if ( calculate_distance (*Tx+1, *Ty, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
@@ -849,6 +827,11 @@ void consumir_cpu(Trainer *trainer)
 {
    switch (algoritmo)
    {
+        case FIFO:
+        {
+            usleep (config->retardo_cpu * 1); //Uso usleep para que no sea tan lenta la ejecución
+        }
+
         case RR:
         {
             if (ciclos_cpu >= config->quantum)
@@ -871,8 +854,11 @@ void consumir_cpu(Trainer *trainer)
 
         case SJFSD:
         {
+            usleep (config->retardo_cpu * 1); //Uso usleep para que no sea tan lenta la ejecución
             trainer->rafagaEjecutada++;
         }
+
+        default:;
 
     }
 }

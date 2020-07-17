@@ -160,11 +160,11 @@ void RR_exec (void)
             ciclos_cpu=0;
        }
 }
-/*
+
 void SJFSD_exec (void)
 {
     int sizeReady=0;
-    int sizeReadyaAnt=0; 
+    int sizeReadyAnt=0; 
        while (1) //Este while debería ser "mientras team no haya ganado"
        {
             sem_wait ( &qr_sem1 );
@@ -179,35 +179,31 @@ void SJFSD_exec (void)
             sizeReadyAnt=sizeReady;
             sem_post ( &(trainer->trainer_sem) );
             sem_wait (&using_cpu);
-            actualizar_estimacion(trainer);
-        }                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm                                                                                                                                                                                                   
+            trainer->rafagaEstimada = actualizar_estimacion(trainer);
+            trainer->rafagaEjecutada=0;
+            printf ("************************************************************************Nueva ráfaga estimada (%d): %f******************************\n",trainer->index, trainer->rafagaEstimada);
 
-
-ordenar_lista_ready()
-{
-
-    
-    list_sort(ReadyQueue,comparador) //No necesito proteger esta zona crítica, porque ya se protegió antes del llamado a la función
-
+        }
 }
 
+
+void ordenar_lista_ready (void)
 {
-    actualizar_estimacion()
     bool comparador (void *tr1, void *tr2)
     {
-        Trainer *trainer1=tr1;
-        Trainer *trainer2=tr2;
-        trainer1->rafagaEjecutada;
-        trainer1->rafagaEstimada;
-
+    Trainer *trainer1=tr1;
+    Trainer *trainer2=tr2;
+    return (trainer1->rafagaEstimada<trainer2->rafagaEstimada); 
     }
-    
-    
-    return ()
-
+    list_sort(ReadyQueue,comparador); //No necesito proteger esta zona crítica, porque ya se protegió antes del llamado a la función
 }
 
-*/
+double  actualizar_estimacion (Trainer *trainer)
+{
+    return ( (config->alpha)*(trainer->rafagaEjecutada) + (1-config->alpha)*(trainer->rafagaEstimada) ); 
+}
+
+
 // ============================================================================================================
 //    ***** Función que  crea un hilo por cada uno de los entrenadores existente en la lista del Team*****
 //                  ***** Recibe una estructura Team y devuelve un código de error *****

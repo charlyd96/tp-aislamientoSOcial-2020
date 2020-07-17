@@ -36,6 +36,7 @@ typedef struct {
     int retardo_cpu;
     char *planning_algorithm;
     int quantum;
+    double alpha;
     u_int32_t initial_estimation;
     char *broker_IP;
     char *broker_port;
@@ -43,7 +44,7 @@ typedef struct {
     char *team_port;
 
 } Config;
-
+Config *config;
 
 typedef enum
 {
@@ -57,7 +58,7 @@ planificacion algoritmo;
 
 extern t_list *trainers;
 
-Config *config;
+
 extern int ciclos_cpu;
 /*Para crear puntero a archivo de configuración*/
 t_config *get_config(void);

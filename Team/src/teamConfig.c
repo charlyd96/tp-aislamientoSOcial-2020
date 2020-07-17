@@ -96,7 +96,7 @@ void Team_load_trainers_config(void)
         {//puts ("if");
         //printf ("%s\n",*(pok_in_bag_to_array + i ));
            // puts (*(pok_in_bag_to_array + i ));
-              //list_add(entrenadores->bag, *(pok_in_bag_to_array ));
+              list_add(entrenadores->bag, *(pok_in_bag_to_array ));
         }
       
         char **objetivos = string_split(*(trainers_obj_to_array + i), "|" );
@@ -154,6 +154,7 @@ void Team_load_global_config()
     config->retardo_cpu          = config_get_int_value(config->team_config, "RETARDO_CICLO_CPU");
     config->planning_algorithm   = string_duplicate(config_get_string_value(config->team_config, "ALGORITMO_PLANIFICACION"));
     config->quantum              = config_get_int_value(config->team_config, "QUANTUM");
+    config->alpha                = config_get_double_value(config->team_config, "ALPHA");
     config->initial_estimation   = config_get_int_value(config->team_config, "ESTIMACION_INICIAL");
     config->broker_IP            = string_duplicate (config_get_string_value(config->team_config, "IP_BROKER"));
     config->broker_port          = string_duplicate (config_get_string_value(config->team_config, "PUERTO_BROKER"));

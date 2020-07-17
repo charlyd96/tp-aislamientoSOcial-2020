@@ -130,4 +130,10 @@ void* listen_routine_colas (void *conexion);
 
 void informarIDlocalized(uint32_t id);
 
+void SJFSD_exec (void);
+
+double  actualizar_estimacion (); //Ver cómo agregar el parámetro Trainer *
+
+void ordenar_lista_ready(void);
+
 #endif /* TEAM_H_ */
