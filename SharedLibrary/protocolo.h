@@ -51,6 +51,8 @@ typedef struct {
 
 typedef struct {
 	op_code codigo_operacion;
+	process_code tipo_proceso;
+	uint32_t id_proceso;
 	t_buffer* buffer;
 } t_paquete;
 

@@ -881,20 +881,26 @@ void atenderCliente(int socket){
 	int socket_cliente = socket;
 	log_info(logBrokerInterno,"Atender Cliente %d: ", socket_cliente);
 	op_code cod_op = recibirOperacion(socket_cliente);
+	process_code tipo_proceso = recibirTipoProceso(socket_cliente);
+	uint32_t id_proceso = recibirIDProceso(socket_cliente);
 	switch(cod_op){
 		case NEW_POKEMON:{
 			// 1. Conexión de un proceso al broker.
-			log_info(logBroker, "Se conectó un Team.");
-			log_info(logBrokerInterno, "Se conectó un Team.");
-
+			log_info(logBroker, "Se conectó un Team");
+			log_info(logBrokerInterno, "Se conectó un Team");
 			atenderMensajeNewPokemon(socket_cliente);
 			break;
 		}
 		case APPEARED_POKEMON:{
+			if(tipo_proceso == P_GAMECARD){
 			// 1. Conexión de un proceso al broker.
-			log_info(logBroker, "Se conectó un Game Card.");
-			log_info(logBrokerInterno, "Se conectó un Game Card.");
-
+			log_info(logBroker, "Se conectó el Game Card %d.", id_proceso);
+			log_info(logBrokerInterno, "Se conectó el Game Card %d.", id_proceso);
+			}else{
+			// 1. Conexión de un proceso al broker.
+			log_info(logBroker, "Se conectó el Game Boy %d.", id_proceso);
+			log_info(logBrokerInterno, "Se conectó el Game Boy %d.", id_proceso);
+			}
 			atenderMensajeAppearedPokemon(socket_cliente);
 			break;
 		}

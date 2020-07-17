@@ -112,6 +112,26 @@ op_code recibirOperacion(int socket_cliente){
 	return cod_op;
 }
 
+process_code recibirTipoProceso(int socket_cliente){
+	process_code tipo_proceso;
+	int recibido = recv(socket_cliente, &tipo_proceso, sizeof(uint32_t), MSG_WAITALL);
+	//-1: error, 0: desconexión del servidor
+	if(recibido == 0 || recibido == -1){
+		return P_UNKNOWN;
+	}
+	return tipo_proceso;
+}
+
+uint32_t recibirIDProceso(int socket_cliente){
+	uint32_t id_proceso;
+	int recibido = recv(socket_cliente, &id_proceso, sizeof(uint32_t), MSG_WAITALL);
+	//-1: error, 0: desconexión del servidor
+	if(recibido == 0 || recibido == -1){
+		return P_UNKNOWN;
+	}
+	return id_proceso;
+}
+
 int enviarACK(int socket_destino){
 	t_log* logger = log_create("conexion.log", "CONEXION", 0, LOG_LEVEL_ERROR);
 
@@ -141,10 +161,12 @@ int recibirACK(int socket_origen){
  * Envía un mensaje por el socket indicado
  *
  */
-int enviarMensaje(int nroSocket,op_code operacion,t_buffer* buffer){
+int enviarMensaje(int nroSocket,op_code operacion,t_buffer* buffer, process_code tipo_proceso, uint32_t id_proceso){
 	t_paquete* paquete = malloc(sizeof(t_paquete));
 
 	paquete->codigo_operacion = operacion;
+	paquete->tipo_proceso = tipo_proceso;
+	paquete->id_proceso = id_proceso;
 	paquete->buffer = buffer;
 
 	int tamanio_a_enviar;
@@ -157,11 +179,11 @@ int enviarMensaje(int nroSocket,op_code operacion,t_buffer* buffer){
 	return enviado;
 }
 
-int enviarNewPokemon(int socket_cliente, t_new_pokemon mensaje){
+/*int enviarNewPokemon(int socket_cliente, t_new_pokemon mensaje){
 	t_buffer* buffer = serializarNewPokemon(mensaje);
 
 	return enviarMensaje(socket_cliente,NEW_POKEMON,buffer);
-}
+}*/
 int enviarSuscripcion(int nro_socket,t_suscribe suscripcion){
 
 	uint32_t bytes_enviar = sizeof(op_code) + sizeof(op_code) + sizeof(uint32_t);
@@ -191,12 +213,12 @@ int enviarSuscripcion(int nro_socket,t_suscribe suscripcion){
  * el campo id_mensaje_correlativo debe iniciarse en 0 en caso de no querer serializarlo
  *
  */
-int enviarAppearedPokemon(int socket_cliente, t_appeared_pokemon mensaje){
+int enviarAppearedPokemon(int socket_cliente, t_appeared_pokemon mensaje, process_code tipo_proceso, uint32_t id_proceso){
 	t_buffer* buffer = serializarAppearedPokemon(mensaje);
 
-	return enviarMensaje(socket_cliente,APPEARED_POKEMON,buffer);
+	return enviarMensaje(socket_cliente,APPEARED_POKEMON,buffer, tipo_proceso, id_proceso);
 }
-int enviarGetPokemon(int socket_cliente, t_get_pokemon mensaje){
+/*int enviarGetPokemon(int socket_cliente, t_get_pokemon mensaje){
 	t_buffer* buffer = serializarGetPokemon(mensaje);
 
 	return enviarMensaje(socket_cliente,GET_POKEMON,buffer);
@@ -216,7 +238,7 @@ int enviarCaughtPokemon(int socket_cliente, t_caught_pokemon mensaje){
 	t_buffer* buffer = serializarCaughtPokemon(mensaje);
 
 	return enviarMensaje(socket_cliente,CAUGHT_POKEMON,buffer);
-}
+}*/
 
 t_new_pokemon* recibirNewPokemon(int socket_cliente){
 	uint32_t size_buffer, largo_nombre, pos_x, pos_y, cantidad;
