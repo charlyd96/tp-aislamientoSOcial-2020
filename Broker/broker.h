@@ -52,36 +52,42 @@ typedef struct {
 typedef struct {
 	t_list* susc_enviados;
 	t_list* susc_ack;
+	t_list* susc_no_ack;
 	t_new_pokemon* mensaje;
 } t_nodo_cola_new;
 
 typedef struct {
 	t_list* susc_enviados;
 	t_list* susc_ack;
+	t_list* susc_no_ack;
 	t_appeared_pokemon* mensaje;
 } t_nodo_cola_appeared;
 
 typedef struct {
 	t_list* susc_enviados;
 	t_list* susc_ack;
+	t_list* susc_no_ack;
 	t_get_pokemon* mensaje;
 } t_nodo_cola_get;
 
 typedef struct {
 	t_list* susc_enviados;
 	t_list* susc_ack;
+	t_list* susc_no_ack;
 	t_localized_pokemon* mensaje;
 } t_nodo_cola_localized;
 
 typedef struct {
 	t_list* susc_enviados;
 	t_list* susc_ack;
+	t_list* susc_no_ack;
 	t_catch_pokemon* mensaje;
 } t_nodo_cola_catch;
 
 typedef struct {
 	t_list* susc_enviados;
 	t_list* susc_ack;
+	t_list* susc_no_ack;
 	t_caught_pokemon* mensaje;
 } t_nodo_cola_caught;
 
@@ -265,7 +271,8 @@ void enviarCaughtPokemonCacheados(int socket, t_suscribe* suscriptor);
 void enviarGetPokemonCacheados(int socket, t_suscribe* suscriptor);
 void enviarLocalizedPokemonCacheados(int socket, t_suscribe* suscriptor);
 
-void confirmacionDeRecepcionTeam(int socket, t_suscribe* suscribe_team);
-void confirmacionDeRecepcionGameCard(int socket, t_suscribe* suscribe_gamecard);
+void confirmacionDeRecepcionTeam(int socket, t_suscribe* suscribe_team, uint32_t id_mensaje);
+void confirmacionDeRecepcionGameCard(int socket, t_suscribe* suscribe_gamecard, uint32_t id_mensaje);
+void confirmacionDeRecepcionGameBoy(int ack, t_suscribe* suscribe_gameboy, uint32_t id_mensaje);
 
 #endif /* BROKER_H_ */
