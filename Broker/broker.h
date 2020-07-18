@@ -208,7 +208,7 @@ void atenderSuscripcionGameBoy(int socket);
 
 /// PROCESAMIENTO
 int suscribir(t_suscriptor* suscriptor, op_code cola);
-void desuscribir(int index, op_code cola);
+void desuscribir(int index, op_code cola, uint32_t id_proceso);
 
 void encolarNewPokemon(t_new_pokemon* msg);
 void encolarAppearedPokemon(t_appeared_pokemon* msg);
@@ -258,12 +258,12 @@ void controlador_de_seniales(int signal);
 void tipoYIDProceso(int socket);
 int devolverID(int socket,uint32_t*id);
 
-void enviarNewPokemonCacheados(int socket, op_code tipo_mensaje);
-void enviarAppearedPokemonCacheados(int socket, op_code tipo_mensaje);
-void enviarCatchPokemonCacheados(int socket, op_code tipo_mensaje);
-void enviarCaughtPokemonCacheados(int socket, op_code tipo_mensaje);
-void enviarGetPokemonCacheados(int socket, op_code tipo_mensaje);
-void enviarLocalizedPokemonCacheados(int socket, op_code tipo_mensaje);
+void enviarNewPokemonCacheados(int socket, t_suscribe* suscriptor);
+void enviarAppearedPokemonCacheados(int socket, t_suscribe* suscriptor);
+void enviarCatchPokemonCacheados(int socket, t_suscribe* suscriptor);
+void enviarCaughtPokemonCacheados(int socket, t_suscribe* suscriptor);
+void enviarGetPokemonCacheados(int socket, t_suscribe* suscriptor);
+void enviarLocalizedPokemonCacheados(int socket, t_suscribe* suscriptor);
 
 void confirmacionDeRecepcionTeam(int socket, t_suscribe* suscribe_team);
 void confirmacionDeRecepcionGameCard(int socket, t_suscribe* suscribe_gamecard);
