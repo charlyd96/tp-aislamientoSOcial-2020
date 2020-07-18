@@ -60,16 +60,13 @@ void* listen_routine_colas (void *colaSuscripcion){
 			while(1)
 			{
 				op_code cod_op = recibirOperacion(socket_cliente);
-				process_code tipo_proceso = recibirTipoProceso(socket_cliente);
-				uint32_t PID = recibirIDProceso(socket_cliente);
-
 				if (cod_op==OP_UNKNOWN)
 					socket_cliente = reintentar_conexion((op_code) colaSuscripcion);
 				else
 				{
-					t_new_pokemon* mensaje_new= recibirNewPokemon(socket_cliente);
-					enviarACK(socket_cliente);
-					log_info (logGamecard, "Recibido: NEW POKEMON %s %d %d %d %d",mensaje_new->nombre_pokemon,mensaje_new->pos_x,mensaje_new->pos_y,mensaje_new->cantidad,mensaje_new->id_mensaje);
+					process_code tipo_proceso = recibirTipoProceso(socket_cliente);
+					uint32_t PID = recibirIDProceso(socket_cliente);
+
 					pthread_t thread;
 					pthread_create (&thread, NULL, (void *) atender_newPokemon, &socket_cliente);
 					pthread_detach (thread);
@@ -83,16 +80,14 @@ void* listen_routine_colas (void *colaSuscripcion){
 			while(1)
 			{
 				op_code cod_op = recibirOperacion(socket_cliente);
-				process_code tipo_proceso = recibirTipoProceso(socket_cliente);
-				uint32_t PID = recibirIDProceso(socket_cliente);
 
 				if (cod_op==OP_UNKNOWN)
 					socket_cliente = reintentar_conexion((op_code) colaSuscripcion);
 				else
 				{
-					t_get_pokemon* mensaje_get= recibirGetPokemon(socket_cliente);
-					enviarACK(socket_cliente);
-					log_info (logGamecard, "Recibido: GET_POKEMON %s %d",mensaje_get->nombre_pokemon,mensaje_get->id_mensaje);
+					process_code tipo_proceso = recibirTipoProceso(socket_cliente);
+					uint32_t PID = recibirIDProceso(socket_cliente);
+					
 					pthread_t thread;
 					pthread_create (&thread, NULL, (void *) atender_getPokemon, &socket_cliente);
 					pthread_detach (thread);
@@ -105,19 +100,16 @@ void* listen_routine_colas (void *colaSuscripcion){
 			while(1)
 			{
 				op_code cod_op = recibirOperacion(socket_cliente);
-				process_code tipo_proceso = recibirTipoProceso(socket_cliente);
-				uint32_t PID = recibirIDProceso(socket_cliente);
 				if (cod_op==OP_UNKNOWN)
 					socket_cliente = reintentar_conexion((op_code) colaSuscripcion);
 				else
 				{
-				t_catch_pokemon* mensaje_catch= recibirCatchPokemon(socket_cliente);
-				enviarACK(socket_cliente);
+					process_code tipo_proceso = recibirTipoProceso(socket_cliente);
+					uint32_t PID = recibirIDProceso(socket_cliente);
 
-				log_info (logGamecard, "Recibido: CATCH_POKEMON %s %d %d",mensaje_catch->nombre_pokemon,mensaje_catch->pos_x,mensaje_catch->pos_y,mensaje_catch->id_mensaje);
-				pthread_t thread;
-				pthread_create (&thread, NULL, (void *) atender_catchPokemon, &socket_cliente);
-				pthread_detach (thread);
+					pthread_t thread;
+					pthread_create (&thread, NULL, (void *) atender_catchPokemon, &socket_cliente);
+					pthread_detach (thread);
 				}
 			} break;
 		}
@@ -325,31 +317,31 @@ t_block* crear_blocks(t_new_pokemon* new_pokemon){
     
     printf("escribir: ");
     char* texto = string_from_format("%lu-%lu=%lu\n",new_pokemon->pos_x,new_pokemon->pos_y,new_pokemon->cantidad);
-	largo_texto = strlen(texto) - 1;
+	largo_texto = strlen(texto);
 	log_info(logInterno, "Se escribe %s -> Tamaño: %d", texto, largo_texto);
 	// Guardo el largo del texto para la metadata
 	info_block->size = largo_texto;
 
 	cant_bloques = cantidad_bloques(largo_texto, block_size);
-	int largo = sizeof(int) * cant_bloques;
-	printf("largo string: %d",largo);
-	blocks_text = malloc(largo*(sizeof(int)+1)+1);
+	// int largo = sizeof(int) * cant_bloques; //???
+	// printf("largo string: %d",largo);
+	// blocks_text = malloc(largo*(sizeof(int)+1)+1);
 	blocks_text = string_new();
-	printf("largo texto bloque: %d\n",largo*(sizeof(int)+1)+1);
+	// printf("largo texto bloque: %d\n",largo*(sizeof(int)+1)+1); //???
 
 	string_append(&blocks_text,"[");
 	printf("block text: %s\n",blocks_text);
-	printf("cantidad de bloques %d\n", cant_bloques);
+	// printf("cantidad de bloques %d\n", cant_bloques);
 	char* bitmap = malloc(total_bloques+1);
 	bitmap = get_bitmap(cant_bloques);
-	printf("\nfile contents before:\n%s \n", bitmap);
+	printf("\nBitmap antes de operar:\n%s \n", bitmap);
 
 	for(int i = 0; i < total_bloques && cant_bloques > contador_avance_bloque; i++) /* replace characters  */
 	{
+		printf("i: %d, contador_avance_bloque: %d\n",i,contador_avance_bloque);
 		if (bitmap[i] == '0') {
-			printf("c_bloques: %d / contador: %d\n",cant_bloques,contador_avance_bloque);
 			block_number = i;
-			printf("valor:%c -bloque modificado: %d\n",bitmap[i],block_number);
+			printf("bitmap[%d]:%c -bloque victima: %d\n",i,bitmap[i],block_number);
 			texto = escribir_bloque(block_number, block_size, texto, &largo_texto);
 
 			bitmap[i] = '1';
@@ -362,11 +354,11 @@ t_block* crear_blocks(t_new_pokemon* new_pokemon){
 		}
 		
 	}
-
-	printf("despues de escribir bloquesp");
 	string_append(&blocks_text,"]");
-	
-    printf("%d", largo_texto);	
+	printf("bloques usados %s\n",blocks_text);
+	printf("\nBitmap despues de operar:\n%s \n", bitmap);
+
+
     info_block->blocks=malloc(strlen(blocks_text)+1);
 	strcpy(info_block->blocks,blocks_text);
 	return info_block;
@@ -388,7 +380,7 @@ char* escribir_bloque(int block_number, int block_size, char* texto, int* largo_
 		
 		memcpy(block_texto, texto, (*largo_texto));
 	}
-	log_info(logInterno, "Se escribe en el bloque %d -> %s -> Tamaño: %d",block_number, block_texto, (*largo_texto)-1);
+	log_info(logInterno, "Se escribe en el bloque %d -> %s -> Tamaño: %d",block_number, block_texto, (*largo_texto));
 
 	fputs(block_texto,archivo);
 	texto_final = string_substring_from(texto,strlen(block_texto));
@@ -491,11 +483,23 @@ void crear_directorio_pokemon(char* pokemon){
 
 void atender_getPokemon(int *socket){
 	t_get_pokemon* get_pokemon= recibirGetPokemon(socket);
+	int enviado = enviarACK(*socket);
+	if(enviado > 0){
+		log_info(logGamecard,"Se devolvió el ACK");		
+	}else{
+		log_info(logGamecard,"ERROR al devolver ACK");
+	}
 	log_info(logGamecard, "Recibi GET_POKEMON %s [%d]\n",get_pokemon->nombre_pokemon,get_pokemon->id_mensaje);
 }
 
 void atender_catchPokemon(int *socket){
 	t_catch_pokemon* catch_pokemon= recibirCatchPokemon(socket);
+	int enviado = enviarACK(*socket);
+	if(enviado > 0){
+		log_info(logGamecard,"Se devolvió el ACK");		
+	}else{
+		log_info(logGamecard,"ERROR al devolver ACK");
+	}
 	log_info(logGamecard, "Recibi CATCH_POKEMON %s %d %d [%d]\n",catch_pokemon->nombre_pokemon,catch_pokemon->pos_x,catch_pokemon->pos_y,catch_pokemon->id_mensaje);
 }
 
@@ -726,7 +730,7 @@ void* concatenar_bloques(int largo_texto, char ** lista_bloques){ //Acá puede p
 int cantidad_bloques(int largo_texto, int block_size){
 	printf("largo_texto: %d block_size:%d \n",largo_texto, block_size);
 	float div = (float)largo_texto/(float)block_size;
-	printf("floate: %f \n",div);
+	//printf("floate: %f \n",div);
 	double cant = ceil(div);
 	return (int)cant;
 }
