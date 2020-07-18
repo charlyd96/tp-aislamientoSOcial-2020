@@ -282,7 +282,7 @@ void atender_newPokemon(int *socket){
 		char* nuevo_buffer = agregar_pokemon(buffer, new_pokemon);
 
 		t_block* info_block = actualizar_datos(nuevo_buffer, lista_bloques);
-
+		crear_metadata(new_pokemon->nombre_pokemon,info_block);
 		//Cierro archivo
 		config_set_value(data_config,"OPEN","N");
 		config_save(data_config);
@@ -432,7 +432,6 @@ void bloques_disponibles(int cantidad,t_list* blocks){
 
 /*
 void modificar_bitmap(char* bitmap, ){
-
 }
 */
 
@@ -557,9 +556,16 @@ char* agregar_pokemon(char *buffer, t_new_pokemon* new_pokemon){
 		return texto_concatenado;
 	}
 	else{
-		string_append_with_format(&buffer,"\n%s%lu",posicion,new_pokemon->cantidad);
-		printf("Nuevo texto: %s",buffer);
-		return buffer;
+		texto_concatenado = malloc(largo_buffer+strlen(posicion)+sizeof(uint32_t));
+		texto_concatenado = string_new();
+		string_append(&texto_concatenado,buffer);
+		printf("antes de agregar nueva posicion: %s\n",texto_concatenado);
+		string_append(&texto_concatenado,"\n");
+		char * nueva_posicion = string_from_format("%s%lu",posicion,new_pokemon->cantidad);
+		printf("nueva posicion: %s",nueva_posicion);
+		string_append_with_format(&texto_concatenado,nueva_posicion);
+		printf("Nuevo texto CON BARRA N: %s",texto_concatenado);
+		return texto_concatenado;
 	}
 
 }
@@ -618,7 +624,7 @@ t_block* actualizar_datos (char* texto,char ** lista_bloques) {
 	for (int i=0; *(lista_bloques+i) != NULL; i++) {
 		block_number = atoi(*(lista_bloques+i));
 
-		escribir_bloque(block_number, block_size, texto, &largo_texto);
+		texto = escribir_bloque(block_number, block_size, texto, &largo_texto);
 
 		contador_avance_bloque++;
 
@@ -710,61 +716,3 @@ int cantidad_bloques(int largo_texto, int block_size){
 	double cant = ceil(div);
 	return (int)cant;
 }
-/*
-void operateNewPokemonFile(t_new_pokemon* newPokemon, char* completePath) {
-	pokemonMetadata pokemonMetadata = readPokemonMetadata(completePath);
-
-	if(string_equals_ignore_case(pokemonMetadata.isOpen, "N")) {
-		game_card_logger_info("El archivo no esta abierto por ningun proceso, se procede a abrir el mismo.");
-		
-		pthread_mutex_lock(&MUTEX_METADATA);
-		updateOpenFileState(newPokemon->nombre_pokemon, "Y");
-		pthread_mutex_unlock(&MUTEX_METADATA);
-		
-		t_list* listBlocks = stringBlocksToList(pokemonMetadata.blocks);
-		t_list* pokemonLines = readPokemonLines(listBlocks);
-		if (coordinateExists(newPokemon->pos_x, newPokemon->pos_y, pokemonLines) == 1) {
-			addTotalPokemonIfCoordinateExist(newPokemon, pokemonLines);
-		} else {
-			blockLine* newNode = createBlockLine(newPokemon->pos_x, newPokemon->pos_y, newPokemon->cantidad);
-			list_add(pokemonLines, newNode);
-		}
-		
-		char* stringToWrite = formatListToStringLine(pokemonLines);
-		int blocksRequired = cuantosBloquesOcupa(stringToWrite);
-		char* stringLength = string_itoa(strlen(stringToWrite));
-
-		if (freeBlocks > blocksRequired) {
-			// Necesito pedir bloques
-			if (blocksRequired > list_size(listBlocks)) {
-				int extraBlocksNeeded = blocksRequired - list_size(listBlocks);
-				t_list* extraBlocks = requestFreeBlocks(extraBlocksNeeded);
-				// Agrego los nuevos bloques en la lista original
-				list_add_all(listBlocks, extraBlocks);
-				list_destroy(extraBlocks);
-			} 
-			writeBlocks(stringToWrite, listBlocks);
-			char* metadataBlocks = formatToMetadataBlocks(listBlocks);
-			
-			pthread_mutex_lock(&MUTEX_METADATA);
-			updatePokemonMetadata(newPokemon->nombre_pokemon, "N", stringLength, metadataBlocks, "N");
-			pthread_mutex_unlock(&MUTEX_METADATA);
-
-			game_card_logger_info("Operacion NEW_POKEMON terminada correctamente");
-			free(metadataBlocks);
-		} else {
-			game_card_logger_error("No hay bloques disponibles. No se puede hacer la operacion");
-		}
-
-		list_destroy_and_destroy_elements(pokemonLines, freeBlockLine);
-		free(stringToWrite);
-		free(stringLength);
-	} else {
-		game_card_logger_info("Archivo abierto, se procede a reintentar luego de %d segundos", game_card_config->tiempo_de_reintento_operacion);
-		sleep(game_card_config->tiempo_de_reintento_operacion);
-		operateNewPokemonFile(newPokemon, completePath, freeBlocks);
-	}
-
-	free(pokemonMetadata.blocks);
-	free(pokemonMetadata.isOpen);
-}*/
