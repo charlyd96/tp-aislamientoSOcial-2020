@@ -33,7 +33,7 @@ int reintentar_conexion(op_code colaSuscripcion)
 	t_suscribe suscripcion;
 	suscripcion.tipo_suscripcion=SUSCRIBE_GAMECARD;
 	suscripcion.cola_suscribir=(int)colaSuscripcion;
-	suscripcion.id_proceso= 40;
+	suscripcion.id_proceso= ID_PROCESO;
 	suscripcion.timeout=0;
 
 	int enviado=enviarSuscripcion (socket_cliente, suscripcion);
@@ -146,11 +146,18 @@ void subscribe()
 	pthread_detach (thread3);
 }
 
-int main(void){
-
+int main(int argc, char** argv){
+	logInterno = log_create("gamecardInterno.log", "GamecardInterno", 1, LOG_LEVEL_INFO);
+	if(argc != 2){
+		log_error(logInterno,"No se ha proporcionado un id. Ej: ./Gamecard 1");
+		log_destroy(logInterno);
+		exit(-1);
+	}
+	ID_PROCESO = atoi(argv[1]);
+	log_info(logInterno,"ID seteado %d",ID_PROCESO);
 
 	logGamecard = log_create("gamecard.log", "Gamecard", 1, LOG_LEVEL_INFO);
-	logInterno = log_create("gamecardInterno.log", "GamecardInterno", 1, LOG_LEVEL_INFO);
+
 	crear_config_gamecard();
 	leer_FS_metadata(config_gamecard);
 	printf("ip %s:%s\n",config_gamecard->ip_gamecard,config_gamecard->puerto_gamecard);

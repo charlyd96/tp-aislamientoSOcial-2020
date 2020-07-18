@@ -30,7 +30,7 @@
 
 
 char* pathGamecardConfig = "/home/utnso/workspace/tp-2020-1c-aislamientoSOcial/GameCard/gameCard.config";
-
+uint32_t ID_PROCESO;
 typedef struct{
 	char* directory;
 	int size;
