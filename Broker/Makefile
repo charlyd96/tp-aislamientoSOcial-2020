@@ -22,7 +22,7 @@ ifeq ($(config),debug)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -g -Wall -Wextra
   ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m32 -g -Wall -Wextra
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
-  LIBS += ../SharedLibrary/Debug/libSharedLibrary.so -lcommons -lpthread
+  LIBS += ../SharedLibrary/Debug/libSharedLibrary.so -lcommons -lpthread -lm
   LDDEPS += ../SharedLibrary/Debug/libSharedLibrary.so
   ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -Wl,-rpath,'$$ORIGIN/../../SharedLibrary/Debug' -m32
   LINKCMD = $(CC) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
@@ -49,7 +49,7 @@ ifeq ($(config),release)
   ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -O3
   ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m32 -O3
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
-  LIBS += ../SharedLibrary/Release/libSharedLibrary.so -lcommons -lpthread
+  LIBS += ../SharedLibrary/Release/libSharedLibrary.so -lcommons -lpthread -lm
   LDDEPS += ../SharedLibrary/Release/libSharedLibrary.so
   ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib32 -Wl,-rpath,'$$ORIGIN/../../SharedLibrary/Release' -m32 -s
   LINKCMD = $(CC) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)

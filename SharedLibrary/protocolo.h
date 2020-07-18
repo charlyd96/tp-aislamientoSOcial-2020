@@ -30,6 +30,7 @@ typedef enum {
 } op_code;
 
 typedef enum {
+	P_GAMEBOY,
 	P_BROKER,
 	P_TEAM,
 	P_GAMECARD,
@@ -51,6 +52,8 @@ typedef struct {
 
 typedef struct {
 	op_code codigo_operacion;
+	process_code tipo_proceso;
+	uint32_t id_proceso;
 	t_buffer* buffer;
 } t_paquete;
 
@@ -79,7 +82,7 @@ typedef struct {
 	uint32_t pos_x;
 	uint32_t pos_y;
 	uint32_t id_mensaje_correlativo;
-} t_appeared_pokemon;
+} t_appeared_pokemon; 
 
 typedef struct {
 	uint32_t atrapo_pokemon;
@@ -96,6 +99,8 @@ typedef struct {
 typedef struct{
 	op_code tipo_suscripcion;
 	op_code cola_suscribir;
+	uint32_t id_proceso;
 	uint32_t timeout; //Solo en caso de gameboy
 } t_suscribe;
+
 #endif /* PROTOCOLO_H_ */

@@ -20,44 +20,71 @@
 #define LIBERAR 0
 
 
-
-
 /* Recursos compartidos */
-t_list *BlockedQueue;
-sem_t qb_sem1;
-sem_t qb_sem2;
+
 sem_t using_cpu;
 extern sem_t trainer_count;
+extern sem_t trainer_deadlock_count;
+
 extern t_list *cola_caught;
 extern sem_t qcaught1_sem;
 extern sem_t qcaught2_sem;
 
-t_list *global_objective;
+uint32_t ID_proceso;
 
+extern t_list *ID_localized;
+
+
+extern t_list *deadlock_list;
+extern sem_t deadlock_sem1;
+extern sem_t deadlock_sem2;
+
+t_list *global_objective;
+//sem_t global_sem1;
+//sem_t global_sem2;
+pthread_mutex_t global_sem;
+
+t_list *aux_global_objective;
+//sem_t auxglobal_sem1;
+//sem_t auxglobal_sem2;
+pthread_mutex_t auxglobal_sem;
+
+t_list *new_global_objective;
+pthread_mutex_t new_global_sem;
+
+t_list *aux_new_global_objective;
+pthread_mutex_t aux_new_global_sem;
+
+t_list *mapped_pokemons;
 sem_t poklist_sem;
 sem_t poklist_sem2;
-t_list *mapped_pokemons;
+
+t_list *mapped_pokemons_aux;
+sem_t poklistAux_sem1;
+sem_t poklistAux_sem2;
+
 
 extern t_log *internalLogTeam;
 extern t_log *logTeam;
 
-/* Errores para identificar estado en la ejecución de los hilos - para RR y SJF */
+int ciclos_cpu;
+
+t_list *ReadyQueue;
+sem_t qr_sem1;
+sem_t qr_sem2;
+
+
+/* Errores para identificar estado en la ejecución de los hilos - para RR y SJF - específico de cada ráfaga*/
 typedef enum
 {
     FINISHED,       //Finalizo su ráfaga de ejecución correctamente
-    PENDING,        //Fue desalojado por el planificador y aún tiene instrucciones por ejecutar
+    PENDING,        //Fue desalojado por el planificador y aún tiene instrucciones por ejecutar de la ŕafaga
+    EXECUTING       //Se encuentra ejecutando su ráfaga
 } exec_error;
 
 
 
-typedef struct
-{
-	char *broker_IP;
-	char *broker_port;
-    u_int32_t tiempo_reconexion;
-	op_code colaSuscripcion;   
-} conexionColas;
-
+extern Config *config;
 
 /* Pokemones en el mapa interno del Team*/
 typedef struct
@@ -74,49 +101,33 @@ typedef struct
     uint32_t cant;
 } global_pokemons;
 
-typedef struct
-{
-    /* Configuraciones globales */
-    Config *config;
+// Lista de entrenadores
+t_list *trainers;
 
-    /* Sobre el Team */
-    u_int32_t team_size;
-
-    t_list *trainers;
-    t_list *ReadyQueue;
-    sem_t qr_sem1;
-    sem_t qr_sem2;
-
-    pthread_t trhandler_id;
-
-} Team;
 
 /*Genera lista con strings de pokemones que conforman el objetivo global*/
 t_list* Team_GET_generate (void);
 
-u_int32_t Trainer_handler_create(Team *this_team);
+int Trainer_handler_create(void);
 
 
 /*  Inicializa el proceso Team   */
-Team* Team_Init(void);
+void Team_Init(void);
 
+void* listen_routine_gameboy (void);
 
+void send_trainer_to_exec (void);
 
-void* listen_routine_gameboy (void *config);
+void subscribe (void) ;
 
-void send_trainer_to_exec (Team* this_team, char *planning_algorithm);
-
-exec_error fifo_exec (Team* this_team);
-
-void subscribe (Config *config) ;
-
-void listen_new_pokemons (Config *config);
-
-void liberar_listas(Team *this_team);
+void listen_new_pokemons (void);
 
 void imprimir_lista (t_list *get_list);
 
-void enviar_mensajes_get (Config *config, t_list *get_list);
+void enviar_mensajes_get (t_list *get_list);
 
 void* listen_routine_colas (void *conexion);
+
+void informarIDlocalized(uint32_t id);
+
 #endif /* TEAM_H_ */

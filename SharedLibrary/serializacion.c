@@ -9,12 +9,16 @@
 
 void* serializarPaquete(t_paquete* paquete, int *bytes)
 {
-	int largo = sizeof(op_code) + sizeof(uint32_t) + paquete->buffer->size;
+	int largo = sizeof(op_code) + sizeof(process_code) + 2 * sizeof(uint32_t) + paquete->buffer->size;
 	int offset = 0;
 	void * serializado = malloc(largo);
 
 	memcpy(serializado + offset, &(paquete->codigo_operacion), sizeof(paquete->codigo_operacion));
 	offset += sizeof(paquete->codigo_operacion);
+	memcpy(serializado + offset, &(paquete->tipo_proceso), sizeof(paquete->tipo_proceso));
+	offset += sizeof(paquete->tipo_proceso);
+	memcpy(serializado + offset, &(paquete->id_proceso), sizeof(paquete->id_proceso));
+	offset += sizeof(paquete->id_proceso);
 	memcpy(serializado + offset, &(paquete->buffer->size), sizeof(paquete->buffer->size));
 	offset += sizeof(paquete->buffer->size);
 	memcpy(serializado + offset, paquete->buffer->stream, paquete->buffer->size);
