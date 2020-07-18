@@ -104,7 +104,7 @@ int aceptarCliente(int socket_servidor){
 op_code recibirOperacion(int socket_cliente){
 	op_code cod_op;
 	int recibido = recv(socket_cliente, &cod_op, sizeof(uint32_t), MSG_WAITALL);
-	if(recibido == 0){
+	if(recibido == 0 || recibido == -1){
 		return OP_UNKNOWN;
 	}
 	return cod_op;
