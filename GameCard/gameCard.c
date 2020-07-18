@@ -415,21 +415,30 @@ char* escribir_bloque(int block_number, int block_size, char* texto, int* largo_
 	FILE *archivo = fopen (path_metadata, "w+");
 	printf("texto: %s largo_texto: %d  block_size:%d \n",texto,(*largo_texto),block_size);
 	char* block_texto;
-	char* texto_final;  
+	char* texto_final;
+	int bytes_copiados = 0;  
 	if((*largo_texto) > block_size){
 		puts("se usa largo bloque\n");
-		block_texto = malloc(block_size);
+		bytes_copiados = block_size;
+
+		block_texto = malloc(block_size + 1);
 		memcpy(block_texto, texto, block_size);
+
+		//Agrego un \0 porque fputs sino no sabe hasta donde copiar (agrega basura al final)
+		*(block_texto + block_size) = '\0';
 		}
 	else{
+		bytes_copiados = *largo_texto;
 		block_texto = malloc((*largo_texto));
 		
 		memcpy(block_texto, texto, (*largo_texto));
+		//Agrego un \0 porque fputs sino no sabe hasta donde copiar (agrega basura al final)
+		*(block_texto + (*largo_texto)) = '\0';
 	}
-	log_info(logInterno, "Se escribe en el bloque %d -> %s -> Tamaño: %d",block_number, block_texto, (*largo_texto));
+	log_info(logInterno, "Se escribe en el bloque %d -> %s",block_number, block_texto);
 
 	fputs(block_texto,archivo);
-	texto_final = string_substring_from(texto,strlen(block_texto));
+	texto_final = string_substring_from(texto,bytes_copiados);
 	(*largo_texto) = strlen(texto_final);
 	log_info(logInterno, "Path: %s \n Texto: %s \n largo_texto: %d\n",path_metadata,texto_final,(* largo_texto));
 	fclose (archivo);
