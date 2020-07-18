@@ -26,6 +26,23 @@ extern pthread_mutex_t ID_caught_sem;
 extern t_list *ID_localized;
 extern pthread_mutex_t ID_localized_sem;
 
+extern bool win;
+
+extern sem_t terminar_appeared;
+
+sem_t terminar_caught;
+
+extern int socketGameboy;
+
+extern int socketAppeared;
+
+extern int socketLocalized;
+
+extern int socketCaught;
+
+extern int socketGameboyCliente;
+
+t_list *global_for_free;
 
 t_log *internalLogTeam;
 t_log *logTeam;
@@ -58,8 +75,6 @@ planificacion algoritmo;
 
 extern t_list *trainers;
 
-
-extern int ciclos_cpu;
 /*Para crear puntero a archivo de configuración*/
 t_config *get_config(void);
 
@@ -77,7 +92,16 @@ void _imprimir_lista (void *elemento);
 /*Para liberar memoria*/
 void  free_split (char **string);
 void _free_sub_list (void* elemento);
-void liberar_listas (void);
+void liberar_listas (t_list *lista);
+void cerrar_conexiones(void);
+
+void liberar_lista_global(void);
+
+void liberar_entrenadores(void);
 
 void remover_objetivos_globales_conseguidos(t_list *global_bag);
+
+
+void imprimir_entrenador(void);
+
 #endif /* INCLUDE_TEAMCONFIG_H_ */

@@ -43,10 +43,19 @@ int main(int argc, char **argv)
     						  //crea el hilo de cada entrenador
 
     //liberar semaforos
-    usleep (200); //Para que se imprima el último log
+   // usleep (200); //Para que se imprima el último log
     /* Solo para probar la correcta liberación de las listas*/
     if (LIBERAR ==1)
-    liberar_listas();
+    win=true;
+    //sleep (2);
+
+    cerrar_conexiones();
+
+    //liberar_lista_global();
+liberar_listas (global_for_free);
+    //liberar_entrenadores();
+imprimir_entrenador();
+liberar_listas(mapped_pokemons);
 
     return 0;
 

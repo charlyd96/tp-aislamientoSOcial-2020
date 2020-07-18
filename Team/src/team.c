@@ -19,7 +19,7 @@
 /* Initializing all Team components */
 void Team_Init(void)
 {
-
+    newTrainerToReady=false; //Mejorar la ubiocación de esa instrucción
     config= malloc (sizeof (Config));
     config->team_config = get_config();
     sem_init (&trainer_count, 0, 0);					//*********Mejorar la ubicación de esta instrucción***************//
@@ -141,7 +141,6 @@ void RR_exec (void)
 {
        while (1) //Este while debería ser "mientras team no haya ganado"
        {
-
             sem_wait ( &qr_sem1 );
             sem_wait ( &qr_sem2 );
             Trainer* trainer= list_remove (ReadyQueue, 0);
@@ -155,36 +154,70 @@ void RR_exec (void)
             {
             send_trainer_to_ready(trainers, trainer->index,trainer->actual_operation);
             }
-            else trainer->ejecucion = FINISHED;
+            //else trainer->ejecucion = FINISHED;
 
-            ciclos_cpu=0;
+            trainer->rafagaEjecutada=0;
        }
 }
 
 void SJFSD_exec (void)
 {
-    int sizeReady=0;
-    int sizeReadyAnt=0; 
        while (1) //Este while debería ser "mientras team no haya ganado"
        {
+                      puts ("*************\n**********************\n*****************\n****************SJF-SD************\n***********************\n************************vv");
+
             sem_wait ( &qr_sem1 );
             sem_wait ( &qr_sem2 );
-            sizeReady=list_size(ReadyQueue);
-            if (sizeReady != sizeReadyAnt+1) //Se le suma uno porque el list_remove saca el entrenador que está por ejecutar
+            if (newTrainerToReady)
             ordenar_lista_ready();
-            
+
+            newTrainerToReady=false;
             Trainer* trainer= list_remove (ReadyQueue, 0);       
             trainer->actual_status= EXEC; //Verificar si esto puede salir de la zona crítica
             sem_post ( &qr_sem2 );
-            sizeReadyAnt=sizeReady;
+
             sem_post ( &(trainer->trainer_sem) );
             sem_wait (&using_cpu);
             trainer->rafagaEstimada = actualizar_estimacion(trainer);
             trainer->rafagaEjecutada=0;
-            printf ("************************************************************************Nueva ráfaga estimada (%d): %f******************************\n",trainer->index, trainer->rafagaEstimada);
+        }
+}
+
+void SJFCD_exec (void)
+{
+    puts ("\n\n\n\n\n\n\n\n\n\n\n\n\n\n**************SJFCD - CON DESALOJO ----------------------------------\n\n\n\n\n\n\n\n");
+       while (1) //Este while debería ser "mientras team no haya ganado"
+       {
+            sem_wait ( &qr_sem1 );
+            sem_wait ( &qr_sem2 );
+            if (newTrainerToReady)
+            ordenar_lista_ready();
+            
+            newTrainerToReady=false;
+            Trainer* trainer= list_remove (ReadyQueue, 0);       
+            trainer->actual_status= EXEC; //Verificar si esto puede salir de la zona crítica
+            sem_post ( &qr_sem2 );
+            
+            trainer->rafagaAux=trainer->rafagaEstimada;
+            sem_post ( &(trainer->trainer_sem) );
+            sem_wait (&using_cpu);
+            if (trainer->ejecucion==FINISHED)
+            {
+            trainer->rafagaEstimada = trainer->rafagaAux;
+            trainer->rafagaEstimada = actualizar_estimacion(trainer);
+            trainer->rafagaEjecutada=0;
+            }
+            else if (trainer->ejecucion==PENDING)
+            {
+            newTrainerToReady=true;
+            list_add (ReadyQueue, trainer);
+            sem_post (&qr_sem2);
+            sem_post (&qr_sem1);
+            } 
 
         }
 }
+
 
 
 void ordenar_lista_ready (void)
@@ -200,7 +233,9 @@ void ordenar_lista_ready (void)
 
 double  actualizar_estimacion (Trainer *trainer)
 {
-    return ( (config->alpha)*(trainer->rafagaEjecutada) + (1-config->alpha)*(trainer->rafagaEstimada) ); 
+    double nuevaRafaga=(config->alpha)*(trainer->rafagaEjecutada) + (1-config->alpha)*(trainer->rafagaEstimada);
+    printf ("************************************************************************Nueva ráfaga estimada (%d): %f******************************\n",trainer->index, nuevaRafaga);
+    return (nuevaRafaga) ; 
 }
 
 
@@ -278,24 +313,22 @@ int Trainer_handler_create ()
 
 }
 
-
-
 // ============================================================================================================
-//    ***** Función que está a la espera de la llegada de nuevos pokemons y los guarda en una lista *****
-//          ***** Recibe una estructura de tipo Team. Añade nodos con data ingresda por consola ****
+//    *************** Función que abre un socket de escucha para recibir mensajes del Gameboy *****************
 // ============================================================================================================
 
-
-
-void listen_new_pokemons ()
+void listen_new_pokemons (void)
 {
     pthread_t thread; //OJO. Esta variable se está perdiendo
     pthread_create (&thread, NULL, (void*)listen_routine_gameboy , NULL);
     pthread_detach (thread);
 } 
 
+// ============================================================================================================
+//    *************** Función que crea tres hilos para manejar las suscripciones a cada cola ******************
+// ============================================================================================================
 
-void subscribe ()
+void subscribe (void)
 {
 	pthread_t thread1; //OJO. Esta variable se está perdiendo
 	pthread_create (&thread1, NULL, listen_routine_colas , (int*)APPEARED_POKEMON);

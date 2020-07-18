@@ -12,13 +12,18 @@
 void * listen_routine_gameboy ()
 {
 	
-    int socket= crearSocketServidor (config->team_IP, config->team_port);
+    socketGameboy= crearSocketServidor (config->team_IP, config->team_port);
     while (1) //Este while en realidad debería llevar como condición, que el proceso Team no haya ganado.
 		{
 		//pthread_t thread;
-		int socket_cliente = aceptarCliente (socket);
-		printf ("Socket cliente: %d\n", socket_cliente);
-		get_opcode(socket_cliente);
+		socketGameboyCliente = aceptarCliente (socketGameboy);
+		if (win)
+		{
+			puts ("fin escucha");
+			break;
+		} 
+		printf ("Socket cliente: %d\n", socketGameboyCliente);
+		get_opcode(socketGameboyCliente);
 		//pthread_create (&thread, NULL, (void *) get_opcode, (int*)socket_cliente);
 		//pthread_detach (thread);
 		} 
@@ -70,25 +75,14 @@ void process_request_recv (op_code cod_op, int socket_cliente)
 			default: log_error (internalLogTeam, "Operacion no reconocida por el sistema");
 		}
 }
-/*
-int send_catch (Trainer *trainer)
-{
-	pthread_t thread;
-	void *retorno;
-	
-	pthread_create(&thread, NULL, (void *) send_catch_routine, trainer);
-	pthread_join(thread,&retorno); //Se bloquea el hilo del entrenador
 
-	return (*(int*)retorno);
-}*/
 
-//void * send_catch_routine (void * train)
 int send_catch (Trainer *trainer)
 {	
 	trainer->actual_status = BLOCKED_WAITING_REPLY;
 		
-	char *IP= trainer->config->broker_IP;
-	char *puerto= trainer->config->broker_port;
+	char *IP= config->broker_IP;
+	char *puerto= config->broker_port;
 	t_catch_pokemon message;
 
 	int socket = crearSocketCliente (IP,puerto);
@@ -104,6 +98,7 @@ int send_catch (Trainer *trainer)
 		message.id_mensaje=0;
 
 		enviarCatchPokemon (socket, message);
+		trainer->ejecucion=FINISHED;
 		sem_post(&using_cpu); //Disponibilizar la CPU para otro entrenador
 		puts ("esperando ID");
 		recv (socket,&(message.id_mensaje),sizeof(uint32_t),MSG_WAITALL); //Recibir ID
@@ -116,44 +111,54 @@ int send_catch (Trainer *trainer)
 																			 	  //el planificador de la CPU lo habilite nuevamente 																	
 	}	
 	log_info (logTeam,"Fallo en la conexion al Broker. Se efectuará acción por defecto");
+	trainer->ejecucion=FINISHED;
 	sem_post(&using_cpu); //Disponibilizar la CPU para otro entrenador
+
 	return (DEFAULT_CATCH);
 		 
 }
 
 void* listen_routine_colas (void *colaSuscripcion)
 
-{	int socket_cliente;
-	if ( (op_code)colaSuscripcion != LOCALIZED_POKEMON)
-	socket_cliente =reintentar_conexion((op_code)colaSuscripcion);
+{	//int socket_cliente;
+	//if ( (op_code)colaSuscripcion != LOCALIZED_POKEMON)
+	//socket_cliente =reintentar_conexion((op_code)colaSuscripcion);
 
 	switch ((op_code)colaSuscripcion)
 	{
 		case APPEARED_POKEMON:
 		{
-			while(1)
+			socketAppeared=-1;
+			while(!win)
 			{
-				op_code cod_op = recibirOperacion(socket_cliente);
+				op_code cod_op = recibirOperacion(socketAppeared);
 				if (cod_op==OP_UNKNOWN)
-				socket_cliente = reintentar_conexion((op_code) colaSuscripcion);
+				{
+					sem_wait(&terminar_appeared);
+					socketAppeared = reintentar_conexion((op_code) colaSuscripcion);
+					sem_post(&terminar_appeared);
+				}
 				else
 				{
-				t_appeared_pokemon* mensaje_appeared= recibirAppearedPokemon(socket_cliente);
-				enviarACK(socket_cliente);
-				log_info (internalLogTeam, "Mensaje recibido: %s %s %d %d",colaParaLogs((int)cod_op),mensaje_appeared->nombre_pokemon,mensaje_appeared->pos_x,mensaje_appeared->pos_y);
-				pthread_t thread;
-				pthread_create (&thread, NULL, (void *) procesar_appeared, mensaje_appeared);
-				pthread_detach (thread);	
+					t_appeared_pokemon* mensaje_appeared= recibirAppearedPokemon(socketAppeared);
+					enviarACK(socketAppeared);
+					log_info (internalLogTeam, "Mensaje recibido: %s %s %d %d",colaParaLogs((int)cod_op),mensaje_appeared->nombre_pokemon,mensaje_appeared->pos_x,mensaje_appeared->pos_y);
+					pthread_t thread;
+					pthread_create (&thread, NULL, (void *) procesar_appeared, mensaje_appeared);
+					pthread_detach (thread);	
 				}
 			
-			} break;
+			}
+			puts ("cerrando appearead"); 
+			break;
 		}
 
 		case LOCALIZED_POKEMON:
 		{
-			while(0)
+			/*while(0)
 			{
 				op_code cod_op = recibirOperacion(socket_cliente);
+				if (win) break;
 				if (cod_op==OP_UNKNOWN)
 				socket_cliente = reintentar_conexion((op_code) colaSuscripcion);
 				else 
@@ -165,26 +170,31 @@ void* listen_routine_colas (void *colaSuscripcion)
 				//pthread_create (&thread, NULL, (void *) procesar_caught, (int*)mensaje_caught->id_mensaje_correlativo);
 				//pthread_detach (thread);	
 				}				
-			} break;
+			}*/ break;
 		}
 
 		case CAUGHT_POKEMON:
-		{		//sleep(10);						
-			while(1)
+		{	
+			socketCaught=-1;					
+			while(!win)
 			{
-				op_code cod_op = recibirOperacion(socket_cliente);
+				op_code cod_op = recibirOperacion(socketCaught);
 				if (cod_op==OP_UNKNOWN)
-				socket_cliente = reintentar_conexion((op_code) colaSuscripcion);
+				{
+					sem_wait(&terminar_caught);
+					socketCaught = reintentar_conexion((op_code) colaSuscripcion);
+					sem_post(&terminar_caught);
+				}
 				else
 				{
-				t_caught_pokemon* mensaje_caught= recibirCaughtPokemon(socket_cliente);
-				enviarACK(socket_cliente);
-				log_info (internalLogTeam, "Mensaje recibido: %s %d %d",colaParaLogs((int)cod_op),mensaje_caught->atrapo_pokemon, mensaje_caught->id_mensaje_correlativo);
-				pthread_t thread;
-				pthread_create (&thread, NULL, (void *) procesar_caught, mensaje_caught);
-				pthread_detach (thread);
+					t_caught_pokemon* mensaje_caught= recibirCaughtPokemon(-1);
+					enviarACK(socketCaught);
+					log_info (internalLogTeam, "Mensaje recibido: %s %d %d",colaParaLogs((int)cod_op),mensaje_caught->atrapo_pokemon, mensaje_caught->id_mensaje_correlativo);
+					pthread_t thread;
+					pthread_create (&thread, NULL, (void *) procesar_caught, mensaje_caught);
+					pthread_detach (thread);
 				}					
-			} break;
+			}puts ("cerrando caught"); break;
 		}
 
 		case OP_UNKNOWN:
@@ -208,14 +218,14 @@ int reintentar_conexion(op_code colaSuscripcion)
 	colaAppeared.timeout=0;
 	int enviado=enviarSuscripcion (socket_cliente, colaAppeared);
 	
-	while (socket_cliente == -1 || enviado==0)
+	while ( (socket_cliente == -1 || enviado==0) && !win )
 		{
 			log_info (internalLogTeam, "Falló la conexión al broker con la cola %s",colaParaLogs(colaSuscripcion));
 			sleep (config->reconnection_time);
 			socket_cliente = crearSocketCliente (config->broker_IP,config->broker_port);
 			enviado=enviarSuscripcion (socket_cliente, colaAppeared);
-		}
-	log_info (internalLogTeam, "Conexión exitosa con la cola %s", colaParaLogs(colaSuscripcion));
+		} puts ("sali de reintentar");
+	if (!win) log_info (internalLogTeam, "Conexión exitosa con la cola %s", colaParaLogs(colaSuscripcion));
 	return (socket_cliente);
 }
 

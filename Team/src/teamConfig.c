@@ -25,7 +25,7 @@ t_config* get_config()
 {
     t_config* ret =  config_create("../team.config");
     if (ret == NULL)
-    log_info (internalLogTeam, "No se pudieron leer las configuraciones");
+    log_error  (internalLogTeam, "No se pudieron leer las configuraciones");
     else log_info (internalLogTeam, "Configuraciones leidas correctamente");
     return ret;
 }
@@ -69,6 +69,12 @@ void Team_load_trainers_config(void)
 
     pthread_mutex_init(&ID_localized_sem, NULL);
 
+    sem_init(&terminar_appeared, 0, 1);
+
+    sem_init(&terminar_caught, 0, 1);
+
+    global_for_free = list_create();
+
     ID_caught= list_create();
     pthread_mutex_init(&ID_caught_sem, NULL);
 
@@ -107,11 +113,10 @@ void Team_load_trainers_config(void)
         sem_init (&(entrenadores->trainer_sem), 0, 0);
         sem_post (&trainer_count);
 
-        entrenadores->config = config;
         entrenadores->index= index;
         entrenadores->rafagaEjecutada=0;
         entrenadores->rafagaEstimada=config->initial_estimation;
-        entrenadores->rafagaRemanente=0;
+        entrenadores->rafagaAux=0;
         
         index++;
         /*  Añado el entrenador creado, ya cada uno con su lista bag y lista de objetivos, a la lista de entrenadores */
@@ -126,7 +131,7 @@ void Team_load_trainers_config(void)
         //free (mochila);
         free (objetivos);
     }
-
+    list_add_all(global_for_free, global_objective);
     remover_objetivos_globales_conseguidos(bag_global);
     list_destroy(bag_global);
     new_global_objective = list_duplicate(global_objective);
@@ -149,7 +154,7 @@ void Team_load_trainers_config(void)
 
 void Team_load_global_config()
 {
-    ciclos_cpu=0;
+    win=false;
     config->reconnection_time    = config_get_int_value(config->team_config, "TIEMPO_RECONEXION");
     config->retardo_cpu          = config_get_int_value(config->team_config, "RETARDO_CICLO_CPU");
     config->planning_algorithm   = string_duplicate(config_get_string_value(config->team_config, "ALGORITMO_PLANIFICACION"));
@@ -197,10 +202,10 @@ void Team_load_global_config()
 //                               ***** Funciones parar liberar listas *****
 // ============================================================================================================
 
-void liberar_listas ()
+void liberar_listas (t_list *lista)
 {
-    list_destroy_and_destroy_elements (trainers, _free_sub_list);
-    list_destroy (global_objective);
+    list_destroy_and_destroy_elements (lista, free);
+    //list_destroy (global_objective);
 }
 
 
@@ -275,3 +280,24 @@ void remover_objetivos_globales_conseguidos(t_list *global_bag)
     list_remove_by_condition(global_objective,comparar_y_borrar);
     }
 }
+
+void cerrar_conexiones(void)
+{
+    printf ("Cerrando conexión gameboy: %d\n", shutdown(socketGameboy, SHUT_RDWR));
+    sem_wait(&terminar_appeared);
+    printf ("Cerrando conexión appeared: %d\n", shutdown(socketAppeared, SHUT_RDWR));
+    sem_wait(&terminar_caught);
+    printf ("Cerrando conexión caught: %d\n", shutdown(socketCaught, SHUT_RDWR));
+}
+/*
+void liberar_lista_global(void)
+{
+    void trainer_destroy(void *trainer)
+    {
+        trainer-
+    }
+
+
+}
+*/
+//void liberar_entrenadores(void);

@@ -17,7 +17,7 @@
 #include <commons/log.h>
 
 #define PRINT_TEST 0
-#define LIBERAR 0
+#define LIBERAR 1
 
 
 /* Recursos compartidos */
@@ -34,6 +34,7 @@ uint32_t ID_proceso;
 
 extern t_list *ID_localized;
 
+bool win;
 
 extern t_list *deadlock_list;
 extern sem_t deadlock_sem1;
@@ -66,8 +67,6 @@ sem_t poklistAux_sem2;
 
 extern t_log *internalLogTeam;
 extern t_log *logTeam;
-
-int ciclos_cpu;
 
 t_list *ReadyQueue;
 sem_t qr_sem1;
@@ -131,6 +130,8 @@ void* listen_routine_colas (void *conexion);
 void informarIDlocalized(uint32_t id);
 
 void SJFSD_exec (void);
+
+void SJFCD_exec (void);
 
 double  actualizar_estimacion (); //Ver cómo agregar el parámetro Trainer *
 

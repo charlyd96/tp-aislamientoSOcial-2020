@@ -113,11 +113,13 @@ void* trainer_to_catch()
 void send_trainer_to_ready (t_list *lista, int index, Operation op) //Eliminar el switch, es innecesario.
 
 {
+    
     switch (op)
     {
         case OP_EXECUTING_CATCH:
         {
             sem_wait (&qr_sem2);
+            newTrainerToReady=true;
             list_add (ReadyQueue , list_get (lista, index) );
             sem_post (&qr_sem2);
             sem_post (&qr_sem1);
@@ -127,6 +129,7 @@ void send_trainer_to_ready (t_list *lista, int index, Operation op) //Eliminar e
         case OP_EXECUTING_DEADLOCK:
         {
             sem_wait (&qr_sem2);
+            newTrainerToReady=true;
             list_add (ReadyQueue , list_get (lista, index) );
             sem_post (&qr_sem2);
             sem_post (&qr_sem1);
@@ -287,10 +290,17 @@ void send_trainer_to_exec (void)
 
         case SJFSD:
         {
-            puts ("aqui");
         pthread_create(&thread, NULL, (void*)SJFSD_exec,NULL);
-
+        break;
         }
+
+        case SJFCD:
+        {
+        pthread_create(&thread, NULL, (void*)SJFCD_exec,NULL);
+        break;
+        }
+
+        default:;
     }
 
     /*
@@ -328,7 +338,7 @@ void* trainer_routine (void *train)
     Trainer *trainer=train;
     trainer->actual_status = NEW;
     sem_wait(&(trainer)->trainer_sem); //Bloqueo post-inicilización
-
+    puts ("pase el bloqueo");
     while (trainer->actual_status != EXIT)
     {
 		switch (trainer->actual_operation)
@@ -336,8 +346,6 @@ void* trainer_routine (void *train)
 			case OP_EXECUTING_CATCH:
 			{
 				move_trainer_to_objective (train, OP_EXECUTING_CATCH); //Entre paréntesis debería ir "trainer". No sé por qué funciona así
-                
-
                 consumir_cpu(trainer);
 				int result= send_catch (trainer);
                 
@@ -420,7 +428,7 @@ void* trainer_routine (void *train)
 /*Productor hacia cola de bloqueados por deadlock*/
 void trainer_to_deadlock(Trainer *trainer)
 {
-    sem_wait (&deadlock_sem2); //Verificar si se requiere sincronización
+    sem_wait (&deadlock_sem2); //Verificar si se requiere sincronización (esquema productor consumidor: ¿necesario?)
     list_add (deadlock_list, trainer); 
     sem_post (&deadlock_sem2);
     sem_post (&deadlock_sem1);
@@ -669,7 +677,7 @@ int deadlock_recovery (void)
     puts ("SEND TRAINER TO READY");
     trainer1->actual_operation = OP_EXECUTING_DEADLOCK;
     trainer2->actual_operation = OP_EXECUTING_DEADLOCK; //Mejorar esto ya que puede ser confuso. Agregar un estado "waiting for deadlock"
-    send_trainer_to_ready(deadlock_list, 0, OP_EXECUTING_DEADLOCK);
+    send_trainer_to_ready(deadlock_list, 0, OP_EXECUTING_DEADLOCK); //Cambiar esa constante por trainer1->actual_operation
     
     
     printf ("Trainer %d entregará %s\n", trainer1->index, entregar_trainer1);
@@ -787,32 +795,30 @@ void move_trainer_to_objective (Trainer *trainer, Operation op)
         }    
 
     }
-
     while ( (*Tx != *Px) || (*Ty!=*Py) )
     {
- 
         if ( calculate_distance (*Tx+1, *Ty, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
         consumir_cpu(trainer);
         *Tx=*Tx+1;
-        log_info (logTeam , "El entrenador %d se movió  hacia la derecha. Posición: (%d,%d)", trainer->index, *Tx, *Ty);
+        //log_info (logTeam , "El entrenador %d se movió  hacia la derecha. Posición: (%d,%d)", trainer->index, *Tx, *Ty);
         }
 
         if ( calculate_distance (*Tx, *Ty+1, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
         consumir_cpu(trainer);
         *Ty=*Ty+1;
-        log_info (logTeam , "El entrenador %d se movió  hacia arriba. Posición: (%d,%d)", trainer->index, *Tx, *Ty);
+        //log_info (logTeam , "El entrenador %d se movió  hacia arriba. Posición: (%d,%d)", trainer->index, *Tx, *Ty);
         }
 
         if ( calculate_distance (*Tx-1, *Ty, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
         consumir_cpu(trainer);
         *Tx=*Tx-1;
-        log_info (logTeam , "El entrenador %d se movió  hacia la izquierda. Posición: (%d,%d)", trainer->index, *Tx, *Ty);
+        //log_info (logTeam , "El entrenador %d se movió  hacia la izquierda. Posición: (%d,%d)", trainer->index, *Tx, *Ty);
         }
 
         if ( calculate_distance (*Tx, *Ty-1, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
         consumir_cpu(trainer);
         *Ty=*Ty-1;
-        log_info (logTeam , "El entrenador %d se movió  hacia abajo. Posición: (%d,%d)", trainer->index, *Tx, *Ty);
+        //log_info (logTeam , "El entrenador %d se movió  hacia abajo. Posición: (%d,%d)", trainer->index, *Tx, *Ty);
         }
     }
 }
@@ -830,11 +836,12 @@ void consumir_cpu(Trainer *trainer)
         case FIFO:
         {
             usleep (config->retardo_cpu * 1); //Uso usleep para que no sea tan lenta la ejecución
+            break;
         }
 
         case RR:
         {
-            if (ciclos_cpu >= config->quantum)
+            if (trainer->rafagaEjecutada >= config->quantum)
             {
                 trainer->actual_status=READY;
                 trainer->ejecucion= PENDING;
@@ -848,17 +855,62 @@ void consumir_cpu(Trainer *trainer)
                 usleep (config->retardo_cpu * 1); //Uso usleep para que no sea tan lenta la ejecución
                 trainer->ejecucion= EXECUTING;
             }
-            ciclos_cpu++;
-
+            trainer->rafagaEjecutada++;
+            break;
         }
 
         case SJFSD:
         {
             usleep (config->retardo_cpu * 1); //Uso usleep para que no sea tan lenta la ejecución
             trainer->rafagaEjecutada++;
+            break;
+        }
+
+        case SJFCD:
+        {   puts ("\n\n\n\n\n\n\n\n\n\n**************************SJF CON DESALOJOn\n\n\n\n\n\n**************************");
+            trainer->rafagaEjecutada++;
+            sem_wait(&qr_sem2);
+            printf ("New=%d\t",newTrainerToReady);
+            if (newTrainerToReady)
+            {
+                newTrainerToReady=false;
+                trainer->rafagaEstimada= trainer->rafagaEstimada-trainer->rafagaEjecutada;
+                ordenar_lista_ready();
+                if ( ((Trainer *)list_get(ReadyQueue, 0))->rafagaEstimada > trainer->rafagaEstimada ) //Comparo la lista ordenada con el entrenador actual en ejecución
+                {//Seguir ejecutando
+                puts ("****************************************************************seguir ejecutando************************************************************************");
+                printf ("Rafaga estimada actual: %f\nRafaga estimada nuesvo entrenador:%f\n",trainer->rafagaEstimada, ((Trainer *)list_get(ReadyQueue, 0))->rafagaEstimada );
+                sem_post(&qr_sem2); //Disponibilizar la cola ready
+                }
+                else 
+                {//Desalojar
+                log_error(internalLogTeam, "El entrenador %d será desalojado por el algoritmo SJF-CD", trainer->index);
+                trainer->actual_status=READY;
+                trainer->ejecucion=PENDING;
+                sem_post(&using_cpu);
+                sem_wait(&trainer->trainer_sem);
+                trainer->ejecucion=EXECUTING;
+                }
+            }
+            else 
+            {
+                sem_post(&qr_sem2);
+            }        
+        usleep (config->retardo_cpu * 1); //Uso usleep para que no sea tan lenta la ejecución
+        break;
         }
 
         default:;
 
     }
+}
+
+void imprimir_entrenador(void)
+{
+    void imprimir (void *elemento)
+    {
+    free (elemento);
+
+    } list_iterate (trainers,imprimir);
+
 }
