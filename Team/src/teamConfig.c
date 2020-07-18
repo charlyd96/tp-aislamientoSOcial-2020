@@ -79,7 +79,7 @@ void Team_load_trainers_config(void)
     pthread_mutex_init(&ID_caught_sem, NULL);
 
     /*  Creo un puntero a estructura del tipo Trainer para ir creando cada entrenador leído por archivo de configuración.
-        Estas estructuras se van apuntando en nodos de una lista definida en la estructura del Team como t_list *trainers     */
+        Estas estructuras se van apuntando en nodos de una lista global t_list *trainers                                    */
     Trainer *entrenadores;
     int index=0;
 
@@ -98,12 +98,10 @@ void Team_load_trainers_config(void)
 
         entrenadores->bag = list_create();
         
-        if (i ==0)
-        {//puts ("if");
-        //printf ("%s\n",*(pok_in_bag_to_array + i ));
-           // puts (*(pok_in_bag_to_array + i ));
-              list_add(entrenadores->bag, *(pok_in_bag_to_array ));
-        }
+        char **mochila = string_split(*(pok_in_bag_to_array + i), "|");
+        entrenadores->bag = list_create();
+        for (int j=0; *(mochila + j) != NULL ; j++)
+        list_add(entrenadores->bag, *(mochila+j) );
       
         char **objetivos = string_split(*(trainers_obj_to_array + i), "|" );
         entrenadores->personal_objective = list_create();
@@ -123,7 +121,7 @@ void Team_load_trainers_config(void)
         list_add(trainers, entrenadores);
 
         /*  Añado los objetivos de cada entrenador a la lista de objetivos globales */
-        list_add_all (global_objective, list_duplicate(entrenadores->personal_objective)); //Ver si se puede poner un list_duplicate. Ya se cambió. Antes estaba duplicar_lista
+        list_add_all (global_objective, list_duplicate(entrenadores->personal_objective)); // Sacara el list_duplicate //Ver si se puede poner un list_duplicate. Ya se cambió. Antes estaba duplicar_lista
         list_add_all (bag_global,entrenadores->bag);
         
         /*  Libero memoria innecesaria generada por la función string_split de las commons  */
@@ -131,10 +129,22 @@ void Team_load_trainers_config(void)
         //free (mochila);
         free (objetivos);
     }
+
+    puts ("Atrapados globales:");
+    list_iterate(bag_global,_imprimir_inventario);
+
+    puts ("Objetivos:");
+    list_iterate(global_objective,_imprimir_objetivos);
+
     list_add_all(global_for_free, global_objective);
     remover_objetivos_globales_conseguidos(bag_global);
+
+    puts ("despues de la manganeta:");
+
+    list_iterate(global_objective,_imprimir_objetivos);
     list_destroy(bag_global);
     new_global_objective = list_duplicate(global_objective);
+
 
     /*  Libero memoria innecesaria generada por la función string_split de las commons  */
    /* free_split (pos_trainers_to_array);
@@ -257,7 +267,15 @@ void remover_objetivos_globales_conseguidos(t_list *global_bag)
     bool comparar (void *element)
     {
         if (!strcmp( (char *)element, nombre))
-        return true; else return false;
+        {
+            puts("Igual");
+            return true;
+        }
+        else 
+        {
+            puts ("distinto");
+            return false;
+             }
     }
 
 
@@ -266,18 +284,23 @@ void remover_objetivos_globales_conseguidos(t_list *global_bag)
         for (int i=0; i<global_bag->elements_count; i++)
         {
             nombre=list_get(global_bag,i);
+            printf ("Comparando Objetivo: %s con Atrapado: %s \n",(char*) element, nombre);
             if (!strcmp( (char *)element, nombre ) )
             {
+            puts ("en el if");
             list_remove_by_condition(global_bag,comparar);
             return true;
             }
         }
         return false;
     }
-
-    for (int i=0; i<global_objective->elements_count; i++)
+    
+    
+    while (1)
     {
     list_remove_by_condition(global_objective,comparar_y_borrar);
+    if (list_remove_by_condition(global_objective,comparar_y_borrar) == NULL)
+    break;
     }
 }
 

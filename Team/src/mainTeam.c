@@ -46,7 +46,7 @@ int main(int argc, char **argv)
    // usleep (200); //Para que se imprima el último log
     /* Solo para probar la correcta liberación de las listas*/
     if (LIBERAR ==1)
-    win=true;
+    //win=true;
     //sleep (2);
 
     cerrar_conexiones();
