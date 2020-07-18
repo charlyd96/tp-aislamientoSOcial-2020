@@ -205,7 +205,7 @@ void partirBuddy(int indice){
 		list_replace(particiones,indice,buddy_der);
 		list_add_in_index(particiones,indice,buddy_izq);
 	}
-	free(buddy_der);
+	// free(buddy_der);
 }
 /**
  * algoritmo recursivo para buscar una partición buddy adecuada.
@@ -532,7 +532,7 @@ void compactarParticiones(){
 	espacio_libre->tamanio = config_broker->tam_memoria - offset;
 	list_add(particiones,espacio_libre);
 
-	free(espacio_libre);
+	// free(espacio_libre);
 }
 
 void cachearNewPokemon(t_new_pokemon* msg){

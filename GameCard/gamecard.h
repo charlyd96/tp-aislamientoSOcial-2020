@@ -106,4 +106,9 @@ char* editar_posicion(char* texto,int cantidad, char* posicion_texto);
 char* concatenar_lista_char(int largo_texto, char ** lista);
 t_block* actualizar_datos (char* texto,char ** lista_bloques);
 
+void levantarPuertoEscucha(void);
+int reintentar_conexion(op_code colaSuscripcion);
+void* listen_routine_colas (void *colaSuscripcion);
+void subscribe();
+
 #endif /* GAMECARD_H_ */

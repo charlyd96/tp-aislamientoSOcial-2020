@@ -40,7 +40,7 @@ int reintentar_conexion(op_code colaSuscripcion)
 
 	while (socket_cliente == -1 || enviado==0)
 		{
-			log_info (logGamecard, "Falló la conexión al broker %s:%s con la cola %s",config_gamecard->ip_broker,config_gamecard->puerto_broker,colaParaLogs(colaSuscripcion));
+			log_info (logGamecard, "Fallo de conexión o desconexín broker %s:%s con la cola %s",config_gamecard->ip_broker,config_gamecard->puerto_broker,colaParaLogs(colaSuscripcion));
 			sleep (config_gamecard->tiempo_reintento_conexion);
 			socket_cliente = crearSocketCliente (config_gamecard->ip_broker,config_gamecard->puerto_broker);
 			enviado=enviarSuscripcion (socket_cliente, suscripcion);
@@ -69,7 +69,7 @@ void* listen_routine_colas (void *colaSuscripcion){
 				{
 					t_new_pokemon* mensaje_new= recibirNewPokemon(socket_cliente);
 					enviarACK(socket_cliente);
-					log_info (logGamecard, "Recibido: NEW POKEMON %s %d %d %d %d",colaParaLogs((int)cod_op),mensaje_new->nombre_pokemon,mensaje_new->pos_x,mensaje_new->pos_y,mensaje_new->cantidad,mensaje_new->id_mensaje);
+					log_info (logGamecard, "Recibido: NEW POKEMON %s %d %d %d %d",mensaje_new->nombre_pokemon,mensaje_new->pos_x,mensaje_new->pos_y,mensaje_new->cantidad,mensaje_new->id_mensaje);
 					pthread_t thread;
 					pthread_create (&thread, NULL, (void *) atender_newPokemon, &socket_cliente);
 					pthread_detach (thread);
@@ -80,7 +80,7 @@ void* listen_routine_colas (void *colaSuscripcion){
 
 		case GET_POKEMON:
 		{
-			while(0)
+			while(1)
 			{
 				op_code cod_op = recibirOperacion(socket_cliente);
 				process_code tipo_proceso = recibirTipoProceso(socket_cliente);
@@ -131,7 +131,7 @@ void* listen_routine_colas (void *colaSuscripcion){
 		default: log_error (logGamecard, "Operacion no reconocida por el sistema");
 	}
 }
-void subscribe ()
+void subscribe()
 {
 	pthread_t thread1; //OJO. Esta variable se está perdiendo
 	pthread_create (&thread1, NULL, listen_routine_colas , (int*)NEW_POKEMON);
@@ -160,7 +160,7 @@ int main(void){
 	pthread_create(&hiloEscucha, NULL, (void*)levantarPuertoEscucha,NULL);
 
 	//Conexión a broker
-	suscribe();
+	subscribe();
 	pthread_join(hiloEscucha,NULL);
 }
 
@@ -223,6 +223,8 @@ void atender_cliente(int* socket){
 	int socket_cliente = *socket;
 	log_info(logGamecard, "Atender cliente %d \n",socket_cliente);
 	op_code cod_op = recibirOperacion(socket_cliente);
+	process_code tipo_proceso = recibirTipoProceso(socket_cliente);
+	uint32_t PID = recibirIDProceso(socket_cliente);
 	switch(cod_op){
 		case NEW_POKEMON:
 			atender_newPokemon(&socket_cliente);
@@ -242,7 +244,12 @@ void atender_cliente(int* socket){
 void atender_newPokemon(int *socket){
 	t_new_pokemon* new_pokemon = recibirNewPokemon(*socket);
 	log_info(logGamecard, "Recibi NEW_POKEMON %s %d %d %d [%d]\n",new_pokemon->nombre_pokemon,new_pokemon->pos_x,new_pokemon->pos_y,new_pokemon->cantidad,new_pokemon->id_mensaje);
-
+	int enviado = enviarACK(*socket);
+	if(enviado > 0){
+		log_info(logGamecard,"Se devolvió el ACK");		
+	}else{
+		log_info(logGamecard,"ERROR al devolver ACK");
+	}
 	char* pathMetadata = string_from_format("%s/Files/%s/Metadata.bin", config_gamecard->punto_montaje, new_pokemon->nombre_pokemon);
 	printf ("pathmetadata:%s\n", pathMetadata);
 	if(existe_archivo(pathMetadata)){ //Si existe la metadata del archivo, opero sobre los bloques y la metadata ya existente
