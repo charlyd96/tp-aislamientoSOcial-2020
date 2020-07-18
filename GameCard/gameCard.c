@@ -7,15 +7,8 @@
 
 #include "gamecard.h"
 
-int main(void){
-
-	
-	logGamecard = log_create("gamecard.log", "Gamecard", 1, LOG_LEVEL_INFO);
-	logInterno = log_create("gamecardInterno.log", "GamecardInterno", 1, LOG_LEVEL_INFO);
-	crear_config_gamecard();
-	leer_FS_metadata(config_gamecard);
-	printf("ip %s:%s",config_gamecard->ip_gamecard,config_gamecard->puerto_gamecard);
-
+void levantarPuertoEscucha(void){
+	printf("Puerto escucha\n");
 	int socketServidorGamecard = crearSocketServidor(config_gamecard->ip_gamecard, config_gamecard->puerto_gamecard);
 	printf("%d",socketServidorGamecard);
 	if(socketServidorGamecard == -1){
@@ -33,7 +26,142 @@ int main(void){
 		close(socketServidorGamecard);
 		log_info(logGamecard, "Se cerro el Soket Servidor %d\n", socketServidorGamecard);
 	}
+}
+int reintentar_conexion(op_code colaSuscripcion)
+{
+	int socket_cliente = crearSocketCliente (config_gamecard->ip_broker,config_gamecard->puerto_broker);
+	t_suscribe suscripcion;
+	suscripcion.tipo_suscripcion=SUSCRIBE_GAMECARD;
+	suscripcion.cola_suscribir=(int)colaSuscripcion;
+	suscripcion.id_proceso= 40;
+	suscripcion.timeout=0;
 
+	int enviado=enviarSuscripcion (socket_cliente, suscripcion);
+
+	while (socket_cliente == -1 || enviado==0)
+		{
+			log_info (logGamecard, "Falló la conexión al broker %s:%s con la cola %s",config_gamecard->ip_broker,config_gamecard->puerto_broker,colaParaLogs(colaSuscripcion));
+			sleep (config_gamecard->tiempo_reintento_conexion);
+			socket_cliente = crearSocketCliente (config_gamecard->ip_broker,config_gamecard->puerto_broker);
+			enviado=enviarSuscripcion (socket_cliente, suscripcion);
+		}
+	log_info (logGamecard, "Suscripción exitosa con la cola %s", colaParaLogs(colaSuscripcion));
+	return (socket_cliente);
+}
+void* listen_routine_colas (void *colaSuscripcion){
+
+	int socket_cliente;
+	socket_cliente =reintentar_conexion((op_code)colaSuscripcion);
+
+	switch ((op_code)colaSuscripcion)
+	{
+		case NEW_POKEMON:
+		{
+			while(1)
+			{
+				op_code cod_op = recibirOperacion(socket_cliente);
+				process_code tipo_proceso = recibirTipoProceso(socket_cliente);
+				uint32_t PID = recibirIDProceso(socket_cliente);
+
+				if (cod_op==OP_UNKNOWN)
+					socket_cliente = reintentar_conexion((op_code) colaSuscripcion);
+				else
+				{
+					t_new_pokemon* mensaje_new= recibirNewPokemon(socket_cliente);
+					enviarACK(socket_cliente);
+					log_info (logGamecard, "Recibido: NEW POKEMON %s %d %d %d %d",colaParaLogs((int)cod_op),mensaje_new->nombre_pokemon,mensaje_new->pos_x,mensaje_new->pos_y,mensaje_new->cantidad,mensaje_new->id_mensaje);
+					pthread_t thread;
+					pthread_create (&thread, NULL, (void *) atender_newPokemon, &socket_cliente);
+					pthread_detach (thread);
+				}
+
+			} break;
+		}
+
+		case GET_POKEMON:
+		{
+			while(0)
+			{
+				op_code cod_op = recibirOperacion(socket_cliente);
+				process_code tipo_proceso = recibirTipoProceso(socket_cliente);
+				uint32_t PID = recibirIDProceso(socket_cliente);
+
+				if (cod_op==OP_UNKNOWN)
+					socket_cliente = reintentar_conexion((op_code) colaSuscripcion);
+				else
+				{
+					t_get_pokemon* mensaje_get= recibirGetPokemon(socket_cliente);
+					enviarACK(socket_cliente);
+					log_info (logGamecard, "Recibido: GET_POKEMON %s %d",mensaje_get->nombre_pokemon,mensaje_get->id_mensaje);
+					pthread_t thread;
+					pthread_create (&thread, NULL, (void *) atender_getPokemon, &socket_cliente);
+					pthread_detach (thread);
+				}
+			} break;
+		}
+
+		case CATCH_POKEMON:
+		{
+			while(1)
+			{
+				op_code cod_op = recibirOperacion(socket_cliente);
+				process_code tipo_proceso = recibirTipoProceso(socket_cliente);
+				uint32_t PID = recibirIDProceso(socket_cliente);
+				if (cod_op==OP_UNKNOWN)
+					socket_cliente = reintentar_conexion((op_code) colaSuscripcion);
+				else
+				{
+				t_catch_pokemon* mensaje_catch= recibirCatchPokemon(socket_cliente);
+				enviarACK(socket_cliente);
+
+				log_info (logGamecard, "Recibido: CATCH_POKEMON %s %d %d",mensaje_catch->nombre_pokemon,mensaje_catch->pos_x,mensaje_catch->pos_y,mensaje_catch->id_mensaje);
+				pthread_t thread;
+				pthread_create (&thread, NULL, (void *) atender_catchPokemon, &socket_cliente);
+				pthread_detach (thread);
+				}
+			} break;
+		}
+
+		case OP_UNKNOWN:
+		{
+			log_error (logGamecard, "Operacion inválida");
+			break;
+		}
+
+		default: log_error (logGamecard, "Operacion no reconocida por el sistema");
+	}
+}
+void subscribe ()
+{
+	pthread_t thread1; //OJO. Esta variable se está perdiendo
+	pthread_create (&thread1, NULL, listen_routine_colas , (int*)NEW_POKEMON);
+	pthread_detach (thread1);
+
+	pthread_t thread2; //OJO. Esta variable se está perdiendo
+	pthread_create (&thread2, NULL, listen_routine_colas , (int*)GET_POKEMON);
+	pthread_detach (thread2);
+
+	pthread_t thread3; //OJO. Esta variable se está perdiendo
+	pthread_create (&thread3, NULL, listen_routine_colas , (int*)CATCH_POKEMON);
+	pthread_detach (thread3);
+}
+
+int main(void){
+
+
+	logGamecard = log_create("gamecard.log", "Gamecard", 1, LOG_LEVEL_INFO);
+	logInterno = log_create("gamecardInterno.log", "GamecardInterno", 1, LOG_LEVEL_INFO);
+	crear_config_gamecard();
+	leer_FS_metadata(config_gamecard);
+	printf("ip %s:%s\n",config_gamecard->ip_gamecard,config_gamecard->puerto_gamecard);
+
+	//Creo un hilo para el socket de escucha
+	pthread_t hiloEscucha;
+	pthread_create(&hiloEscucha, NULL, (void*)levantarPuertoEscucha,NULL);
+
+	//Conexión a broker
+	suscribe();
+	pthread_join(hiloEscucha,NULL);
 }
 
 
@@ -55,6 +183,8 @@ void crear_config_gamecard(){
 	config_gamecard->punto_montaje = string_duplicate (config_get_string_value(config_ruta, "PUNTO_MONTAJE_TALLGRASS"));
 	config_gamecard->ip_gamecard = string_duplicate (config_get_string_value(config_ruta, "IP_GAMECARD"));
 	config_gamecard->puerto_gamecard = string_duplicate (config_get_string_value(config_ruta, "PUERTO_GAMECARD"));
+	config_gamecard->ip_broker = string_duplicate (config_get_string_value(config_ruta, "IP_BROKER"));
+	config_gamecard->puerto_broker = string_duplicate (config_get_string_value(config_ruta, "PUERTO_BROKER"));
 	
 	config_destroy (config_ruta);
 }
@@ -95,13 +225,13 @@ void atender_cliente(int* socket){
 	op_code cod_op = recibirOperacion(socket_cliente);
 	switch(cod_op){
 		case NEW_POKEMON:
-			atender_newPokemon(socket_cliente);
+			atender_newPokemon(&socket_cliente);
 			break;
 		case GET_POKEMON:
-			atender_getPokemon(socket_cliente);
+			atender_getPokemon(&socket_cliente);
 			break;
 		case CATCH_POKEMON:
-			atender_catchPokemon(socket_cliente);
+			atender_catchPokemon(&socket_cliente);
 			break;
 		default:
 			printf("La operación no es correcta");
@@ -109,8 +239,8 @@ void atender_cliente(int* socket){
 	}
 }
 
-void atender_newPokemon(int socket){
-	t_new_pokemon* new_pokemon = recibirNewPokemon(socket);
+void atender_newPokemon(int *socket){
+	t_new_pokemon* new_pokemon = recibirNewPokemon(*socket);
 	log_info(logGamecard, "Recibi NEW_POKEMON %s %d %d %d [%d]\n",new_pokemon->nombre_pokemon,new_pokemon->pos_x,new_pokemon->pos_y,new_pokemon->cantidad,new_pokemon->id_mensaje);
 
 	char* pathMetadata = string_from_format("%s/Files/%s/Metadata.bin", config_gamecard->punto_montaje, new_pokemon->nombre_pokemon);
@@ -346,12 +476,12 @@ void crear_directorio_pokemon(char* pokemon){
 	}
 }
 
-void atender_getPokemon(int socket){
+void atender_getPokemon(int *socket){
 	t_get_pokemon* get_pokemon= recibirGetPokemon(socket);
 	log_info(logGamecard, "Recibi GET_POKEMON %s [%d]\n",get_pokemon->nombre_pokemon,get_pokemon->id_mensaje);
 }
 
-void atender_catchPokemon(int socket){
+void atender_catchPokemon(int *socket){
 	t_catch_pokemon* catch_pokemon= recibirCatchPokemon(socket);
 	log_info(logGamecard, "Recibi CATCH_POKEMON %s %d %d [%d]\n",catch_pokemon->nombre_pokemon,catch_pokemon->pos_x,catch_pokemon->pos_y,catch_pokemon->id_mensaje);
 }

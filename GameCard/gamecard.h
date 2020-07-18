@@ -45,6 +45,8 @@ typedef struct{
 	char* punto_montaje;
 	char* ip_gamecard;
 	char* puerto_gamecard;
+	char* ip_broker;
+	char* puerto_broker;
 } t_configuracion;
 
 typedef struct {
@@ -88,9 +90,9 @@ void crear_directorio_pokemon(char* nombre_pokemon);
 bool existe_archivo(char* path);
 
 void atender_cliente(int* socket_cliente);
-void atender_newPokemon(int socket);
-void atender_getPokemon(int socket);
-void atender_catchPokemon(int socket);
+void atender_newPokemon(int *socket);
+void atender_getPokemon(int *socket);
+void atender_catchPokemon(int *socket);
 void leer_FS_metadata (t_configuracion *config_gamecard);
 void crear_metadata (char *directorio,t_block* info_blocks);
 void* concatenar_bloques(int largo_texto, char ** lista_bloques);
