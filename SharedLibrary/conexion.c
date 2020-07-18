@@ -441,16 +441,16 @@ t_suscribe* recibirSuscripcion(op_code tipo_suscripcion,int socket_cliente){
 	uint32_t id_proceso = 0;
 
 	recv(socket_cliente, &cola_suscribir, sizeof(op_code), MSG_WAITALL);
+	recv(socket_cliente, &id_proceso, sizeof(uint32_t), MSG_WAITALL);
 	if(tipo_suscripcion == SUSCRIBE_GAMEBOY){
 		recv(socket_cliente, &timeout, sizeof(uint32_t), MSG_WAITALL);
 	}
-	recv(socket_cliente, &id_proceso, sizeof(uint32_t), MSG_WAITALL);
 	
 	t_suscribe* suscripcion = malloc(sizeof(t_suscribe));
 	suscripcion->tipo_suscripcion = tipo_suscripcion;
 	suscripcion->cola_suscribir = cola_suscribir;
-	suscripcion->timeout = timeout;
 	suscripcion->id_proceso = id_proceso;
+	suscripcion->timeout = timeout;
 
 	return suscripcion;
 }

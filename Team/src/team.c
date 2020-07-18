@@ -90,7 +90,7 @@ void enviar_mensajes_get (t_list* GET_list)
         int socket = crearSocketCliente (config->broker_IP,config->broker_port);
         if (socket != -1)
         {
-        int enviado= enviarGetPokemon (socket, mensaje_get);
+        int enviado= enviarGetPokemon (socket, mensaje_get, P_TEAM, ID_proceso);
         log_info(internalLogTeam, "Se envió GET %s al broker. Enviado=%d. Socket= %d",mensaje_get.nombre_pokemon,enviado,socket);
         recv (socket,&(mensaje_get.id_mensaje),sizeof(uint32_t),MSG_WAITALL); //Recibir ID
 		printf ("\t\t\t\t\t\t\tEl Id devuelto fue: %d. Pertenece al pokemon %s\t\t\t\t\t\t\n", mensaje_get.id_mensaje, mensaje_get.nombre_pokemon);

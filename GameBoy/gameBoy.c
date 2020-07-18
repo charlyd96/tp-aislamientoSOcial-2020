@@ -422,6 +422,8 @@ void recibirMensajes(int socket){
 		caseDefault = false;
 		enviado = -1;
 		op_code cod_op = recibirOperacion(socket_cliente);
+		recibirTipoProceso(socket_cliente);
+		recibirIDProceso(socket_cliente);
 		logInfoAux("cod_op %d",cod_op);
 		switch(cod_op){
 			case NEW_POKEMON:{
@@ -502,7 +504,7 @@ t_error_codes suscribirse(parser_result result) {
 	int gameBoyBroker = crearSocketCliente(ipServidor, puertoServidor);
 	if (gameBoyBroker != -1) {
 		logInfoAux("Enviando suscripción a Broker %s:%s en socket %d",ipServidor,puertoServidor,gameBoyBroker);
-		t_suscribe msgSuscribe = { SUSCRIBE_GAMEBOY, result.msg_type, result.timeout };
+		t_suscribe msgSuscribe = { SUSCRIBE_GAMEBOY, result.msg_type, (uint32_t)config_get_int_value(config,"ID_PROCESO"), result.timeout };
 		int enviado = enviarSuscripcion(gameBoyBroker, msgSuscribe);
 
 		if (enviado == -1) {

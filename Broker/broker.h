@@ -255,6 +255,7 @@ void dump_cache();
 void controlador_de_seniales(int signal);
 
 /// COMUNICACIÓN
+void tipoYIDProceso(int socket);
 int devolverID(int socket,uint32_t*id);
 
 void enviarNewPokemonCacheados(int socket, op_code tipo_mensaje);
