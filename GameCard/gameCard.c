@@ -146,6 +146,9 @@ int main(int argc, char** argv){
 		exit(-1);
 	}
 	ID_PROCESO = atoi(argv[1]);
+	sem_init(&mx_file_metadata,0,(unsigned int) 1);
+	sem_init(&mx_creacion_archivo,0,(unsigned int) 1);
+
 	log_info(logInterno,"ID seteado %d",ID_PROCESO);
 
 	logGamecard = log_create("gamecard.log", "Gamecard", 1, LOG_LEVEL_INFO);
@@ -161,6 +164,10 @@ int main(int argc, char** argv){
 	//Conexión a broker
 	subscribe();
 	pthread_join(hiloEscucha,NULL);
+
+	sem_destroy(&mx_creacion_archivo);
+	sem_destroy(&mx_file_metadata);
+
 }
 
 
@@ -239,7 +246,29 @@ void atender_cliente(int* socket){
 			break;
 	}
 }
+int enviarAppearedAlBroker(t_new_pokemon * new_pokemon){
+	int socket_cliente = crearSocketCliente (config_gamecard->ip_broker,config_gamecard->puerto_broker);
+	if(socket_cliente <= 0){
+		log_warning(logGamecard,"No se pudo conectar al broker para enviar APPEARED");
+		return socket_cliente;
+	}else{
+		t_appeared_pokemon* appeared_pokemon = malloc(sizeof(t_appeared_pokemon));
+		appeared_pokemon->nombre_pokemon = new_pokemon->nombre_pokemon;
+		appeared_pokemon->pos_x = new_pokemon->pos_x;
+		appeared_pokemon->pos_y = new_pokemon->pos_y;
+		appeared_pokemon->id_mensaje_correlativo = new_pokemon->id_mensaje;
 
+		int app_enviado = enviarAppearedPokemon(socket_cliente, *appeared_pokemon, P_GAMECARD, ID_PROCESO);
+		if(app_enviado > 0){
+			log_info(logGamecard,"Se devolvió APPEARED_POKEMON %s %d %d [%d]",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y,appeared_pokemon->id_mensaje_correlativo);
+		}else{
+			log_warning(logGamecard,"No se pudo devolver el appeared");
+		}
+		close(socket_cliente);
+		free(appeared_pokemon);
+		return app_enviado;
+	}
+}
 void atender_newPokemon(int *socket){
 	t_new_pokemon* new_pokemon = recibirNewPokemon(*socket);
 	log_info(logGamecard, "Recibi NEW_POKEMON %s %d %d %d [%d]\n",new_pokemon->nombre_pokemon,new_pokemon->pos_x,new_pokemon->pos_y,new_pokemon->cantidad,new_pokemon->id_mensaje);
@@ -251,7 +280,11 @@ void atender_newPokemon(int *socket){
 	}
 	char* pathMetadata = string_from_format("%s/Files/%s/Metadata.bin", config_gamecard->punto_montaje, new_pokemon->nombre_pokemon);
 	printf ("pathmetadata:%s\n", pathMetadata);
-	if(existe_archivo(pathMetadata)){ //Si existe la metadata del archivo, opero sobre los bloques y la metadata ya existente
+	
+	sem_wait(&mx_creacion_archivo);
+	if(existe_archivo(pathMetadata)){
+		sem_post(&mx_creacion_archivo);
+		//Si existe la metadata del archivo, opero sobre los bloques y la metadata ya existente
 		
 		//Marcar el archivo abierto en la metadata (ver después el tema de la sincronización)
 		//Traer los bloques a memoria y concatenarlos - concatenar_bloques ();
@@ -262,21 +295,28 @@ void atender_newPokemon(int *socket){
 		//Enviar mensaje a la cola APPEARED_POKEMON (ver después)
 
 		//Se puede pasarle una estrucura t_metadata en vez de la ruta al metadata. Esto está asociado al comentario de la línea 212
+		
+		
+		sem_wait(&mx_file_metadata);
 		t_config *data_config = config_create (pathMetadata);
-
 		bool archivoAbierto = strcmp(config_get_string_value(data_config,"OPEN"),"Y") == 0;
 		printf("open %d\n",archivoAbierto);
 
 		//Si el archivo está abierto, espero y reintento luego del delay
 		while(archivoAbierto == true){
+			sem_post(&mx_file_metadata);
+
 			sleep(config_gamecard->tiempo_reintento_operacion);
+
+			sem_wait(&mx_file_metadata);
+			data_config = config_create(pathMetadata);
 			archivoAbierto = strcmp(config_get_string_value(data_config,"OPEN"),"Y") == 0;
 			printf("open %d\n",archivoAbierto);
 		}
 		//Seteo OPEN=Y en el archivo
 		config_set_value(data_config,"OPEN","Y");
 		config_save(data_config);
-
+		sem_post(&mx_file_metadata);
 		//Retardo simulando IO
 		sleep(config_gamecard->tiempo_retardo_operacion);
 
@@ -301,8 +341,14 @@ void atender_newPokemon(int *socket){
 		
 		t_block* info_block = crear_blocks(new_pokemon);
 		crear_metadata(new_pokemon->nombre_pokemon,info_block);
-		
+		sem_post(&mx_creacion_archivo);
 	}
+	//Ya sea que agregué o creé el pokemon, respondo el appeared
+	//NOTA: Contemplar el caso en que no se pueda agregar el pokemon al FS, en ese caso no devolver appeared
+	
+	//ENVIAR SIEMPRE AL BROKER, para asegurarme abro una conexión
+	enviarAppearedAlBroker(new_pokemon);
+	
 }
 
 t_block* crear_blocks(t_new_pokemon* new_pokemon){
@@ -330,7 +376,7 @@ t_block* crear_blocks(t_new_pokemon* new_pokemon){
 	// printf("largo texto bloque: %d\n",largo*(sizeof(int)+1)+1); //???
 
 	string_append(&blocks_text,"[");
-	printf("block text: %s\n",blocks_text);
+	// printf("block text: %s\n",blocks_text);
 	// printf("cantidad de bloques %d\n", cant_bloques);
 	char* bitmap = malloc(total_bloques+1);
 	bitmap = get_bitmap(cant_bloques);
@@ -443,7 +489,7 @@ void modificar_bitmap(char* bitmap, ){
 
 char* get_bitmap(){
 	char* pathBitmap = string_from_format ("%s/Metadata/Bitmap.bin", config_gamecard->punto_montaje);
-	puts("get bitmap\n");
+	// puts("get bitmap\n");
 	char *addr; 
 	int fd;
 	struct stat file_st;
@@ -476,7 +522,7 @@ void crear_directorio_pokemon(char* pokemon){
 		
 	}
 	else {
-		log_error(logInterno, "ERROR: No se pudo crear directorio /%s", pokemon); 
+		log_error(logInterno, "ERROR: No se pudo crear directorio o ya existe /%s", pokemon); 
 		exit (CREATE_DIRECTORY_ERROR);
 	}
 }

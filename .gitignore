@@ -59,7 +59,9 @@ dkms.conf
 .project
 .settings
 /.metadata/
-
+/GameCard/tall-grass
 # Log files
 *.log
 *.txt
+GameCard/.autotools
+.vscode/settings.json

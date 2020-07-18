@@ -25,6 +25,7 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <math.h>
+#include <semaphore.h>
 
 #include "strings.h"
 
@@ -110,5 +111,8 @@ void levantarPuertoEscucha(void);
 int reintentar_conexion(op_code colaSuscripcion);
 void* listen_routine_colas (void *colaSuscripcion);
 void subscribe();
-
+int enviarAppearedAlBroker(t_new_pokemon * new_pokemon);
+//Semaforos
+sem_t mx_file_metadata;
+sem_t mx_creacion_archivo;
 #endif /* GAMECARD_H_ */
