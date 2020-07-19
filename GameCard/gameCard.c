@@ -387,8 +387,11 @@ t_block* crear_blocks(t_new_pokemon* new_pokemon){
 	string_append(&blocks_text,"[");
 	// printf("block text: %s\n",blocks_text);
 	// printf("cantidad de bloques %d\n", cant_bloques);
+
 	char* bitmap = malloc(total_bloques+1);
-	bitmap = get_bitmap(cant_bloques);
+
+	sem_wait(&mx_w_bloques);
+	bitmap = get_bitmap();
 	printf("\nBitmap antes de operar:\n%s \n", bitmap);
 
 	for(int i = 0; i < total_bloques && cant_bloques > contador_avance_bloque; i++) /* replace characters  */
@@ -411,8 +414,8 @@ t_block* crear_blocks(t_new_pokemon* new_pokemon){
 	}
 	string_append(&blocks_text,"]");
 	printf("bloques usados %s\n",blocks_text);
+	sem_post(&mx_w_bloques);
 	printf("\nBitmap despues de operar:\n%s \n", bitmap);
-
 
     info_block->blocks=malloc(strlen(blocks_text)+1);
 	strcpy(info_block->blocks,blocks_text);
@@ -594,86 +597,78 @@ char* agregar_pokemon(char *buffer, t_new_pokemon* new_pokemon){
 	printf("Posición= %s \n",posicion);
 	bool bandera = 0;
 	int largo_buffer = strlen(buffer);
+	printf("BRIAN: largo buffer %d",largo_buffer);
 	int posicion_remplazo = 0;
 	char * dato_remplazo;
-	char* texto_concatenado;
+	char* nuevo_buffer;
 	int largo_dato_remplazo = 0;
 	char ** split = string_split(buffer,"\n");
 	printf("split : %s\n",*(split));
-	
+	char* nueva_linea;
 	for (int i=0; *(split+i) != NULL && bandera == 0; i++) {
 		if(string_contains(*(split+i),posicion)){
 			int largo_anterior;
 			largo_anterior = strlen(*(split+i));
 			printf("existe la posicion %s\n",*(split+i));
 			bandera=1;
-			char* nuevo_dato= editar_posicion(*(split+i), (int)new_pokemon->cantidad, posicion);
-			texto_concatenado = malloc(largo_buffer + strlen(nuevo_dato)-largo_anterior);
-			printf("largo buffer anterior: %d nuevo: %d \n",strlen(buffer),largo_buffer + (largo_dato_remplazo - largo_anterior));
-			largo_dato_remplazo = strlen(nuevo_dato);
+			nueva_linea= editar_posicion(*(split+i), (int)new_pokemon->cantidad, posicion);
 
-			texto_concatenado = malloc(largo_buffer);
-			texto_concatenado = string_new();
+			//largo buffer original - largo linea original + largo linea modificada 
+			//+1 por el \0 que usan las funciones para operar strings
+			nuevo_buffer = malloc(largo_buffer -largo_anterior +strlen(nueva_linea) +1);
+			nuevo_buffer = string_new();
 
-			dato_remplazo = malloc(strlen(nuevo_dato));
-			dato_remplazo = nuevo_dato;
-			printf("dato_remplazo %s\n",dato_remplazo);
+			printf("dato_remplazo %s\n",nueva_linea);
 			posicion_remplazo = i;
 		}
 	}
 
 	if(bandera==1){
-		
+		//Copio las lineas al nuevo buffer, usando la nueva en la posición i
 		for (int i=0; *(split+i) != NULL; i++) {
 			if(i != posicion_remplazo){
-				printf("posicion no remplazo\n");
-				string_append(&texto_concatenado,*(split+i));
-				printf("texto_concatenado %d: %s \n",i,texto_concatenado);
+				string_append(&nuevo_buffer,*(split+i));
 			}
 			else{
-				string_append(&texto_concatenado,dato_remplazo);
+				string_append(&nuevo_buffer,nueva_linea);
 			}
 		}
-		printf("texto nuevo: %s \n",texto_concatenado);
-		return texto_concatenado;
+		printf("Nuevo buffer: %s \n",nuevo_buffer);
+		return nuevo_buffer;
 	}
 	else{
-		texto_concatenado = malloc(largo_buffer+strlen(posicion)+sizeof(uint32_t));
-		texto_concatenado = string_new();
-		string_append(&texto_concatenado,buffer);
-		printf("antes de agregar nueva posicion: %s\n",texto_concatenado);
-		// string_append(&texto_concatenado,"\n");
-		char * nueva_posicion = string_from_format("%s%lu",posicion,new_pokemon->cantidad);
-		printf("nueva posicion: %s",nueva_posicion);
-		string_append_with_format(&texto_concatenado,nueva_posicion);
-		printf("Nuevo texto CON BARRA N: %s",texto_concatenado);
-		return texto_concatenado;
+		//Si es una linea nueva (la posición no existía)
+		//Convierto la cantidad a string para calcular su largo
+		char* cantidad_string = string_itoa(new_pokemon->cantidad);
+														//+1 por el \0 que manejan los strings
+		nuevo_buffer = malloc(largo_buffer+strlen(posicion)+strlen(cantidad_string) + 2);
+		nuevo_buffer = string_new(); //me crea un string vacio "\0"
+		//copio el buffer original
+		string_append(&nuevo_buffer,buffer);
+		
+		char * nueva_posicion = string_from_format("%s%lu\n",posicion,new_pokemon->cantidad);
+		printf("Nueva linea: %s",nueva_posicion);
+		string_append(&nuevo_buffer,nueva_posicion);
+		printf("Nuevo buffer: %s \n",nuevo_buffer);
+
+		return nuevo_buffer;
 	}
 
 }
 
-char* editar_posicion(char* texto,int cantidad, char* posicion_texto){
-	int posicion_largo = strlen(posicion_texto);
-	if(string_contains(texto,"\n")){
-		int length = strlen(texto) - posicion_largo - 2;  
-		int cantidad_actual = (int)(string_substring(texto, posicion_largo+1, length));
-		printf("caant_actual %d\n", cantidad_actual);
-		return string_from_format("%s%d\n",posicion_texto,cantidad_actual+(int)cantidad);
-	}
-	else{
-		int length = strlen(texto) - posicion_largo;
-		printf("length_nro %d\n", length);
-		char* cant_actual= string_substring(texto, posicion_largo, length);
-		printf("cantidad_actual %sX\n", cant_actual);
-		int cantidad_actual = atoi(cant_actual);
-		printf("cantidad_actual %d\n", cantidad_actual);
-		int nueva_cantidad = cantidad_actual+cantidad;
-		printf("nueva_cantidad %d\n", nueva_cantidad);
-		int nuevo_string = string_from_format("%s%d",posicion_texto,nueva_cantidad);
-		printf("nuevo_string %s\n", nuevo_string);
-		return nuevo_string;
-	}
+char* editar_posicion(char* linea,int cantidad, char* texto_posicion){
+	int largo_pos = strlen(texto_posicion);
+	
+	//linea tiene algo así: 10-2=5
+	//texto_posicion algo así: 10-2=
+	//Calculo el largo del dato que me interesa (la cantidad de pokemones)
+	int length = strlen(linea) - largo_pos;  //largo total - largo posición
+	//Substring para recuperar el 5
+	int cantidad_actual = atoi(string_substring(linea, largo_pos, length));
+	char* nueva_linea = string_from_format("%s%d\n",texto_posicion,cantidad_actual+cantidad);
 
+	printf("La nueva linea es: %s",nueva_linea);
+	return nueva_linea;
 }
 
 t_block* actualizar_datos (char* texto,char ** lista_bloques) {
@@ -682,42 +677,21 @@ t_block* actualizar_datos (char* texto,char ** lista_bloques) {
     int block_size = FS_config->BLOCK_SIZE;
 	int total_bloques = FS_config->BLOCKS;
     int largo_texto = strlen(texto);
-	int largo_texto_actual;
 	int cant_bloques = cantidad_bloques(largo_texto, block_size);
-	printf("cant bloques: %d",cant_bloques);
+	printf("cant bloques a ocupar: %d\n",cant_bloques);
 	t_block* info_block = malloc(sizeof(t_block));
 	char* blocks_text;
 	int contador_avance_bloque = 0;
 	int block_number;
     
-
 	log_info(logInterno, "Se escribe %s -> Tamaño: %d", texto, largo_texto);
 	// Guardo el largo del texto para la metadata
 	info_block->size = largo_texto;
 	
-	printf("blocks_text malloc: %d\n",cant_bloques*(sizeof(int)+1)+1);
-	blocks_text = malloc(cant_bloques*(sizeof(int)+1)+1);
-
+	blocks_text = string_new();
 
 	string_append(&blocks_text,"[");
-	printf("block text: %s\n",blocks_text);
-	printf("cantidad de bloques %d\n", cant_bloques);
-/* 
-	for (int i=0; *(lista_bloques+i) != NULL; i++) {
-		block_number = atoi(*(lista_bloques+i));
-
-		texto = escribir_bloque(block_number, block_size, texto, &largo_texto);
-
-		contador_avance_bloque++;
-
-		if(contador_avance_bloque == cant_bloques)
-			string_append(&blocks_text,string_from_format("%d",block_number));
-		else
-			string_append(&blocks_text,string_from_format("%d,",block_number));
-
-	}
-*/
-
+	
 	char* bitmap = malloc(total_bloques+1);
 	bitmap = get_bitmap(cant_bloques);
 	printf("\nfile contents before:\n%s \n", bitmap);
@@ -747,10 +721,9 @@ t_block* actualizar_datos (char* texto,char ** lista_bloques) {
 		
 	}
 	sem_post(&mx_w_bloques);
-	printf("despues de escribir bloques");
 	string_append(&blocks_text,"]");
+	printf("despues de escribir bloques, %s",blocks_text);
 	
-    printf("%d", largo_texto);	
     info_block->blocks=malloc(strlen(blocks_text)+1);
 	strcpy(info_block->blocks,blocks_text);
 	return info_block;
