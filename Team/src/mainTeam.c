@@ -46,18 +46,16 @@ int main(int argc, char **argv)
    // usleep (200); //Para que se imprima el último log
     /* Solo para probar la correcta liberación de las listas*/
     if (LIBERAR ==1)
-    //win=true;
+    win=true;
     //sleep (2);
 
+    //Antes de cerrar conexiones, esperar a que vuelvan todos los hilos
     cerrar_conexiones();
-
-    //liberar_lista_global();
-liberar_listas (global_for_free);
-    //liberar_entrenadores();
-imprimir_entrenador();
-liberar_listas(mapped_pokemons);
-
+    destruir_log();
+    destruir_listas();
+    liberar_entrenadores();
+    liberar_configuraciones();
+    sleep (3);
     return 0;
-
 }
 

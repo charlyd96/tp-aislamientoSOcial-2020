@@ -21,7 +21,10 @@ void* trainer_to_catch()
     int target=-1;
     u_int32_t distance_min= 100000  ; //Arreglar esta hardcodeada trucha
     mapPokemons *actual_pokemon;
-
+    int i;
+    bool planificar=true;
+    sem_getvalue(&trainer_count,&i); //Saltea el proceso de planificación por distancia si se inicializa con todos los pokemones atrapados
+    if (i==0) planificar=false; 
 
     void calculate_distance (void *element)
     {
@@ -29,7 +32,7 @@ void* trainer_to_catch()
         Trainer *trainer=element;
        // count++;
         if ( trainer->actual_status ==NEW ||trainer->actual_status == BLOCKED_NOTHING_TO_DO) //Sólo planifica entrenadores no bloqueados
-        {
+        {   
             u_int32_t Tx= trainer->posx;
             u_int32_t Ty= trainer->posy;
             u_int32_t Px= actual_pokemon->posx;
@@ -44,10 +47,9 @@ void* trainer_to_catch()
         }
     }
 
-    while (1)
-    {      
-         
-                        
+    while (planificar)
+    {             
+
         sem_wait (&trainer_count); // Este semáforo bloquea el proceso de planificación si no hay entrenadores para mandar a ready
         
         printf ("Lista global: %d\n", list_size (global_objective));
@@ -95,7 +97,6 @@ void* trainer_to_catch()
                 {
                     pthread_mutex_unlock (&auxglobal_sem);
                     sem_wait (&trainer_count);
-                    puts ("me bloquee");
                 }
                 else 
                 {
@@ -103,6 +104,9 @@ void* trainer_to_catch()
                     break;
                 } 
             }
+                            //sem_wait (&trainer_count); // Este semáforo bloquea el proceso de planificación si no hay entrenadores para mandar a ready
+
+
     }
 
     puts ("Terminó la búsqueda de pokemones");
@@ -134,7 +138,7 @@ void send_trainer_to_ready (t_list *lista, int index, Operation op) //Eliminar e
             sem_post (&qr_sem2);
             sem_post (&qr_sem1);
             //log_info (internalLogTeam, "Se planificó a Ready al entrenador %d para resolver un DEADLOCK", 
-            //( (Trainer*) list_get(lista, index) )->index);
+            //( (Trainer*) list_get(trainers, index) )->index); //Verificar si en esta lista va trainers
             break;
         }
     }
@@ -175,9 +179,12 @@ void remover_objetivo_global_auxiliar(char *name_pokemon)
         return (true);
         else return (false);
     }
+    puts ("previo al bloqueo");
     pthread_mutex_lock (&auxglobal_sem);
+    puts ("ingreso zona critica");
     list_remove_by_condition(aux_global_objective, remover);
     pthread_mutex_unlock (&auxglobal_sem);
+    puts ("salgo zona critica");
 }
 
 
@@ -279,24 +286,31 @@ void send_trainer_to_exec (void)
         case FIFO:
         {
         pthread_create(&thread, NULL, (void*)fifo_exec,NULL);
+        pthread_detach(thread);
         break;
         }
 
         case RR:
         {
         pthread_create(&thread, NULL, (void*)RR_exec,NULL);
+        pthread_detach(thread);
+
         break;
         }
 
         case SJFSD:
         {
         pthread_create(&thread, NULL, (void*)SJFSD_exec,NULL);
+        pthread_detach(thread);
+
         break;
         }
 
         case SJFCD:
         {
         pthread_create(&thread, NULL, (void*)SJFCD_exec,NULL);
+        pthread_detach(thread);
+
         break;
         }
 
@@ -321,7 +335,7 @@ void desbloquear_planificacion(void)
     void buscar_entrenadores_libres (void *entrenador)
     {
         Trainer *trainer=entrenador;
-        if (trainer->actual_status==BLOCKED_DEADLOCK || trainer->actual_status==EXIT)
+        if (trainer->actual_status==BLOCKED_DEADLOCK || trainer->actual_status==EXIT || trainer->actual_status==NEW )
         trainer_block_exit++;  
     }
     list_iterate(trainers,buscar_entrenadores_libres);
@@ -336,9 +350,7 @@ void desbloquear_planificacion(void)
 void* trainer_routine (void *train)
 {
     Trainer *trainer=train;
-    trainer->actual_status = NEW;
     sem_wait(&(trainer)->trainer_sem); //Bloqueo post-inicilización
-    puts ("pase el bloqueo");
     while (trainer->actual_status != EXIT)
     {
 		switch (trainer->actual_operation)
@@ -417,12 +429,15 @@ void* trainer_routine (void *train)
                 break;
             }
 				
-				default: puts ("Operación no válida"); //exit (INVALID_TRAINER_OP);
+				default: puts ("Operación no váasdadlida"); //exit (INVALID_TRAINER_OP);
 		}
     }
     
     //Liberar recursos y finalizar el hilo del entrenador
-    log_info (internalLogTeam,"El entrenador %d finalizó su hilo de ejecución con éxito", trainer->index);
+    int index = trainer->index;
+    liberar_listas_entrenador(trainer);
+    log_info (internalLogTeam,"El entrenador %d finalizó su hilo de ejecución con éxito", index);
+    
 }
 
 /*Productor hacia cola de bloqueados por deadlock*/
@@ -463,12 +478,15 @@ bool comparar_listas (t_list *lista1, t_list *lista2)
             if (strcmp ( (char*)elemento2, elemento1 ) ==0)
             {
                 list_remove_by_condition (lista_duplicada,comparar_strcmp);
+                break;
             }
         }
     }
 
     list_iterate(lista1,listas_iguales);
-    return (list_is_empty(lista_duplicada));
+    bool result = list_is_empty(lista_duplicada);
+    list_destroy (lista_duplicada);
+    return (result);
 }
 
 
@@ -496,7 +514,7 @@ t_list* duplicar_lista (t_list *lista)
 
 
 void split_objetivos_capturados (Trainer *trainer, t_list *lista_pok_sobrantes, t_list *lista_pok_faltantes)
-    {
+{
     t_list *lista_objetivos  = trainer->personal_objective;
     t_list *lista_capturados = trainer->bag;
     t_list *lista_objetivos_duplicados= list_duplicate (trainer->personal_objective);
@@ -566,6 +584,8 @@ void split_objetivos_capturados (Trainer *trainer, t_list *lista_pok_sobrantes, 
     puts ("");*/
     list_add_all (lista_pok_faltantes, lista_objetivos_duplicados);
     list_add_all (lista_pok_sobrantes, lista_capturados_duplicados );
+    list_destroy (lista_objetivos_duplicados);
+    list_destroy (lista_capturados_duplicados);
 
 }
 
@@ -648,8 +668,13 @@ int deadlock_recovery (void)
             puts ("No se pudo resolver el deadlock. Abortando programa");
             exit (RECOVERY_DEADLOCK_ERROR);
             }
+
         printf ("Resultado interno:%d\n",deadlock_recovery()); //Llamado recursivo. Liberar recursos del primer llamado al regresar del llamado recursivo.
         index=0;
+        list_destroy(trainer1_sobrantes);
+        list_destroy(trainer1_faltantes);
+        list_destroy(trainer2_sobrantes);
+        list_destroy(trainer2_faltantes);
         return (RECURSIVE_RECOVERY_SUCESS); //Retornar el éxito dando aviso de que fue recursivo
     }  
 
@@ -699,6 +724,10 @@ int deadlock_recovery (void)
     printf ("Faltantes entrenador %d:\n",trainer2->index);
     list_iterate(trainer2_faltantes, imprimir3);*/
     index=0; //Reiniciar el index para ejecutar nuevamente el algoritmo con otros entrenadores luego del intercambio
+    list_destroy(trainer1_sobrantes);
+    list_destroy(trainer1_faltantes);
+    list_destroy(trainer2_sobrantes);
+    list_destroy(trainer2_faltantes);
     return (0);
 
 }
@@ -748,6 +777,11 @@ int intercambiar(Trainer *trainer1, Trainer *trainer2)
 bool detectar_deadlock (Trainer *trainer)
 {
     //Agregar: if trainer==NULL--> terminar (no hubo deadlocks)
+    if (trainer->index == 3)
+    {
+        log_error (internalLogTeam, "Comparar listas: %d \t list_size(objetivos): %d", comparar_listas(trainer->bag,trainer->personal_objective), list_size (trainer->personal_objective));
+
+    }
  if (list_size (trainer->bag) >= list_size (trainer->personal_objective)  && !comparar_listas(trainer->bag,trainer->personal_objective))
  return true; 
  else return false;
@@ -867,10 +901,9 @@ void consumir_cpu(Trainer *trainer)
         }
 
         case SJFCD:
-        {   puts ("\n\n\n\n\n\n\n\n\n\n**************************SJF CON DESALOJOn\n\n\n\n\n\n**************************");
+        {   
             trainer->rafagaEjecutada++;
             sem_wait(&qr_sem2);
-            printf ("New=%d\t",newTrainerToReady);
             if (newTrainerToReady)
             {
                 newTrainerToReady=false;
@@ -905,12 +938,9 @@ void consumir_cpu(Trainer *trainer)
     }
 }
 
-void imprimir_entrenador(void)
+void liberar_listas_entrenador(Trainer *trainer)
 {
-    void imprimir (void *elemento)
-    {
-    free (elemento);
-
-    } list_iterate (trainers,imprimir);
-
+    printf ("\n\n\n\n\n**********Liberando entrenador %d***********\n\n\n\n\n", trainer->index);
+    list_destroy (trainer->personal_objective);
+    list_destroy_and_destroy_elements (trainer->bag,free);
 }

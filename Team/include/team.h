@@ -65,6 +65,7 @@ sem_t poklistAux_sem1;
 sem_t poklistAux_sem2;
 
 
+
 extern t_log *internalLogTeam;
 extern t_log *logTeam;
 
@@ -72,6 +73,7 @@ t_list *ReadyQueue;
 sem_t qr_sem1;
 sem_t qr_sem2;
 
+sem_t terminar_ejecucion;
 
 /* Errores para identificar estado en la ejecución de los hilos - para RR y SJF - específico de cada ráfaga*/
 typedef enum
@@ -137,4 +139,7 @@ double  actualizar_estimacion (); //Ver cómo agregar el parámetro Trainer *
 
 void ordenar_lista_ready(void);
 
+void inicializar_listas(void); 
+
+void inicializar_semaforos(void);  
 #endif /* TEAM_H_ */

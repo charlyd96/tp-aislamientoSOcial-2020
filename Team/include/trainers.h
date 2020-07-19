@@ -168,6 +168,6 @@ void remover_pokemones_en_mapa_auxiliar(char *nombre_pokemon);
 
 void mover_de_aux_a_global(char *name);
 
-void imprimir_entrenador(void);
+void liberar_listas_entrenador(Trainer *trainer);
 
 #endif /* INCLUDE_TRAINERS_H_ */

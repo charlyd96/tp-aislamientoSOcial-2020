@@ -68,7 +68,7 @@ void process_request_recv (op_code cod_op, int socket_cliente)
 
 			case OP_UNKNOWN: 
 				{ 
-				log_error (internalLogTeam, "Operacion desconocida");
+				log_error (internalLogTeam, "Operacion desconocidaaa");
 				break;
 				}
 

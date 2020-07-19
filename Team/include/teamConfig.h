@@ -92,7 +92,7 @@ void _imprimir_lista (void *elemento);
 /*Para liberar memoria*/
 void  free_split (char **string);
 void _free_sub_list (void* elemento);
-void liberar_listas (t_list *lista);
+void destruir_listas (void);
 void cerrar_conexiones(void);
 
 void liberar_lista_global(void);
@@ -101,7 +101,10 @@ void liberar_entrenadores(void);
 
 void remover_objetivos_globales_conseguidos(t_list *global_bag);
 
+void liberar_configuraciones(void);
 
 void imprimir_entrenador(void);
+
+void destruir_log (void);
 
 #endif /* INCLUDE_TEAMCONFIG_H_ */

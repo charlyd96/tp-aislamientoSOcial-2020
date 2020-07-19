@@ -19,38 +19,13 @@
 /* Initializing all Team components */
 void Team_Init(void)
 {
+    inicializar_listas(); 
+    inicializar_semaforos();  
     newTrainerToReady=false; //Mejorar la ubiocación de esa instrucción
     config= malloc (sizeof (Config));
     config->team_config = get_config();
-    sem_init (&trainer_count, 0, 0);					//*********Mejorar la ubicación de esta instrucción***************//
-    sem_init (&using_cpu, 0,0);
     Team_load_global_config();
-    
     Team_load_trainers_config();
-
-    ReadyQueue= list_create  ();                 //*********Mejorar la ubicación de esta instrucción***************//
-    sem_init (&qr_sem1, 0, 0);               //*********Mejorar la ubicación de esta instrucción***************//
-    sem_init (&qr_sem2, 0, 1);
-   
-    mapped_pokemons = list_create();             //*********Mejorar la ubicación de esta instrucción***************//
-    sem_init (&poklist_sem, 0, 0);           //*********Mejorar la ubicación de esta instrucción***************//
-    sem_init (&poklist_sem2, 0, 1);          //*********Mejorar la ubicación de esta instrucción***************//
-
-    mapped_pokemons_aux = list_create();
-    sem_init (&poklistAux_sem1, 0, 0);
-    sem_init (&poklistAux_sem2, 0, 1);
-
-
-    /*Lista de entrenadores en deadlock*/
-    deadlock_list = list_create();
-    sem_init (&deadlock_sem1, 0, 0);
-    sem_init (&deadlock_sem2, 0, 1); //Verificar si es necesario el esquema productor/consumidor
-    
-    sem_init (&resolviendo_deadlock, 0, 0);
-
-
-
-
 }
 
 // ============================================================================================================
@@ -81,7 +56,6 @@ t_list*  Team_GET_generate ()
 
 void enviar_mensajes_get (t_list* GET_list)
 {
-	
     void send_get (void *element)
     {
         t_get_pokemon mensaje_get;
@@ -100,6 +74,7 @@ void enviar_mensajes_get (t_list* GET_list)
         else log_info(internalLogTeam, "No se pudo enviar GET %s al broker.\n",mensaje_get.nombre_pokemon);
     }
 	list_iterate(GET_list,send_get );
+    list_destroy(GET_list);
 }
 
 
@@ -122,27 +97,27 @@ void imprimir_lista (t_list *lista)
 /* Consumidor de cola Ready */
 void fifo_exec (void)
 {
-    while (1) //Este while debería ser "mientras team no haya ganado"
+    while (1)
     {
-        
-        // if (team ganó) entonces return;
         sem_wait ( &qr_sem1 );
         sem_wait ( &qr_sem2 );
-
+        if (win) break;  
         Trainer* trainer= list_remove (ReadyQueue, 0);
         trainer->actual_status= EXEC;
         sem_post ( &qr_sem2 );
         sem_post ( &(trainer->trainer_sem) );
         sem_wait (&using_cpu);
     }
+    sem_post(&terminar_ejecucion);
 }
 /* Consumidor de cola Ready (y productor cuando se desalojó por quantum)*/
 void RR_exec (void)
 {
-       while (1) //Este while debería ser "mientras team no haya ganado"
+       while (1) 
        {
             sem_wait ( &qr_sem1 );
             sem_wait ( &qr_sem2 );
+            if (win) break;  
             Trainer* trainer= list_remove (ReadyQueue, 0);
             trainer->actual_status= EXEC; //Verificar si esto puede salir de la zona crítica
             sem_post ( &qr_sem2 );
@@ -154,68 +129,70 @@ void RR_exec (void)
             {
             send_trainer_to_ready(trainers, trainer->index,trainer->actual_operation);
             }
-            //else trainer->ejecucion = FINISHED;
-
             trainer->rafagaEjecutada=0;
        }
+       sem_post(&terminar_ejecucion);
 }
 
 void SJFSD_exec (void)
 {
-       while (1) //Este while debería ser "mientras team no haya ganado"
-       {
-                      puts ("*************\n**********************\n*****************\n****************SJF-SD************\n***********************\n************************vv");
+    puts ("********************************************************************SJF-SD***********************************************************vv");
+    while (1) //Este while debería ser "mientras team no haya ganado"
+    {
+        sem_wait ( &qr_sem1 );
+        sem_wait ( &qr_sem2 );
+        if (win) break;                
+        if (newTrainerToReady)
+        ordenar_lista_ready();
 
-            sem_wait ( &qr_sem1 );
-            sem_wait ( &qr_sem2 );
-            if (newTrainerToReady)
-            ordenar_lista_ready();
+        newTrainerToReady=false;
+        Trainer* trainer= list_remove (ReadyQueue, 0);       
+        trainer->actual_status= EXEC; //Verificar si esto puede salir de la zona crítica
+        sem_post ( &qr_sem2 );
 
-            newTrainerToReady=false;
-            Trainer* trainer= list_remove (ReadyQueue, 0);       
-            trainer->actual_status= EXEC; //Verificar si esto puede salir de la zona crítica
-            sem_post ( &qr_sem2 );
+        sem_post ( &(trainer->trainer_sem) );
+        sem_wait (&using_cpu);
+        trainer->rafagaEstimada = actualizar_estimacion(trainer);
+        trainer->rafagaEjecutada=0;
+    }
+    sem_post(&terminar_ejecucion);
 
-            sem_post ( &(trainer->trainer_sem) );
-            sem_wait (&using_cpu);
-            trainer->rafagaEstimada = actualizar_estimacion(trainer);
-            trainer->rafagaEjecutada=0;
-        }
 }
 
 void SJFCD_exec (void)
 {
     puts ("\n\n\n\n\n\n\n\n\n\n\n\n\n\n**************SJFCD - CON DESALOJO ----------------------------------\n\n\n\n\n\n\n\n");
-       while (1) //Este while debería ser "mientras team no haya ganado"
-       {
-            sem_wait ( &qr_sem1 );
-            sem_wait ( &qr_sem2 );
-            if (newTrainerToReady)
-            ordenar_lista_ready();
-            
-            newTrainerToReady=false;
-            Trainer* trainer= list_remove (ReadyQueue, 0);       
-            trainer->actual_status= EXEC; //Verificar si esto puede salir de la zona crítica
-            sem_post ( &qr_sem2 );
-            
-            trainer->rafagaAux=trainer->rafagaEstimada;
-            sem_post ( &(trainer->trainer_sem) );
-            sem_wait (&using_cpu);
-            if (trainer->ejecucion==FINISHED)
-            {
-            trainer->rafagaEstimada = trainer->rafagaAux;
-            trainer->rafagaEstimada = actualizar_estimacion(trainer);
-            trainer->rafagaEjecutada=0;
-            }
-            else if (trainer->ejecucion==PENDING)
-            {
-            newTrainerToReady=true;
-            list_add (ReadyQueue, trainer);
-            sem_post (&qr_sem2);
-            sem_post (&qr_sem1);
-            } 
-
+    while (1) //Este while debería ser "mientras team no haya ganado"
+    {
+        sem_wait ( &qr_sem1 );
+        sem_wait ( &qr_sem2 );
+        if (win) break;  
+        if (newTrainerToReady)
+        ordenar_lista_ready();
+        
+        newTrainerToReady=false;
+        Trainer* trainer= list_remove (ReadyQueue, 0);       
+        trainer->actual_status= EXEC; //Verificar si esto puede salir de la zona crítica
+        sem_post ( &qr_sem2 );
+        
+        trainer->rafagaAux=trainer->rafagaEstimada;
+        sem_post ( &(trainer->trainer_sem) );
+        sem_wait (&using_cpu);
+        if (trainer->ejecucion==FINISHED)
+        {
+        trainer->rafagaEstimada = trainer->rafagaAux;
+        trainer->rafagaEstimada = actualizar_estimacion(trainer);
+        trainer->rafagaEjecutada=0;
         }
+        else if (trainer->ejecucion==PENDING)
+        {
+        newTrainerToReady=true;
+        list_add (ReadyQueue, trainer);
+        sem_post (&qr_sem2);
+        sem_post (&qr_sem1);
+        } 
+    }
+    sem_post(&terminar_ejecucion);
 }
 
 
@@ -285,7 +262,7 @@ int Trainer_handler_create ()
         printf ("Estado: %d\n",((Trainer*)trainer)->actual_status);
     }
 
-    list_iterate (trainers,imprimir_estados);
+    //list_iterate (trainers,imprimir_estados);
 
     void imprimir_entrenadores (void *entrenador)
     {
@@ -307,7 +284,7 @@ int Trainer_handler_create ()
     }
 
     
-    list_iterate (trainers, imprimir_entrenadores);
+    //list_iterate (trainers, imprimir_entrenadores);
     return (error);
     
 
@@ -341,4 +318,68 @@ void subscribe (void)
 	pthread_t thread3; //OJO. Esta variable se está perdiendo
 	pthread_create (&thread3, NULL, listen_routine_colas , (int*)CAUGHT_POKEMON);
 	pthread_detach (thread3);
+}
+
+void inicializar_listas (void)
+{
+    trainers = list_create();
+    ReadyQueue= list_create  (); 
+    mapped_pokemons = list_create();            
+    mapped_pokemons_aux = list_create();
+    deadlock_list = list_create();
+    global_objective = list_create();
+    aux_global_objective= list_create();
+    //new_global_objective=list_create(); //Se crea en teamConfig.c al hacer list_duplicate(global_objective)
+    aux_new_global_objective=list_create();
+    global_for_free = list_create();
+    ID_caught= list_create();
+    ID_localized = list_create();
+}
+
+
+void destruir_listas (void)
+{
+    list_destroy (ReadyQueue);
+    list_destroy (mapped_pokemons);           
+    list_destroy (mapped_pokemons_aux);
+    list_destroy (deadlock_list);
+    list_destroy (global_objective); 
+    list_destroy (aux_global_objective);
+    list_destroy (new_global_objective);
+    list_destroy (aux_new_global_objective);
+    liberar_lista_global();
+    list_destroy (ID_caught);
+    list_destroy (ID_localized);
+}
+
+void inicializar_semaforos (void)
+{
+    sem_init (&qr_sem1, 0, 0);              
+    sem_init (&qr_sem2, 0, 1);
+    sem_init (&poklist_sem, 0, 0);           
+    sem_init (&poklist_sem2, 0, 1);
+    sem_init (&poklistAux_sem1, 0, 0);
+    sem_init (&poklistAux_sem2, 0, 1);
+    sem_init (&deadlock_sem1, 0, 0);
+    sem_init (&deadlock_sem2, 0, 1); //Verificar si es necesario el esquema productor/consumidor
+    sem_init (&resolviendo_deadlock, 0, 0);
+    sem_init (&trainer_count, 0, 0);					
+    sem_init (&using_cpu, 0,0);
+    sem_init (&terminar_ejecucion, 0, 0);
+}
+
+void cerar_semaforos (void)
+{
+    sem_close (&qr_sem1);              
+    sem_close (&qr_sem2);
+    sem_close (&poklist_sem);           
+    sem_close (&poklist_sem2);
+    sem_close (&poklistAux_sem1);
+    sem_close (&poklistAux_sem2);
+    sem_close (&deadlock_sem1);
+    sem_close (&deadlock_sem2); //Verificar si es necesario el esquema productor/consumidor
+    sem_close (&resolviendo_deadlock);
+    sem_close (&trainer_count);					
+    sem_close (&using_cpu);
+    sem_close (&terminar_ejecucion);
 }

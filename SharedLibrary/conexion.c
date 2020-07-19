@@ -82,7 +82,7 @@ int crearSocketServidor(char* ip, char* puerto){
 	listen(socket_servidor, SOMAXCONN);
 
 	freeaddrinfo(servinfo);
-
+	log_destroy(logger);
 	return socket_servidor;
 }
 
