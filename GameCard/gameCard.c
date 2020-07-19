@@ -148,6 +148,7 @@ int main(int argc, char** argv){
 	ID_PROCESO = atoi(argv[1]);
 	sem_init(&mx_file_metadata,0,(unsigned int) 1);
 	sem_init(&mx_creacion_archivo,0,(unsigned int) 1);
+	sem_init(&mx_w_bloques,0,(unsigned int) 1);
 
 	log_info(logInterno,"ID seteado %d",ID_PROCESO);
 
@@ -167,6 +168,7 @@ int main(int argc, char** argv){
 
 	sem_destroy(&mx_creacion_archivo);
 	sem_destroy(&mx_file_metadata);
+	sem_destroy(&mx_w_bloques);
 
 }
 
@@ -249,7 +251,7 @@ void atender_cliente(int* socket){
 int enviarAppearedAlBroker(t_new_pokemon * new_pokemon){
 	int socket_cliente = crearSocketCliente (config_gamecard->ip_broker,config_gamecard->puerto_broker);
 	if(socket_cliente <= 0){
-		log_warning(logGamecard,"No se pudo conectar al broker para enviar APPEARED");
+		// log_info(logGamecard,"No se pudo conectar al broker para enviar APPEARED");
 		return socket_cliente;
 	}else{
 		t_appeared_pokemon* appeared_pokemon = malloc(sizeof(t_appeared_pokemon));
@@ -300,10 +302,10 @@ void atender_newPokemon(int *socket){
 		sem_wait(&mx_file_metadata);
 		t_config *data_config = config_create (pathMetadata);
 		bool archivoAbierto = strcmp(config_get_string_value(data_config,"OPEN"),"Y") == 0;
-		printf("open %d\n",archivoAbierto);
 
 		//Si el archivo está abierto, espero y reintento luego del delay
 		while(archivoAbierto == true){
+			printf("open %s: %d, se aguarda reintento\n",new_pokemon->nombre_pokemon,archivoAbierto);
 			sem_post(&mx_file_metadata);
 
 			sleep(config_gamecard->tiempo_reintento_operacion);
@@ -311,8 +313,9 @@ void atender_newPokemon(int *socket){
 			sem_wait(&mx_file_metadata);
 			data_config = config_create(pathMetadata);
 			archivoAbierto = strcmp(config_get_string_value(data_config,"OPEN"),"Y") == 0;
-			printf("open %d\n",archivoAbierto);
+			
 		}
+		printf("open %s: %d, se realiza la operación\n",new_pokemon->nombre_pokemon,archivoAbierto);
 		//Seteo OPEN=Y en el archivo
 		config_set_value(data_config,"OPEN","Y");
 		config_save(data_config);
@@ -326,13 +329,19 @@ void atender_newPokemon(int *socket){
 		char *buffer=concatenar_bloques(largo_texto, lista_bloques); //Apunta buffer a todos los datos del archivo concatenados
 
 		char* nuevo_buffer = agregar_pokemon(buffer, new_pokemon);
+		// log_warning(logGamecard,"el nuevo contenido es %s",nuevo_buffer);
 
 		t_block* info_block = actualizar_datos(nuevo_buffer, lista_bloques);
 		crear_metadata(new_pokemon->nombre_pokemon,info_block);
 		//Cierro archivo
+		
+		config_set_value(data_config,"SIZE",string_itoa(info_block->size));
+		config_set_value(data_config,"BLOCKS",info_block->blocks);
+		
 		config_set_value(data_config,"OPEN","N");
 		config_save(data_config);
 
+		// log_warning(logGamecard,"los nuevos bloques son %s",info_block->blocks);
 		config_destroy(data_config);
 
 		}
@@ -633,7 +642,7 @@ char* agregar_pokemon(char *buffer, t_new_pokemon* new_pokemon){
 		texto_concatenado = string_new();
 		string_append(&texto_concatenado,buffer);
 		printf("antes de agregar nueva posicion: %s\n",texto_concatenado);
-		string_append(&texto_concatenado,"\n");
+		// string_append(&texto_concatenado,"\n");
 		char * nueva_posicion = string_from_format("%s%lu",posicion,new_pokemon->cantidad);
 		printf("nueva posicion: %s",nueva_posicion);
 		string_append_with_format(&texto_concatenado,nueva_posicion);
@@ -672,7 +681,7 @@ t_block* actualizar_datos (char* texto,char ** lista_bloques) {
 
     int block_size = FS_config->BLOCK_SIZE;
 	int total_bloques = FS_config->BLOCKS;
-    int largo_texto = strlen(texto);;
+    int largo_texto = strlen(texto);
 	int largo_texto_actual;
 	int cant_bloques = cantidad_bloques(largo_texto, block_size);
 	printf("cant bloques: %d",cant_bloques);
@@ -693,7 +702,7 @@ t_block* actualizar_datos (char* texto,char ** lista_bloques) {
 	string_append(&blocks_text,"[");
 	printf("block text: %s\n",blocks_text);
 	printf("cantidad de bloques %d\n", cant_bloques);
-
+/* 
 	for (int i=0; *(lista_bloques+i) != NULL; i++) {
 		block_number = atoi(*(lista_bloques+i));
 
@@ -707,11 +716,17 @@ t_block* actualizar_datos (char* texto,char ** lista_bloques) {
 			string_append(&blocks_text,string_from_format("%d,",block_number));
 
 	}
+*/
 
 	char* bitmap = malloc(total_bloques+1);
 	bitmap = get_bitmap(cant_bloques);
 	printf("\nfile contents before:\n%s \n", bitmap);
-
+	sem_wait(&mx_w_bloques);
+	//Para "fusionar" los bloques al escribir una nueva linea, lo más fácil es marcar como libres
+	//los bloques de este pokemon, y el 2do for va a escribir todo de nuevo + la nueva linea
+	for(int k = 0; lista_bloques[k] != NULL; k++){
+		bitmap[atoi(lista_bloques[k])] = '0';
+	}
 	for(int i = 0; i < total_bloques && cant_bloques > contador_avance_bloque; i++) /* replace characters  */
 	{
 		if (bitmap[i] == '0') {
@@ -731,8 +746,8 @@ t_block* actualizar_datos (char* texto,char ** lista_bloques) {
 		}
 		
 	}
-
-	printf("despues de escribir bloquesp");
+	sem_post(&mx_w_bloques);
+	printf("despues de escribir bloques");
 	string_append(&blocks_text,"]");
 	
     printf("%d", largo_texto);	

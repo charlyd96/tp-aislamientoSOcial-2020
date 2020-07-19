@@ -115,4 +115,5 @@ int enviarAppearedAlBroker(t_new_pokemon * new_pokemon);
 //Semaforos
 sem_t mx_file_metadata;
 sem_t mx_creacion_archivo;
+sem_t mx_w_bloques;
 #endif /* GAMECARD_H_ */
