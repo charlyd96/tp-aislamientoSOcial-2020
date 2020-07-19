@@ -66,7 +66,7 @@ void* listen_routine_colas (void *colaSuscripcion){
 				{
 					process_code tipo_proceso = recibirTipoProceso(socket_cliente);
 					uint32_t PID = recibirIDProceso(socket_cliente);
-
+					printf("Se conectó el proceso %s [%d]\n",tipoProcesoParaLogs(tipo_proceso),PID);
 					pthread_t thread;
 					pthread_create (&thread, NULL, (void *) atender_newPokemon, &socket_cliente);
 					pthread_detach (thread);
@@ -87,7 +87,7 @@ void* listen_routine_colas (void *colaSuscripcion){
 				{
 					process_code tipo_proceso = recibirTipoProceso(socket_cliente);
 					uint32_t PID = recibirIDProceso(socket_cliente);
-					
+					printf("Se conectó el proceso %s [%d]\n",tipoProcesoParaLogs(tipo_proceso),PID);
 					pthread_t thread;
 					pthread_create (&thread, NULL, (void *) atender_getPokemon, &socket_cliente);
 					pthread_detach (thread);
@@ -106,7 +106,7 @@ void* listen_routine_colas (void *colaSuscripcion){
 				{
 					process_code tipo_proceso = recibirTipoProceso(socket_cliente);
 					uint32_t PID = recibirIDProceso(socket_cliente);
-
+					printf("Se conectó el proceso %s [%d]\n",tipoProcesoParaLogs(tipo_proceso),PID);
 					pthread_t thread;
 					pthread_create (&thread, NULL, (void *) atender_catchPokemon, &socket_cliente);
 					pthread_detach (thread);
@@ -233,6 +233,7 @@ void atender_cliente(int* socket){
 	op_code cod_op = recibirOperacion(socket_cliente);
 	process_code tipo_proceso = recibirTipoProceso(socket_cliente);
 	uint32_t PID = recibirIDProceso(socket_cliente);
+	printf("Se conectó el proceso %s [%d]\n",tipoProcesoParaLogs(tipo_proceso),PID);
 	switch(cod_op){
 		case NEW_POKEMON:
 			atender_newPokemon(&socket_cliente);
@@ -341,98 +342,71 @@ void atender_newPokemon(int *socket){
 		config_set_value(data_config,"OPEN","N");
 		config_save(data_config);
 
-		// log_warning(logGamecard,"los nuevos bloques son %s",info_block->blocks);
 		config_destroy(data_config);
-
 		}
 	else{ //Si no existe, creo el directorio del pokemon
 		crear_directorio_pokemon(new_pokemon->nombre_pokemon);
 		
-		t_block* info_block = crear_blocks(new_pokemon);
+		char* texto = string_from_format("%lu-%lu=%lu\n",new_pokemon->pos_x,new_pokemon->pos_y,new_pokemon->cantidad);
+		t_block* info_block = actualizar_datos(texto, NULL);
+
 		crear_metadata(new_pokemon->nombre_pokemon,info_block);
 		sem_post(&mx_creacion_archivo);
 	}
 	//Ya sea que agregué o creé el pokemon, respondo el appeared
 	//NOTA: Contemplar el caso en que no se pueda agregar el pokemon al FS, en ese caso no devolver appeared
 	
-	//ENVIAR SIEMPRE AL BROKER, para asegurarme abro una conexión
-	enviarAppearedAlBroker(new_pokemon);
-	
+	//ENVIAR SIEMPRE AL BROKER, para asegurarme abro una conexión nueva
+	enviarAppearedAlBroker(new_pokemon);	
 }
-
-t_block* crear_blocks(t_new_pokemon* new_pokemon){
-    int block_size = FS_config->BLOCK_SIZE;
-	int total_bloques = FS_config->BLOCKS;
-    int largo_texto;
-	int cant_bloques;
-	t_block* info_block = malloc(sizeof(t_block));
-	char* blocks_text;
-	int contador_avance_bloque = 0;
-	int block_number;
-    
-    printf("escribir: ");
-    char* texto = string_from_format("%lu-%lu=%lu\n",new_pokemon->pos_x,new_pokemon->pos_y,new_pokemon->cantidad);
-	largo_texto = strlen(texto);
-	log_info(logInterno, "Se escribe %s -> Tamaño: %d", texto, largo_texto);
-	// Guardo el largo del texto para la metadata
-	info_block->size = largo_texto;
-
-	cant_bloques = cantidad_bloques(largo_texto, block_size);
-	// int largo = sizeof(int) * cant_bloques; //???
-	// printf("largo string: %d",largo);
-	// blocks_text = malloc(largo*(sizeof(int)+1)+1);
-	blocks_text = string_new();
-	// printf("largo texto bloque: %d\n",largo*(sizeof(int)+1)+1); //???
-
-	string_append(&blocks_text,"[");
-	// printf("block text: %s\n",blocks_text);
-	// printf("cantidad de bloques %d\n", cant_bloques);
-
-	char* bitmap = malloc(total_bloques+1);
-
-	sem_wait(&mx_w_bloques);
-	bitmap = get_bitmap();
-	printf("\nBitmap antes de operar:\n%s \n", bitmap);
-
-	for(int i = 0; i < total_bloques && cant_bloques > contador_avance_bloque; i++) /* replace characters  */
-	{
-		printf("i: %d, contador_avance_bloque: %d\n",i,contador_avance_bloque);
-		if (bitmap[i] == '0') {
-			block_number = i;
-			printf("bitmap[%d]:%c -bloque victima: %d\n",i,bitmap[i],block_number);
-			texto = escribir_bloque(block_number, block_size, texto, &largo_texto);
-
-			bitmap[i] = '1';
-			contador_avance_bloque++;
-
-			if(contador_avance_bloque == cant_bloques)
-				string_append(&blocks_text,string_from_format("%d",block_number));
-			else
-				string_append(&blocks_text,string_from_format("%d,",block_number));
-		}
-		
+void atender_getPokemon(int *socket){
+	/**
+	 * 	Verificar si el Pokémon existe dentro de nuestro Filesystem. Para esto se deberá buscar dentro del directorio Pokemon, si existe el archivo con el nombre de nuestro pokémon. En caso de no existir se deberá informar el mensaje sin posiciones ni cantidades.
+		Verificar si se puede abrir el archivo (si no hay otro proceso que lo esté abriendo). En caso que el archivo se encuentre abierto se deberá reintentar la operación luego de un tiempo definido por configuración.
+		Obtener todas las posiciones y cantidades de Pokemon requerido.
+		Esperar la cantidad de segundos definidos por archivo de configuración
+		Cerrar el archivo.
+		Conectarse al Broker y enviar el mensaje con todas las posiciones y su cantidad.
+	 */
+	t_get_pokemon* get_pokemon= recibirGetPokemon(*socket);
+	log_info(logGamecard, "Recibi GET_POKEMON %s [%d]\n",get_pokemon->nombre_pokemon,get_pokemon->id_mensaje);
+	int enviado = enviarACK(*socket);
+	if(enviado > 0){
+		log_info(logGamecard,"Se devolvió el ACK");		
+	}else{
+		log_info(logGamecard,"ERROR al devolver ACK");
 	}
-	string_append(&blocks_text,"]");
-	printf("bloques usados %s\n",blocks_text);
-	sem_post(&mx_w_bloques);
-	printf("\nBitmap despues de operar:\n%s \n", bitmap);
-
-    info_block->blocks=malloc(strlen(blocks_text)+1);
-	strcpy(info_block->blocks,blocks_text);
-	return info_block;
 }
 
+void atender_catchPokemon(int *socket){
+	/*
+		Verificar si el Pokémon existe dentro de nuestro Filesystem. Para esto se deberá buscar dentro del directorio Pokemon, si existe el archivo con el nombre de nuestro pokémon. En caso de no existir se deberá informar un error.
+		Verificar si se puede abrir el archivo (si no hay otro proceso que lo esté abriendo). En caso que el archivo se encuentre abierto se deberá reintentar la operación luego de un tiempo definido en el archivo de configuración.
+		Verificar si las posiciones ya existen dentro del archivo. En caso de no existir se debe informar un error.
+		En caso que la cantidad del Pokémon sea “1”, se debe eliminar la línea. En caso contrario se debe decrementar la cantidad en uno.
+		Esperar la cantidad de segundos definidos por archivo de configuración
+		Cerrar el archivo.
+		Conectarse al Broker y enviar el mensaje indicando el resultado correcto.
+
+	 */
+	t_catch_pokemon* catch_pokemon= recibirCatchPokemon(*socket);
+	log_info(logGamecard, "Recibi CATCH_POKEMON %s %d %d [%d]\n",catch_pokemon->nombre_pokemon,catch_pokemon->pos_x,catch_pokemon->pos_y,catch_pokemon->id_mensaje);
+	int enviado = enviarACK(*socket);
+	if(enviado > 0){
+		log_info(logGamecard,"Se devolvió el ACK");		
+	}else{
+		log_info(logGamecard,"ERROR al devolver ACK");
+	}
+}
 char* escribir_bloque(int block_number, int block_size, char* texto, int* largo_texto){
 	char *path_metadata= string_from_format("%s/Blocks/%d.bin",config_gamecard->punto_montaje, block_number);
 	FILE *archivo = fopen (path_metadata, "w+");
-	printf("texto: %s largo_texto: %d  block_size:%d \n",texto,(*largo_texto),block_size);
+	
 	char* block_texto;
 	char* texto_final;
 	int bytes_copiados = 0;  
 	if((*largo_texto) > block_size){
-		puts("se usa largo bloque\n");
 		bytes_copiados = block_size;
-
 		block_texto = malloc(block_size + 1);
 		memcpy(block_texto, texto, block_size);
 
@@ -452,7 +426,7 @@ char* escribir_bloque(int block_number, int block_size, char* texto, int* largo_
 	fputs(block_texto,archivo);
 	texto_final = string_substring_from(texto,bytes_copiados);
 	(*largo_texto) = strlen(texto_final);
-	log_info(logInterno, "Path: %s \n Texto: %s \n largo_texto: %d\n",path_metadata,texto_final,(* largo_texto));
+	// log_info(logInterno, "Path: %s \n Texto: %s \n largo_texto: %d\n",path_metadata,texto_final,(* largo_texto));
 	fclose (archivo);
 	return texto_final;
 }
@@ -548,30 +522,6 @@ void crear_directorio_pokemon(char* pokemon){
 	}
 }
 
-void atender_getPokemon(int *socket){
-	t_get_pokemon* get_pokemon= recibirGetPokemon(socket);
-	int enviado = enviarACK(*socket);
-	if(enviado > 0){
-		log_info(logGamecard,"Se devolvió el ACK");		
-	}else{
-		log_info(logGamecard,"ERROR al devolver ACK");
-	}
-	log_info(logGamecard, "Recibi GET_POKEMON %s [%d]\n",get_pokemon->nombre_pokemon,get_pokemon->id_mensaje);
-}
-
-void atender_catchPokemon(int *socket){
-	t_catch_pokemon* catch_pokemon= recibirCatchPokemon(socket);
-	int enviado = enviarACK(*socket);
-	if(enviado > 0){
-		log_info(logGamecard,"Se devolvió el ACK");		
-	}else{
-		log_info(logGamecard,"ERROR al devolver ACK");
-	}
-	log_info(logGamecard, "Recibi CATCH_POKEMON %s %d %d [%d]\n",catch_pokemon->nombre_pokemon,catch_pokemon->pos_x,catch_pokemon->pos_y,catch_pokemon->id_mensaje);
-}
-
-
-
 /**=================================================================================================================
  * Esta función debería recibir un t_metadata para poder crear/actualizar la metadata luego de modificar los bloques
  * =================================================================================================================
@@ -594,31 +544,22 @@ void crear_metadata (char *pokemon,t_block* info_block) {
 
 char* agregar_pokemon(char *buffer, t_new_pokemon* new_pokemon){
 	char* posicion = string_from_format("%lu-%lu=",new_pokemon->pos_x,new_pokemon->pos_y);
-	printf("Posición= %s \n",posicion);
+	printf("Posición objetivo: %s \n",posicion);
+
 	bool bandera = 0;
-	int largo_buffer = strlen(buffer);
-	printf("BRIAN: largo buffer %d",largo_buffer);
 	int posicion_remplazo = 0;
-	char * dato_remplazo;
 	char* nuevo_buffer;
-	int largo_dato_remplazo = 0;
 	char ** split = string_split(buffer,"\n");
-	printf("split : %s\n",*(split));
 	char* nueva_linea;
 	for (int i=0; *(split+i) != NULL && bandera == 0; i++) {
-		if(string_contains(*(split+i),posicion)){
-			int largo_anterior;
-			largo_anterior = strlen(*(split+i));
-			printf("existe la posicion %s\n",*(split+i));
+		//Si la linea empieza con x-y=
+		if(string_starts_with(*(split+i),posicion)){
+			printf("Coincidencia con linea %s\n",*(split+i));
 			bandera=1;
 			nueva_linea= editar_posicion(*(split+i), (int)new_pokemon->cantidad, posicion);
-
-			//largo buffer original - largo linea original + largo linea modificada 
-			//+1 por el \0 que usan las funciones para operar strings
-			nuevo_buffer = malloc(largo_buffer -largo_anterior +strlen(nueva_linea) +1);
 			nuevo_buffer = string_new();
 
-			printf("dato_remplazo %s\n",nueva_linea);
+			printf("La linea modificada queda: %s",nueva_linea);
 			posicion_remplazo = i;
 		}
 	}
@@ -633,27 +574,20 @@ char* agregar_pokemon(char *buffer, t_new_pokemon* new_pokemon){
 				string_append(&nuevo_buffer,nueva_linea);
 			}
 		}
-		printf("Nuevo buffer: %s \n",nuevo_buffer);
+		// printf("Nuevos datos:\n%s\n",nuevo_buffer);
 		return nuevo_buffer;
 	}
 	else{
 		//Si es una linea nueva (la posición no existía)
-		//Convierto la cantidad a string para calcular su largo
-		char* cantidad_string = string_itoa(new_pokemon->cantidad);
-														//+1 por el \0 que manejan los strings
-		nuevo_buffer = malloc(largo_buffer+strlen(posicion)+strlen(cantidad_string) + 2);
 		nuevo_buffer = string_new(); //me crea un string vacio "\0"
 		//copio el buffer original
 		string_append(&nuevo_buffer,buffer);
 		
-		char * nueva_posicion = string_from_format("%s%lu\n",posicion,new_pokemon->cantidad);
-		printf("Nueva linea: %s",nueva_posicion);
-		string_append(&nuevo_buffer,nueva_posicion);
-		printf("Nuevo buffer: %s \n",nuevo_buffer);
-
+		nueva_linea = string_from_format("%s%lu\n",posicion,new_pokemon->cantidad);
+		printf("No hubo coincidencia. Se agrega la linea: %s",nueva_linea);
+		string_append(&nuevo_buffer,nueva_linea);
 		return nuevo_buffer;
 	}
-
 }
 
 char* editar_posicion(char* linea,int cantidad, char* texto_posicion){
@@ -667,12 +601,12 @@ char* editar_posicion(char* linea,int cantidad, char* texto_posicion){
 	int cantidad_actual = atoi(string_substring(linea, largo_pos, length));
 	char* nueva_linea = string_from_format("%s%d\n",texto_posicion,cantidad_actual+cantidad);
 
-	printf("La nueva linea es: %s",nueva_linea);
 	return nueva_linea;
 }
 
 t_block* actualizar_datos (char* texto,char ** lista_bloques) {
-	printf("TEXTO NUEVO: %s\n",texto);
+	printf("Nuevos datos a escribir en los bloques:\n%s\n",texto);
+	printf("Tamaño nuevos datos: %dB, tamaño bloques: %d\n",strlen(texto),FS_config->BLOCK_SIZE);
 
     int block_size = FS_config->BLOCK_SIZE;
 	int total_bloques = FS_config->BLOCKS;
@@ -680,36 +614,30 @@ t_block* actualizar_datos (char* texto,char ** lista_bloques) {
 	int cant_bloques = cantidad_bloques(largo_texto, block_size);
 	printf("cant bloques a ocupar: %d\n",cant_bloques);
 	t_block* info_block = malloc(sizeof(t_block));
-	char* blocks_text;
+	char* blocks_text = string_new();
 	int contador_avance_bloque = 0;
 	int block_number;
-    
-	log_info(logInterno, "Se escribe %s -> Tamaño: %d", texto, largo_texto);
 	// Guardo el largo del texto para la metadata
 	info_block->size = largo_texto;
-	
-	blocks_text = string_new();
 
 	string_append(&blocks_text,"[");
 	
 	char* bitmap = malloc(total_bloques+1);
-	bitmap = get_bitmap(cant_bloques);
-	printf("\nfile contents before:\n%s \n", bitmap);
 	sem_wait(&mx_w_bloques);
+	bitmap = get_bitmap();
+	printf("\nBITMAP antes de escribir:\n%s \n", bitmap);
 	//Para "fusionar" los bloques al escribir una nueva linea, lo más fácil es marcar como libres
 	//los bloques de este pokemon, y el 2do for va a escribir todo de nuevo + la nueva linea
-	for(int k = 0; lista_bloques[k] != NULL; k++){
-		bitmap[atoi(lista_bloques[k])] = '0';
+	if(lista_bloques != NULL){ //Si se escribe por primera vez, es NULL
+		for(int k = 0; lista_bloques[k] != NULL; k++){
+			bitmap[atoi(lista_bloques[k])] = '0';
+		}
 	}
-	for(int i = 0; i < total_bloques && cant_bloques > contador_avance_bloque; i++) /* replace characters  */
+	for(int i = 0; i < total_bloques && cant_bloques > contador_avance_bloque; i++)
 	{
 		if (bitmap[i] == '0') {
-			printf("c_bloques: %d / contador: %d\n",cant_bloques,contador_avance_bloque);
-			puts("si el bitmap es 0");
 			block_number = i;
-			printf("valor:%c -bloque modificado: %d\n",bitmap[i],block_number);
 			texto = escribir_bloque(block_number, block_size, texto, &largo_texto);
-
 			bitmap[i] = '1';
 			contador_avance_bloque++;
 
@@ -722,10 +650,11 @@ t_block* actualizar_datos (char* texto,char ** lista_bloques) {
 	}
 	sem_post(&mx_w_bloques);
 	string_append(&blocks_text,"]");
-	printf("despues de escribir bloques, %s",blocks_text);
+	printf("Bloques escritos: %s\n",blocks_text);
 	
     info_block->blocks=malloc(strlen(blocks_text)+1);
 	strcpy(info_block->blocks,blocks_text);
+	printf("\nBITMAP después de escribir:\n%s \n", bitmap);
 	return info_block;
 }
 
@@ -742,24 +671,27 @@ char* concatenar_lista_char(int largo_texto, char ** lista){
  * Esta función debe llamarse si el pokemon ya existía. Levanta los bloques y devuelve un puntero a esos bloques concatenados
  * ==========================================================================================================================
 */
-void* concatenar_bloques(int largo_texto, char ** lista_bloques){ //Acá puede pasársele la estructura t_metadata en vez del path
+char* concatenar_bloques(int largo_texto, char ** lista_bloques){ //Acá puede pasársele la estructura t_metadata en vez del path
 
 	char *datos_aux;
-	char *datos=malloc (largo_texto); //En este malloc tiene que ir el SIZE que viene del metadata asociado a los bloques
-	int tamanioArchivo=0;
+	char *datos=malloc (largo_texto +1); //+1 para un \0, sino acarrea basura al final de los datos
+	//En este malloc tiene que ir el SIZE que viene del metadata asociado a los bloques
+	int offset=0;
 	for (int i=0; *(lista_bloques +i) != NULL; i++) {
 		
 		char *dir_bloque=string_from_format ("%s/Blocks/%s.bin",config_gamecard->punto_montaje,*(lista_bloques+i));
 		int archivo=open (dir_bloque, O_RDWR);
-		printf("%c",*(lista_bloques+i));
+		// printf("%c",*(lista_bloques+i));
 		if (archivo != -1) {
 			struct stat buf;
 			fstat (archivo, &buf);
+			//mmap devuelve void*
 			datos_aux=mmap(NULL, buf.st_size, PROT_WRITE, MAP_SHARED, archivo, 0);
-			memcpy(datos+tamanioArchivo,datos_aux,buf.st_size);
-			tamanioArchivo= tamanioArchivo +buf.st_size;
+			memcpy(datos+offset,datos_aux,buf.st_size);
+			offset= offset + buf.st_size;
 			munmap (datos_aux,buf.st_size);
-			printf ("Bloque: %d  Datos archivo:\n%s\n",i,datos);
+			
+			*(datos+offset) = '\0';
 		}
 		else{
 			puts ("No se abrió el bloque");
@@ -771,9 +703,7 @@ void* concatenar_bloques(int largo_texto, char ** lista_bloques){ //Acá puede p
 }
 
 int cantidad_bloques(int largo_texto, int block_size){
-	printf("largo_texto: %d block_size:%d \n",largo_texto, block_size);
 	float div = (float)largo_texto/(float)block_size;
-	//printf("floate: %f \n",div);
 	double cant = ceil(div);
 	return (int)cant;
 }

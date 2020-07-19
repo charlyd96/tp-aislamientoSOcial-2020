@@ -491,3 +491,31 @@ char* colaParaLogs(op_code cola){
 
 	return colaLog;
 }
+char* tipoProcesoParaLogs(process_code tipo){
+	char* tipo_proceso;
+
+	switch(tipo){
+		case P_GAMEBOY:{
+			tipo_proceso = "GAMEBOY";
+			break;
+		}
+		case P_GAMECARD:{
+			tipo_proceso = "GAMECARD";
+			break;
+		}
+		case P_BROKER:{
+			tipo_proceso = "BROKER";
+			break;
+		}
+		case P_TEAM:{
+			tipo_proceso = "TEAM";
+			break;
+		}
+		default:{
+			tipo_proceso = "TIPO_DESCONOCIDO";
+			break;
+		}
+	}
+
+	return tipo_proceso;
+}
