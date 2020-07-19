@@ -218,6 +218,7 @@ void leer_FS_metadata (t_configuracion *config_gamecard){
 
 
 bool existe_archivo(char* path){
+	printf("Consulto si existe: %s",path);
 	FILE * file = fopen(path, "r");
 	if(file!=NULL){
 		fclose(file);
@@ -272,6 +273,23 @@ int enviarAppearedAlBroker(t_new_pokemon * new_pokemon){
 		return app_enviado;
 	}
 }
+int enviarLocalizedAlBroker(t_localized_pokemon * msg_localized){
+	int socket_cliente = crearSocketCliente (config_gamecard->ip_broker,config_gamecard->puerto_broker);
+	if(socket_cliente <= 0){
+		log_info(logGamecard,"No se pudo conectar al broker para enviar el LOCALIZED");
+		return socket_cliente;
+	}else{
+		int enviado = enviarLocalizedPokemon(socket_cliente,*msg_localized,P_GAMECARD,ID_PROCESO);
+		if(enviado > 0){
+			log_info(logGamecard,"Se devolvió LOCALIZED_POKEMON %s %d %s [%d]",msg_localized->nombre_pokemon,msg_localized->cant_pos,msg_localized->posiciones,msg_localized->id_mensaje_correlativo);
+		}else{
+			log_warning(logGamecard,"No se pudo devolver el LOCALIZED");
+		}
+		close(socket_cliente);
+		free(msg_localized);
+		return enviado;
+	}
+}
 void atender_newPokemon(int *socket){
 	t_new_pokemon* new_pokemon = recibirNewPokemon(*socket);
 	log_info(logGamecard, "Recibi NEW_POKEMON %s %d %d %d [%d]\n",new_pokemon->nombre_pokemon,new_pokemon->pos_x,new_pokemon->pos_y,new_pokemon->cantidad,new_pokemon->id_mensaje);
@@ -282,7 +300,6 @@ void atender_newPokemon(int *socket){
 		log_info(logGamecard,"ERROR al devolver ACK");
 	}
 	char* pathMetadata = string_from_format("%s/Files/%s/Metadata.bin", config_gamecard->punto_montaje, new_pokemon->nombre_pokemon);
-	printf ("pathmetadata:%s\n", pathMetadata);
 	
 	sem_wait(&mx_creacion_archivo);
 	if(existe_archivo(pathMetadata)){
@@ -306,7 +323,7 @@ void atender_newPokemon(int *socket){
 
 		//Si el archivo está abierto, espero y reintento luego del delay
 		while(archivoAbierto == true){
-			printf("open %s: %d, se aguarda reintento\n",new_pokemon->nombre_pokemon,archivoAbierto);
+			printf("[NEW] Consulto /%s -> ESTÁ ABIERTO, se aguarda reintento\n",new_pokemon->nombre_pokemon);
 			sem_post(&mx_file_metadata);
 
 			sleep(config_gamecard->tiempo_reintento_operacion);
@@ -316,26 +333,23 @@ void atender_newPokemon(int *socket){
 			archivoAbierto = strcmp(config_get_string_value(data_config,"OPEN"),"Y") == 0;
 			
 		}
-		printf("open %s: %d, se realiza la operación\n",new_pokemon->nombre_pokemon,archivoAbierto);
+		printf("[NEW] Consulto /%s -> ESTÁ CERRADO, se realiza la operación\n",new_pokemon->nombre_pokemon);
 		//Seteo OPEN=Y en el archivo
 		config_set_value(data_config,"OPEN","Y");
 		config_save(data_config);
 		sem_post(&mx_file_metadata);
+
+		//Realizo las operaciones
+		char *buffer = getDatosBloques(data_config);
+		char* nuevo_buffer = agregar_pokemon(buffer, new_pokemon);
+		char **lista_bloques=config_get_array_value(data_config, "BLOCKS");
+		t_block* info_block = actualizar_datos(nuevo_buffer, lista_bloques);
+		crear_metadata(new_pokemon->nombre_pokemon,info_block);
+
 		//Retardo simulando IO
 		sleep(config_gamecard->tiempo_retardo_operacion);
 
-		//Realizo las operaciones
-		char **lista_bloques=config_get_array_value(data_config, "BLOCKS");
-		int largo_texto = config_get_int_value(data_config, "SIZE");
-		char *buffer=concatenar_bloques(largo_texto, lista_bloques); //Apunta buffer a todos los datos del archivo concatenados
-
-		char* nuevo_buffer = agregar_pokemon(buffer, new_pokemon);
-		// log_warning(logGamecard,"el nuevo contenido es %s",nuevo_buffer);
-
-		t_block* info_block = actualizar_datos(nuevo_buffer, lista_bloques);
-		crear_metadata(new_pokemon->nombre_pokemon,info_block);
 		//Cierro archivo
-		
 		config_set_value(data_config,"SIZE",string_itoa(info_block->size));
 		config_set_value(data_config,"BLOCKS",info_block->blocks);
 		
@@ -361,23 +375,80 @@ void atender_newPokemon(int *socket){
 }
 void atender_getPokemon(int *socket){
 	/**
-	 * 	Verificar si el Pokémon existe dentro de nuestro Filesystem. Para esto se deberá buscar dentro del directorio Pokemon, si existe el archivo con el nombre de nuestro pokémon. En caso de no existir se deberá informar el mensaje sin posiciones ni cantidades.
-		Verificar si se puede abrir el archivo (si no hay otro proceso que lo esté abriendo). En caso que el archivo se encuentre abierto se deberá reintentar la operación luego de un tiempo definido por configuración.
-		Obtener todas las posiciones y cantidades de Pokemon requerido.
-		Esperar la cantidad de segundos definidos por archivo de configuración
-		Cerrar el archivo.
-		Conectarse al Broker y enviar el mensaje con todas las posiciones y su cantidad.
+	 * 	1) Verificar si el Pokémon existe dentro de nuestro Filesystem. 
+	 * 		Para esto se deberá buscar dentro del directorio Pokemon, si existe el archivo con el nombre de 
+	 * 		nuestro pokémon. En caso de no existir se deberá informar el mensaje sin posiciones ni cantidades.
+		2) Verificar si se puede abrir el archivo (si no hay otro proceso que lo esté abriendo). En caso que 
+			el archivo se encuentre abierto se deberá reintentar la operación luego de un tiempo definido por 
+			configuración.
+		3) Obtener todas las posiciones y cantidades de Pokemon requerido.
+		4) Esperar la cantidad de segundos definidos por archivo de configuración
+		5) Cerrar el archivo.
+		6) Conectarse al Broker y enviar el mensaje con todas las posiciones y su cantidad.
 	 */
 	t_get_pokemon* get_pokemon= recibirGetPokemon(*socket);
 	log_info(logGamecard, "Recibi GET_POKEMON %s [%d]\n",get_pokemon->nombre_pokemon,get_pokemon->id_mensaje);
 	int enviado = enviarACK(*socket);
 	if(enviado > 0){
-		log_info(logGamecard,"Se devolvió el ACK");		
+		log_info(logGamecard,"Se devolvió el ACK");	
 	}else{
 		log_info(logGamecard,"ERROR al devolver ACK");
 	}
-}
+	// 1)
+	char* pathMetadata = string_from_format("%s/Files/%s/Metadata.bin", config_gamecard->punto_montaje, get_pokemon->nombre_pokemon);
+	char* posiciones = "";
+	uint32_t cant_posiciones = 0;
+	if(existe_archivo(pathMetadata)){
+		sem_wait(&mx_file_metadata);
+		t_config *data_config = config_create (pathMetadata);
+		bool archivoAbierto = strcmp(config_get_string_value(data_config,"OPEN"),"Y") == 0;
 
+		// 2) Si el archivo está abierto, espero y reintento luego del delay
+		while(archivoAbierto == true){
+			printf("[GET] Consulto /%s -> ESTÁ ABIERTO, se aguarda reintento\n",get_pokemon->nombre_pokemon);
+			sem_post(&mx_file_metadata);
+
+			sleep(config_gamecard->tiempo_reintento_operacion);
+
+			sem_wait(&mx_file_metadata);
+			data_config = config_create(pathMetadata);
+			archivoAbierto = strcmp(config_get_string_value(data_config,"OPEN"),"Y") == 0;
+			
+		}
+		printf("[GET] Consulto /%s -> ESTÁ CERRADO, se realiza la operación\n",get_pokemon->nombre_pokemon);
+		//Seteo OPEN=Y en el archivo
+		config_set_value(data_config,"OPEN","Y");
+		config_save(data_config);
+		sem_post(&mx_file_metadata);
+		// 3) Obtener todas las posiciones y cantidades de Pokemon requerido.
+		char* buffer = getDatosBloques(data_config);
+		posiciones = getPosicionesPokemon(buffer,&cant_posiciones);
+		// 4) Esperar la cantidad de segundos definidos por archivo de configuración
+		sleep(config_gamecard->tiempo_retardo_operacion);
+		// 5) Cerrar el archivo.
+		config_set_value(data_config,"OPEN","N");
+		config_save(data_config);
+		config_destroy(data_config);
+	}else{
+		//Error -> enviar localized vacio
+	}
+	t_localized_pokemon* msg_localized = malloc(sizeof(t_localized_pokemon));
+	msg_localized->nombre_pokemon = get_pokemon->nombre_pokemon;
+	msg_localized->cant_pos = cant_posiciones;
+	msg_localized->posiciones = posiciones;
+	msg_localized->id_mensaje_correlativo = get_pokemon->id_mensaje;
+	printf("antes enviar LOCALIZED_POKEMON %s %d %s [%d]\n",msg_localized->nombre_pokemon,msg_localized->cant_pos,msg_localized->posiciones,msg_localized->id_mensaje_correlativo);
+	// 6) Conectarse al Broker y enviar el mensaje con todas las posiciones y su cantidad.
+	enviarLocalizedAlBroker(msg_localized);
+}
+/**
+ * Concatena todo el contenido de los bloques y lo devuelve en formato string
+ */
+char *getDatosBloques(t_config * data_config){
+	char **lista_bloques=config_get_array_value(data_config, "BLOCKS");
+	int largo_texto = config_get_int_value(data_config, "SIZE");
+	return concatenar_bloques(largo_texto, lista_bloques); //Apunta buffer a todos los datos del archivo concatenados
+}
 void atender_catchPokemon(int *socket){
 	/*
 		Verificar si el Pokémon existe dentro de nuestro Filesystem. Para esto se deberá buscar dentro del directorio Pokemon, si existe el archivo con el nombre de nuestro pokémon. En caso de no existir se deberá informar un error.
@@ -397,6 +468,31 @@ void atender_catchPokemon(int *socket){
 	}else{
 		log_info(logGamecard,"ERROR al devolver ACK");
 	}
+}
+/**
+ * Recolecta todas las posiciones conocidas del pokemon y arma un string array
+ * con el formato de las commons: [1|2,3|32]
+ */
+char *getPosicionesPokemon(char *buffer, uint32_t* cant_pos){
+	char* posiciones_string = string_new();
+	char** linea = string_split(buffer,"\n");
+	int i = 0;
+	string_append(&posiciones_string,"[");
+	for (i=0; *(linea+i) != NULL ; i++) {
+		//Cada linea es del formato 10-2=1
+		//Split por '=' => ["10-2","1"]
+		char* pos_guion = *(string_split(*(linea+i),"=")); //Tomo la primer posicion del char** que devuelve el split
+		char** posx_posy = string_split(pos_guion,"-"); //Separo las dos pos. por el guion => ["10","2"]
+
+		char* posicion = string_from_format("%s|%s,",*(posx_posy + 0),*(posx_posy + 1));
+		string_append(&posiciones_string,posicion);
+	}
+	//Elimino la última ","
+	posiciones_string = string_substring_until(posiciones_string,strlen(posiciones_string)-1);
+	string_append(&posiciones_string,"]");
+	(*cant_pos) = i;
+
+	return posiciones_string;
 }
 char* escribir_bloque(int block_number, int block_size, char* texto, int* largo_texto){
 	char *path_metadata= string_from_format("%s/Blocks/%d.bin",config_gamecard->punto_montaje, block_number);

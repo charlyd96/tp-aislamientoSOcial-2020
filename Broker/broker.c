@@ -1080,7 +1080,7 @@ void atenderMensajeLocalizedPokemon(int socket_cliente){
 	t_localized_pokemon* localized_pokemon = recibirLocalizedPokemon(socket_cliente);
 
 	// 3. Llegada de un nuevo mensaje a una cola de mensajes.
-	log_info(logBroker, "Llegó un Mensaje LOCALIZED_POKEMON.");
+	log_info(logBroker, "Llegó un Mensaje LOCALIZED_POKEMON %s %d %s [%d]\n",localized_pokemon->nombre_pokemon,localized_pokemon->cant_pos,localized_pokemon->posiciones,localized_pokemon->id_mensaje_correlativo);
 	log_info(logBrokerInterno, "Llegó un Mensaje LOCALIZED_POKEMON.");
 
 	uint32_t id_mensaje;
