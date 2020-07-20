@@ -29,7 +29,7 @@ typedef enum {FF, BF} t_algoritmo_particion_libre;
 
 typedef struct {
 	int tam_memoria;
-	int tam_minimo_particion;
+	uint32_t tam_minimo_particion;
 	t_tipo_particionado algoritmo_memoria;
 	t_algoritmo_reemplazo algoritmo_reemplazo;
 	t_algoritmo_particion_libre algoritmo_particion_libre;
@@ -245,8 +245,8 @@ int victimaSegunFIFO();
 int victimaSegunLRU();
 // BUDDY
 void partirBuddy(int indice);
-int obtenerHuecoBuddy(int i);
-int buscarHuecoBuddy(int i);
+int obtenerHuecoBuddy(uint32_t i);
+int buscarHuecoBuddy(uint32_t i);
 void eliminarParticionBuddy();
 
 t_new_pokemon* descachearNewPokemon(void* stream, uint32_t id);

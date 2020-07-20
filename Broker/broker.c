@@ -153,7 +153,7 @@ int buscarParticionLibre(uint32_t largo_stream){
 	} else if (algoritmo == BF) {
 		log_info(logBrokerInterno, "Algoritmo Best Fit.");
 		//Inicializo dif en tamaño max memoria, así el primer candidato será válido
-		int diferenciaActual = config_broker->tam_memoria;
+		uint32_t diferenciaActual = config_broker->tam_memoria;
 		int indiceCandidato = -1;
 		for (i = 0; i < largo_list; i++) {
 			t_particion* part = list_get(particiones, i);
@@ -173,7 +173,7 @@ int buscarParticionLibre(uint32_t largo_stream){
 /**
  * Busca una partición libre y de tamaño indicado
  */
-int buscarHuecoBuddy(int i){
+int buscarHuecoBuddy(uint32_t i){
 	int largo = list_size(particiones);
 	for(int x = 0; x < largo; x++){
 		t_particion* part = list_get(particiones,x);
@@ -211,7 +211,7 @@ void partirBuddy(int indice){
  * algoritmo recursivo para buscar una partición buddy adecuada.
  * se van partiendo a la mitad los buddys de ser necesario
  */
-int obtenerHuecoBuddy(int i){
+int obtenerHuecoBuddy(uint32_t i){
 	int indice;
 
 	//Condición de salida de la recursividad
@@ -405,7 +405,7 @@ void eliminarParticionBuddy(){
 
 	//Consolidar buddys
 	bool huboConsolidacion;
-	int i_aux = i;
+	uint32_t i_aux = i;
 	do{
 		huboConsolidacion = false;
 		//Si no es la última partición
@@ -663,7 +663,7 @@ void cachearLocalizedPokemon(t_localized_pokemon* msg){
 
 	uint32_t pos_x, pos_y;
 	char** pos_list = string_get_string_as_array(msg->posiciones);
-	for(int i=0; i<(msg->cant_pos); i++){
+	for(uint32_t i=0; i<(msg->cant_pos); i++){
 		char** pos_pair = string_split(pos_list[i],"|");
 		pos_x = atoi(pos_pair[0]);
 		pos_y = atoi(pos_pair[1]);
@@ -800,7 +800,7 @@ t_localized_pokemon descachearLocalizedPokemon(void* stream, uint32_t id){
 	uint32_t pos_x, pos_y;
 	char** pos_list = string_get_string_as_array(mensaje_a_enviar.posiciones);
 
-	for(int i = 1; i <= mensaje_a_enviar.cant_pos; i++){
+	for(uint32_t i = 1; i <= mensaje_a_enviar.cant_pos; i++){
 		char** pos_pair = string_split(pos_list[i],"|");
 		pos_x = atoi(pos_pair[0]);
 		pos_y = atoi(pos_pair[1]);
@@ -846,9 +846,9 @@ void dump_cache(){
 		particion_buscada = list_get(particiones, i);
 
 		if(particion_buscada->libre == 0){
-			fprintf(archivo_dump, "Partición %d: %05p - %05p.		[X]		Size: %db		LRU: %ld.%06ld		Cola:%d		ID:%d\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), particion_buscada->tamanio, particion_buscada->time_ultima_ref.tv_sec, particion_buscada->time_ultima_ref.tv_usec, particion_buscada->tipo_mensaje, particion_buscada->id);
+			fprintf(archivo_dump, "Partición %d: %p - %p.		[X]		Size: %db		LRU: %ld.%06ld		Cola:%d		ID:%d\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), particion_buscada->tamanio, particion_buscada->time_ultima_ref.tv_sec, particion_buscada->time_ultima_ref.tv_usec, particion_buscada->tipo_mensaje, particion_buscada->id);
 		}else{
-			fprintf(archivo_dump, "Partición %d: %05p - %05p.		[L]		Size: %db\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), particion_buscada->tamanio);
+			fprintf(archivo_dump, "Partición %d: %p - %p.		[L]		Size: %db\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), particion_buscada->tamanio);
 		}
 	}
 
@@ -1493,7 +1493,7 @@ void enviarNewPokemonCacheados(int socket, t_suscribe* suscriptor){
 			int ack = recibirACK(socket);
 			log_info(logBrokerInterno, "ACK %d", ack);
 
-			list_add(nodo_new->susc_enviados, socket);
+			list_add(nodo_new->susc_enviados, suscriptor->id_proceso);
 
 			char* cola = colaParaLogs(particion_buscada->tipo_mensaje);
 
@@ -1559,7 +1559,7 @@ void enviarAppearedPokemonCacheados(int socket, t_suscribe* suscriptor){
 			int ack = recibirACK(socket);
 			log_info(logBrokerInterno, "ACK %d", ack);
 
-			list_add(nodo_appeared->susc_enviados, socket);
+			list_add(nodo_appeared->susc_enviados, suscriptor->id_proceso);
 
 			char* cola = colaParaLogs(particion_buscada->tipo_mensaje);
 
@@ -1624,7 +1624,7 @@ void enviarCatchPokemonCacheados(int socket, t_suscribe* suscriptor){
 			int ack = recibirACK(socket);
 			log_info(logBrokerInterno, "ACK %d", ack);
 
-			list_add(nodo_catch->susc_enviados, socket);
+			list_add(nodo_catch->susc_enviados, suscriptor->id_proceso);
 
 			char* cola = colaParaLogs(particion_buscada->tipo_mensaje);
 
@@ -1686,7 +1686,7 @@ void enviarCaughtPokemonCacheados(int socket, t_suscribe* suscriptor){
 			int ack = recibirACK(socket);
 			log_info(logBrokerInterno, "ACK %d", ack);
 
-			list_add(nodo_caught->susc_enviados, socket);
+			list_add(nodo_caught->susc_enviados, suscriptor->id_proceso);
 
 			char* cola = colaParaLogs(particion_buscada->tipo_mensaje);
 
@@ -1745,7 +1745,7 @@ void enviarGetPokemonCacheados(int socket, t_suscribe* suscriptor){
 			int ack = recibirACK(socket);
 			log_info(logBrokerInterno, "ACK %d", ack);
 
-			list_add(nodo_get->susc_enviados, socket);
+			list_add(nodo_get->susc_enviados, suscriptor->id_proceso);
 
 			char* cola = colaParaLogs(particion_buscada->tipo_mensaje);
 			
@@ -1825,7 +1825,7 @@ void enviarLocalizedPokemonCacheados(int socket, t_suscribe* suscriptor){
 
 			int enviado = enviarLocalizedPokemon(socket, descacheado,P_BROKER,0);
 
-			list_add(nodo_localized->susc_enviados, socket);
+			list_add(nodo_localized->susc_enviados, suscriptor->id_proceso);
 
 			int ack = recibirACK(socket);
 			log_info(logBrokerInterno, "ACK %d", ack);
@@ -1901,8 +1901,8 @@ void confirmacionDeRecepcionGameBoy(int ack, t_suscribe* suscribe_gameboy, uint3
 }
 
 int main(void){
-	logBroker = log_create("broker.log", "Broker", 1, LOG_LEVEL_INFO);
-	logBrokerInterno = log_create("brokerInterno.log", "Broker Interno", 0, LOG_LEVEL_INFO);
+	logBroker = log_create("broker.log", "Broker", 0, LOG_LEVEL_INFO);
+	logBrokerInterno = log_create("brokerInterno.log", "Broker Interno", 1, LOG_LEVEL_INFO);
 
 	log_info(logBroker, "****************************************** PROCESO BROKER ******************************************");
 
