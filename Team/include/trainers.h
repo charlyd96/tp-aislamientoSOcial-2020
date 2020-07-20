@@ -31,6 +31,7 @@ extern t_list *ReadyQueue;
 extern sem_t qr_sem1;
 extern sem_t qr_sem2;
 
+bool newTrainerToReady;
 
 typedef enum {
     OP_EXECUTING_CATCH=0,        //Ejecutando: desplazándose al pokemon a atrapar
@@ -44,7 +45,7 @@ typedef enum{
     BLOCKED_DEADLOCK,       //Bloqueado por deadlock
     BLOCKED_NOTHING_TO_DO,  //Bloquedo porque el planificador por distancia no lo seleccionó aún para atrapar un pokemon
     BLOCKED_WAITING_REPLY,  //Bloquedo esperando la respuesta de un CATCH
-    EXEC,                   //Listo para ejecutar
+    EXEC,                   //Ejecutando
     EXIT                    //Objetivos personales cumplidos
 } Status;
 
@@ -59,8 +60,6 @@ typedef struct
 } Deadlock;
 
 extern t_list *trainers;
-
-//int ciclos_cpu=0;
 
 extern Config *config;
 
@@ -91,13 +90,12 @@ typedef struct
     /* Para los algoritmos SJF-SD y SJF-CD */
     float rafagaEstimada;
     float rafagaEjecutada;
-    float rafagaRemanente;
+    float rafagaAux;
 
     /*Identificador del entrenador*/
     int index;
 
     u_int32_t catch_result;
-    Config *config; //Sacar esto y corregir todos los impactos que genera la supresión
 
     exec_error ejecucion;
 
@@ -169,5 +167,7 @@ void mover_pokemon_al_mapa (mapPokemons *nuevo_pokemon);
 void remover_pokemones_en_mapa_auxiliar(char *nombre_pokemon);
 
 void mover_de_aux_a_global(char *name);
+
+void liberar_listas_entrenador(Trainer *trainer);
 
 #endif /* INCLUDE_TRAINERS_H_ */

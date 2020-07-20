@@ -43,12 +43,19 @@ int main(int argc, char **argv)
     						  //crea el hilo de cada entrenador
 
     //liberar semaforos
-    usleep (200); //Para que se imprima el último log
+   // usleep (200); //Para que se imprima el último log
     /* Solo para probar la correcta liberación de las listas*/
     if (LIBERAR ==1)
-    liberar_listas();
+    win=true;
+    //sleep (2);
 
+    //Antes de cerrar conexiones, esperar a que vuelvan todos los hilos
+    cerrar_conexiones();
+    destruir_log();
+    destruir_listas();
+    liberar_entrenadores();
+    liberar_configuraciones();
+    sleep (3);
     return 0;
-
 }
 
