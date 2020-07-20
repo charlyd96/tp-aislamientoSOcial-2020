@@ -67,9 +67,9 @@ void listen_routine_colas (void *colaSuscripcion){
 				{
 					process_code tipo_proceso = recibirTipoProceso(socket_cliente);
 					uint32_t PID = recibirIDProceso(socket_cliente);
-					printf("Se conectó el proceso %s [%d]\n",tipoProcesoParaLogs(tipo_proceso),PID);
+					printf("Se conectó el proceso %s [%u]\n",tipoProcesoParaLogs(tipo_proceso),PID);
 					t_new_pokemon *new_pokemon =recibirNewPokemon (socket_cliente);
-					log_info(logGamecard, "Recibi NEW_POKEMON %s %d %d %d [%d]\n",new_pokemon->nombre_pokemon,new_pokemon->pos_x,new_pokemon->pos_y,new_pokemon->cantidad,new_pokemon->id_mensaje);
+					log_info(logGamecard, "Recibi NEW_POKEMON %s %u %u %u [%u]\n",new_pokemon->nombre_pokemon,new_pokemon->pos_x,new_pokemon->pos_y,new_pokemon->cantidad,new_pokemon->id_mensaje);
 					int enviado = enviarACK(socket_cliente);
 					if(enviado > 0){
 						log_info(logGamecard,"Se devolvió el ACK");		
@@ -97,9 +97,9 @@ void listen_routine_colas (void *colaSuscripcion){
 				{
 					process_code tipo_proceso = recibirTipoProceso(socket_cliente);
 					uint32_t PID = recibirIDProceso(socket_cliente);
-					printf("Se conectó el proceso %s [%d]\n",tipoProcesoParaLogs(tipo_proceso),PID);
+					printf("Se conectó el proceso %s [%u]\n",tipoProcesoParaLogs(tipo_proceso),PID);
 					t_get_pokemon *get_pokemon =recibirGetPokemon (socket_cliente);
-					log_info(logGamecard, "Recibi GET_POKEMON %s [%d]\n",get_pokemon->nombre_pokemon,get_pokemon->id_mensaje);
+					log_info(logGamecard, "Recibi GET_POKEMON %s [%u]\n",get_pokemon->nombre_pokemon,get_pokemon->id_mensaje);
 					int enviado = enviarACK(socket_cliente);
 					if(enviado > 0){
 						log_info(logGamecard,"Se devolvió el ACK");		
@@ -125,9 +125,9 @@ void listen_routine_colas (void *colaSuscripcion){
 				{
 					process_code tipo_proceso = recibirTipoProceso(socket_cliente);
 					uint32_t PID = recibirIDProceso(socket_cliente);
-					printf("Se conectó el proceso %s [%d]\n",tipoProcesoParaLogs(tipo_proceso),PID);
+					printf("Se conectó el proceso %s [%u]\n",tipoProcesoParaLogs(tipo_proceso),PID);
 					t_catch_pokemon *catch_pokemon = recibirCatchPokemon(socket_cliente);
-					log_info(logGamecard, "Recibi CATCH_POKEMON %s %d %d [%d]\n",catch_pokemon->nombre_pokemon,catch_pokemon->pos_x,catch_pokemon->pos_y,catch_pokemon->id_mensaje);
+					log_info(logGamecard, "Recibi CATCH_POKEMON %s %u %u [%u]\n",catch_pokemon->nombre_pokemon,catch_pokemon->pos_x,catch_pokemon->pos_y,catch_pokemon->id_mensaje);
 					int enviado = enviarACK(socket_cliente);
 					if(enviado > 0){
 						log_info(logGamecard,"Se devolvió el ACK");		
@@ -241,6 +241,7 @@ void leer_FS_metadata (t_configuracion *config_gamecard){
 		log_error (logGamecard, "No se pudo leer el archivo Metadata del File System");
 		exit (FILE_FSMETADATA_ERROR);
 	}
+	free(pathMetadata);
 }
 
 
@@ -260,7 +261,7 @@ void atender_cliente(int socket){
 	op_code cod_op = recibirOperacion(socket);
 	process_code tipo_proceso = recibirTipoProceso(socket);
 	uint32_t PID = recibirIDProceso(socket);
-	printf("Se conectó el proceso %s [%d]\n",tipoProcesoParaLogs(tipo_proceso),PID);
+	printf("Se conectó el proceso %s [%u]\n",tipoProcesoParaLogs(tipo_proceso),PID);
 	switch(cod_op){
 		case NEW_POKEMON:{
 			t_new_pokemon *new_pokemon=recibirNewPokemon(socket);
@@ -287,7 +288,7 @@ int enviarAppearedAlBroker(t_new_pokemon * new_pokemon){
 	int socket_cliente = crearSocketCliente (config_gamecard->ip_broker,config_gamecard->puerto_broker);
 	if(socket_cliente <= 0){
 		log_info(logGamecard,"No se pudo conectar al broker para enviar APPEARED");
-		close(socket_cliente);
+		// close(socket_cliente);
 		return socket_cliente;
 	}else{
 		t_appeared_pokemon* appeared_pokemon = malloc(sizeof(t_appeared_pokemon));
@@ -298,13 +299,13 @@ int enviarAppearedAlBroker(t_new_pokemon * new_pokemon){
 
 		int app_enviado = enviarAppearedPokemon(socket_cliente, *appeared_pokemon, P_GAMECARD, ID_PROCESO);
 		if(app_enviado > 0){
-			log_info(logGamecard,"Se devolvió APPEARED_POKEMON %s %d %d [%d]",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y,appeared_pokemon->id_mensaje_correlativo);
+			log_info(logGamecard,"Se devolvió APPEARED_POKEMON %s %u %u [%u]",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y,appeared_pokemon->id_mensaje_correlativo);
 			//Reutilizo esta funcion para el id_mensaje
 			uint32_t id_mensaje = recibirIDProceso(socket_cliente);
 			if(id_mensaje>0){
-				log_info(logGamecard,"APPEARED con correlativo [%d] recibió ID_MENSAJE %d",appeared_pokemon->id_mensaje_correlativo,id_mensaje);
+				log_info(logGamecard,"APPEARED con correlativo [%u] recibió ID_MENSAJE %u",appeared_pokemon->id_mensaje_correlativo,id_mensaje);
 			}else{
-				log_info(logGamecard,"Error al recibir el ID para APPEARED con correlativo [%d]",appeared_pokemon->id_mensaje_correlativo);
+				log_info(logGamecard,"Error al recibir el ID para APPEARED con correlativo [%u]",appeared_pokemon->id_mensaje_correlativo);
 			}
 		}else{
 			log_warning(logGamecard,"No se pudo devolver el appeared");
@@ -318,18 +319,18 @@ int enviarLocalizedAlBroker(t_localized_pokemon * msg_localized){
 	int socket_cliente = crearSocketCliente (config_gamecard->ip_broker,config_gamecard->puerto_broker);
 	if(socket_cliente <= 0){
 		log_info(logGamecard,"No se pudo conectar al broker para enviar el LOCALIZED");
-		close(socket_cliente);
+		// close(socket_cliente);
 		return socket_cliente;
 	}else{
 		int enviado = enviarLocalizedPokemon(socket_cliente,*msg_localized,P_GAMECARD,ID_PROCESO);
 		if(enviado > 0){
-			log_info(logGamecard,"Se devolvió LOCALIZED_POKEMON %s %d %s [%d]",msg_localized->nombre_pokemon,msg_localized->cant_pos,msg_localized->posiciones,msg_localized->id_mensaje_correlativo);
+			log_info(logGamecard,"Se devolvió LOCALIZED_POKEMON %s %u %s [%u]",msg_localized->nombre_pokemon,msg_localized->cant_pos,msg_localized->posiciones,msg_localized->id_mensaje_correlativo);
 			//Reutilizo esta funcion para el id_mensaje
 			uint32_t id_mensaje = recibirIDProceso(socket_cliente);
 			if(id_mensaje>0){
-				log_info(logGamecard,"LOCALIZED con correlativo [%d] recibió ID_MENSAJE %d",msg_localized->id_mensaje_correlativo,id_mensaje);
+				log_info(logGamecard,"LOCALIZED con correlativo [%u] recibió ID_MENSAJE %u",msg_localized->id_mensaje_correlativo,id_mensaje);
 			}else{
-				log_info(logGamecard,"Error al recibir el ID para LOCALIZED con correlativo [%d]",msg_localized->id_mensaje_correlativo);
+				log_info(logGamecard,"Error al recibir el ID para LOCALIZED con correlativo [%u]",msg_localized->id_mensaje_correlativo);
 			}
 		}else{
 			log_warning(logGamecard,"No se pudo devolver el LOCALIZED");
@@ -343,18 +344,18 @@ int enviarCaughtAlBroker(t_caught_pokemon * msg_caught){
 	int socket_cliente = crearSocketCliente (config_gamecard->ip_broker,config_gamecard->puerto_broker);
 	if(socket_cliente <= 0){
 		log_info(logGamecard,"No se pudo conectar al broker para enviar el CAUGHT");
-		close(socket_cliente);
+		// close(socket_cliente);
 		return socket_cliente;
 	}else{
 		int enviado = enviarCaughtPokemon(socket_cliente,*msg_caught,P_GAMECARD,ID_PROCESO);
 		if(enviado > 0){
-			log_info(logGamecard,"Se devolvió CAUGHT_POKEMON %d [%d]",msg_caught->atrapo_pokemon,msg_caught->id_mensaje_correlativo);
+			log_info(logGamecard,"Se devolvió CAUGHT_POKEMON %u [%u]",msg_caught->atrapo_pokemon,msg_caught->id_mensaje_correlativo);
 			//Reutilizo esta funcion para el id_mensaje
 			uint32_t id_mensaje = recibirIDProceso(socket_cliente);
 			if(id_mensaje>0){
-				log_info(logGamecard,"CAUGHT_POKEMON con correlativo [%d] recibió ID_MENSAJE %d",msg_caught->id_mensaje_correlativo,id_mensaje);
+				log_info(logGamecard,"CAUGHT_POKEMON con correlativo [%u] recibió ID_MENSAJE %u",msg_caught->id_mensaje_correlativo,id_mensaje);
 			}else{
-				log_info(logGamecard,"Error al recibir el ID para CAUGHT_POKEMON con correlativo [%d]",msg_caught->id_mensaje_correlativo);
+				log_info(logGamecard,"Error al recibir el ID para CAUGHT_POKEMON con correlativo [%u]",msg_caught->id_mensaje_correlativo);
 			}
 		}else{
 			log_warning(logGamecard,"No se pudo devolver el CAUGHT_POKEMON");
@@ -365,7 +366,7 @@ int enviarCaughtAlBroker(t_caught_pokemon * msg_caught){
 	}
 }
 void atender_newPokemon(t_new_pokemon* new_pokemon){
-	log_info(logGamecard, "Recibi NEW_POKEMON %s %d %d %d [%d]\n",new_pokemon->nombre_pokemon,new_pokemon->pos_x,new_pokemon->pos_y,new_pokemon->cantidad,new_pokemon->id_mensaje);
+	log_info(logGamecard, "Recibi NEW_POKEMON %s %u %u %u [%u]\n",new_pokemon->nombre_pokemon,new_pokemon->pos_x,new_pokemon->pos_y,new_pokemon->cantidad,new_pokemon->id_mensaje);
 
 	char* pathMetadata = string_from_format("%s/Files/%s/Metadata.bin", config_gamecard->punto_montaje, new_pokemon->nombre_pokemon);
 	
@@ -425,6 +426,7 @@ void atender_newPokemon(t_new_pokemon* new_pokemon){
 		config_save(data_config);
 
 		config_destroy(data_config);
+		free(buffer);
 		}
 	else{ //Si no existe, creo el directorio del pokemon
 		crear_directorio_pokemon(new_pokemon->nombre_pokemon);
@@ -439,7 +441,8 @@ void atender_newPokemon(t_new_pokemon* new_pokemon){
 	//NOTA: Contemplar el caso en que no se pueda agregar el pokemon al FS, en ese caso no devolver appeared
 	
 	//ENVIAR SIEMPRE AL BROKER, para asegurarme abro una conexión nueva
-	enviarAppearedAlBroker(new_pokemon);	
+	enviarAppearedAlBroker(new_pokemon);
+	free(pathMetadata);	
 }
 void atender_getPokemon(t_get_pokemon* get_pokemon){
 	/**
@@ -489,6 +492,7 @@ void atender_getPokemon(t_get_pokemon* get_pokemon){
 		config_set_value(data_config,"OPEN","N");
 		config_save(data_config);
 		config_destroy(data_config);
+		free(buffer);
 	}else{
 		//Error -> enviar localized vacio
 	}
@@ -497,8 +501,11 @@ void atender_getPokemon(t_get_pokemon* get_pokemon){
 	msg_localized->cant_pos = cant_posiciones;
 	msg_localized->posiciones = posiciones;
 	msg_localized->id_mensaje_correlativo = get_pokemon->id_mensaje;
-	// printf("antes enviar LOCALIZED_POKEMON %s %d %s [%d]\n",msg_localized->nombre_pokemon,msg_localized->cant_pos,msg_localized->posiciones,msg_localized->id_mensaje_correlativo);
+	// printf("antes enviar LOCALIZED_POKEMON %s %d %s [%u]\n",msg_localized->nombre_pokemon,msg_localized->cant_pos,msg_localized->posiciones,msg_localized->id_mensaje_correlativo);
 	// 6) Conectarse al Broker y enviar el mensaje con todas las posiciones y su cantidad.
+	
+	free(get_pokemon);
+	free(pathMetadata);
 	enviarLocalizedAlBroker(msg_localized);
 }
 /**
@@ -507,7 +514,11 @@ void atender_getPokemon(t_get_pokemon* get_pokemon){
 char *getDatosBloques(t_config * data_config){
 	char **lista_bloques=config_get_array_value(data_config, "BLOCKS");
 	int largo_texto = config_get_int_value(data_config, "SIZE");
-	return concatenar_bloques(largo_texto, lista_bloques); //Apunta buffer a todos los datos del archivo concatenados
+	char * buffer = concatenar_bloques(largo_texto, lista_bloques); //Apunta buffer a todos los datos del archivo concatenados
+	log_info(logGamecard,"Datos archivo:\n%s\n",buffer);
+
+	free(lista_bloques);
+	return buffer;
 }
 void atender_catchPokemon(t_catch_pokemon* catch_pokemon){
 	/*
@@ -536,21 +547,29 @@ char *getPosicionesPokemon(char *buffer, uint32_t* cant_pos){
 	char** linea = string_split(buffer,"\n");
 	int i = 0;
 	string_append(&posiciones_string,"[");
-	for (i=0; *(linea+i) != NULL ; i++) {
+	for (i=0; linea[i] != NULL ; i++) {
 		//Cada linea es del formato 10-2=1
 		//Split por '=' => ["10-2","1"]
-		char* pos_guion = *(string_split(*(linea+i),"=")); //Tomo la primer posicion del char** que devuelve el split
+		char* linea_actual = linea[i];
+		char* pos_guion = *(string_split(linea_actual,"=")); //Tomo la primer posicion del char** que devuelve el split
 		char** posx_posy = string_split(pos_guion,"-"); //Separo las dos pos. por el guion => ["10","2"]
 
 		char* posicion = string_from_format("%s|%s,",*(posx_posy + 0),*(posx_posy + 1));
 		string_append(&posiciones_string,posicion);
+
+		free(pos_guion);
+		free(posx_posy);
+		free(posicion);
+		free(linea_actual);
 	}
 	//Elimino la última ","
-	posiciones_string = string_substring_until(posiciones_string,strlen(posiciones_string)-1);
-	string_append(&posiciones_string,"]");
+	//Hago este cambio a variable auxiliar para eliminar memory leak
+	char * posiciones_string_fix = string_substring_until(posiciones_string,strlen(posiciones_string)-1);
+	free(posiciones_string);
+	string_append(&posiciones_string_fix,"]");
 	(*cant_pos) = i;
-
-	return posiciones_string;
+	free(linea);
+	return posiciones_string_fix;
 }
 char* escribir_bloque(int block_number, int block_size, char* texto, int* largo_texto){
 	char *path_metadata= string_from_format("%s/Blocks/%d.bin",config_gamecard->punto_montaje, block_number);
@@ -582,6 +601,8 @@ char* escribir_bloque(int block_number, int block_size, char* texto, int* largo_
 	(*largo_texto) = strlen(texto_final);
 	// log_info(logInterno, "Path: %s \n Texto: %s \n largo_texto: %d\n",path_metadata,texto_final,(* largo_texto));
 	fclose (archivo);
+	free(path_metadata);
+	free(block_texto);
 	return texto_final;
 }
 
@@ -845,14 +866,16 @@ char* concatenar_bloques(int largo_texto, char ** lista_bloques){ //Acá puede p
 			offset= offset + buf.st_size;
 			munmap (datos_aux,buf.st_size);
 			
-			*(datos+offset) = '\0';
 		}
 		else{
 			puts ("No se abrió el bloque");
 			exit (OPEN_BLOCK_ERROR);	
 		}
+		close(archivo);
+		free(dir_bloque);
 	}
-	printf ("Datos archivo:\n%s\n",datos);
+	
+	*(datos+offset) = '\0';
 	return (datos);
 }
 
