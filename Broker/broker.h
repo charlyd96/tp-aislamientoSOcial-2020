@@ -28,7 +28,7 @@ typedef enum {FIFO, LRU} t_algoritmo_reemplazo;
 typedef enum {FF, BF} t_algoritmo_particion_libre;
 
 typedef struct {
-	int tam_memoria;
+	uint32_t tam_memoria;
 	uint32_t tam_minimo_particion;
 	t_tipo_particionado algoritmo_memoria;
 	t_algoritmo_reemplazo algoritmo_reemplazo;

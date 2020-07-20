@@ -449,7 +449,7 @@ void recibirMensajes(int socket){
 			}
 			case CAUGHT_POKEMON:{
 				t_caught_pokemon* caught_pokemon = recibirCaughtPokemon(socket_cliente);
-				if(caught_pokemon->id_mensaje_correlativo >= 0){
+				if(caught_pokemon->id_mensaje_correlativo > 0){
 					logInfoAux("Llegó un Mensaje CAUGHT_POKEMON %d %d.",caught_pokemon->id_mensaje_correlativo,caught_pokemon->atrapo_pokemon);
 				}else{
 					// 3. Llegada de un nuevo mensaje a una cola de mensajes.

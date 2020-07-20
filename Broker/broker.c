@@ -173,8 +173,9 @@ int buscarParticionLibre(uint32_t largo_stream){
 /**
  * Busca una partición libre y de tamaño indicado
  */
-int buscarHuecoBuddy(uint32_t i){
-	int largo = list_size(particiones);
+
+int buscarHuecoBuddy(int i){
+	uint32_t largo = (uint32_t)list_size(particiones);
 	for(int x = 0; x < largo; x++){
 		t_particion* part = list_get(particiones,x);
 		//log_info(logBrokerInterno,"analizo part base %d, i %d, indice %d,libre %d",part->base,part->buddy_i,x,part->libre);
@@ -907,6 +908,7 @@ void atenderCliente(int socket){
 			break;
 		}
 		case LOCALIZED_POKEMON:{
+			printf("Es localized");
 			tipoYIDProceso(socket_cliente);
 			atenderMensajeLocalizedPokemon(socket_cliente);
 			break;
@@ -946,14 +948,19 @@ void atenderMensajeNewPokemon(int socket_cliente){
 	new_pokemon->id_mensaje = id_mensaje;
 
 	cachearNewPokemon(new_pokemon);
-
 	/*Acá habría que enviar sólo si NO es Game Boy, vamos a consultar porque también
 	hay un log del Game Boy como que recibe mensaje, en este caso si se lo enviamos también*/
 	int tam_lista_suscriptores = list_size(cola_new->suscriptores);
-	
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_new->suscriptores, j);
-		enviarNewPokemon(suscriptor->socket_suscriptor, *new_pokemon,P_BROKER,0);
+		int enviado = enviarNewPokemon(suscriptor->socket_suscriptor, *new_pokemon,P_BROKER,0);
+		if(enviado > 0){
+			log_info(logBrokerInterno, "Se reenvió NEW_POKEMON %s %d %d %d [%d] al socket %d", new_pokemon->nombre_pokemon, new_pokemon->pos_x, new_pokemon->pos_y, new_pokemon->cantidad, new_pokemon->id_mensaje,suscriptor->socket_suscriptor);
+			uint32_t ack = recibirACK(suscriptor->socket_suscriptor);
+			log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
+		}else{
+			log_info(logBrokerInterno,"No se pudo enviar el NEW_POKEMON [%d] al suscriptor con socket %d",new_pokemon->id_mensaje,suscriptor->socket_suscriptor);
+		}
 	}
 }
 
@@ -986,7 +993,14 @@ void atenderMensajeAppearedPokemon(int socket_cliente){
 	
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_appeared->suscriptores, j);
-		enviarAppearedPokemon(suscriptor->socket_suscriptor, *appeared_pokemon,P_BROKER,0);
+		int enviado = enviarAppearedPokemon(suscriptor->socket_suscriptor, *appeared_pokemon,P_BROKER,0);
+		if(enviado > 0){
+			log_info(logBrokerInterno, "Se reenvió APPEARED_POKEMON %s %d %d [%d] al socket %d", appeared_pokemon->nombre_pokemon, appeared_pokemon->pos_x, appeared_pokemon->pos_y, appeared_pokemon->id_mensaje_correlativo,suscriptor->socket_suscriptor);
+			uint32_t ack = recibirACK(suscriptor->socket_suscriptor);
+			log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
+		}else{
+			log_info(logBrokerInterno,"No se pudo enviar el APPEARED_POKEMON %s %d %d [%d] al socket %d", appeared_pokemon->nombre_pokemon, appeared_pokemon->pos_x, appeared_pokemon->pos_y, appeared_pokemon->id_mensaje_correlativo,suscriptor->socket_suscriptor);
+		}
 	}
 }
 
@@ -1012,7 +1026,14 @@ void atenderMensajeCatchPokemon(int socket_cliente){
 	
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_catch->suscriptores, j);
-		enviarCatchPokemon(suscriptor->socket_suscriptor, *catch_pokemon,P_BROKER,0);
+		int enviado = enviarCatchPokemon(suscriptor->socket_suscriptor, *catch_pokemon,P_BROKER,0);
+		if(enviado > 0){
+			log_info(logBrokerInterno, "Se reenvió CATCH_POKEMON %s %d %d [%d] al socket %d", catch_pokemon->nombre_pokemon, catch_pokemon->pos_x, catch_pokemon->pos_y, catch_pokemon->id_mensaje,suscriptor->socket_suscriptor);
+			uint32_t ack = recibirACK(suscriptor->socket_suscriptor);
+			log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
+		}else{
+			log_info(logBrokerInterno,"No se pudo enviar el CATCH_POKEMON %s %d %d [%d] al socket %d", catch_pokemon->nombre_pokemon, catch_pokemon->pos_x, catch_pokemon->pos_y, catch_pokemon->id_mensaje,suscriptor->socket_suscriptor);
+		}
 	}
 }
 
@@ -1071,7 +1092,14 @@ void atenderMensajeGetPokemon(int socket_cliente){
 	
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_get->suscriptores, j);
-		enviarGetPokemon(suscriptor->socket_suscriptor, *get_pokemon,P_BROKER,0);
+		int enviado = enviarGetPokemon(suscriptor->socket_suscriptor, *get_pokemon,P_BROKER,0);
+		if(enviado > 0){
+			log_info(logBrokerInterno, "Se reenvió GET_POKEMON %s [%d] al socket %d", get_pokemon->nombre_pokemon, get_pokemon->id_mensaje,suscriptor->socket_suscriptor);
+			uint32_t ack = recibirACK(suscriptor->socket_suscriptor);
+			log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
+		}else{
+			log_info(logBrokerInterno,"No se pudo enviar el GET_POKEMON %s [%d] al socket %d", get_pokemon->nombre_pokemon, get_pokemon->id_mensaje,suscriptor->socket_suscriptor);
+		}
 	}
 }
 
@@ -1079,8 +1107,8 @@ void atenderMensajeLocalizedPokemon(int socket_cliente){
 	t_localized_pokemon* localized_pokemon = recibirLocalizedPokemon(socket_cliente);
 
 	// 3. Llegada de un nuevo mensaje a una cola de mensajes.
-	log_info(logBroker, "Llegó un Mensaje LOCALIZED_POKEMON.");
-	log_info(logBrokerInterno, "Llegó un Mensaje LOCALIZED_POKEMON.");
+	log_info(logBroker, "Llegó un Mensaje LOCALIZED_POKEMON %s %d %s [%d]\n",localized_pokemon->nombre_pokemon,localized_pokemon->cant_pos,localized_pokemon->posiciones,localized_pokemon->id_mensaje_correlativo);
+	log_info(logBrokerInterno, "Llegó un Mensaje LOCALIZED_POKEMON %s %d %s [%d]\n",localized_pokemon->nombre_pokemon,localized_pokemon->cant_pos,localized_pokemon->posiciones,localized_pokemon->id_mensaje_correlativo);
 
 	uint32_t id_mensaje;
 
@@ -1097,7 +1125,14 @@ void atenderMensajeLocalizedPokemon(int socket_cliente){
 	
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_localized->suscriptores, j);
-		enviarLocalizedPokemon(suscriptor->socket_suscriptor, *localized_pokemon,P_BROKER,0);
+		int enviado = enviarLocalizedPokemon(suscriptor->socket_suscriptor, *localized_pokemon,P_BROKER,0);
+		if(enviado > 0){
+			log_info(logBrokerInterno, "Se reenvió LOCALIZED_POKEMON %s %d %s [%d] al socket %d", localized_pokemon->nombre_pokemon,localized_pokemon->cant_pos,localized_pokemon->posiciones,localized_pokemon->id_mensaje_correlativo,suscriptor->socket_suscriptor);
+			uint32_t ack = recibirACK(suscriptor->socket_suscriptor);
+			log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
+		}else{
+			log_info(logBrokerInterno,"No se pudo enviar el LOCALIZED_POKEMON %s %d %s [%d] al socket %d", localized_pokemon->nombre_pokemon,localized_pokemon->cant_pos,localized_pokemon->posiciones,localized_pokemon->id_mensaje_correlativo,suscriptor->socket_suscriptor);
+		}
 	}
 }
 
@@ -1145,7 +1180,7 @@ void atenderSuscripcionGameCard(int socket_cliente){
 	suscriptor->socket_suscriptor = socket_cliente;
 	log_info(logBrokerInterno, "Socket Game Card %d", suscriptor->socket_suscriptor);
 	suscriptor->id_suscriptor = suscribe_gamecard->id_proceso;
-	log_info(logBrokerInterno, "ID Game Card %d", suscriptor->socket_suscriptor);
+	log_info(logBrokerInterno, "ID Game Card %d", suscriptor->id_suscriptor);
 
 	suscribir(suscriptor, suscribe_gamecard->cola_suscribir);
 
@@ -1415,7 +1450,7 @@ void encolarLocalizedPokemon(t_localized_pokemon* mensaje){
 
 void tipoYIDProceso(int socket_cliente){
 	process_code tipo_proceso = recibirTipoProceso(socket_cliente);
-	log_info(logBrokerInterno, "Tipo de Proceso %d", tipo_proceso);
+	// log_info(logBrokerInterno, "Tipo de Proceso %d", tipo_proceso);
 	uint32_t id_proceso = recibirIDProceso(socket_cliente);
 	log_info(logBrokerInterno, "ID de Proceso %d", id_proceso);
 			

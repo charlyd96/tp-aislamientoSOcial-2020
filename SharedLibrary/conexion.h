@@ -59,7 +59,7 @@ int enviarACK(int socket_destino);
 int recibirACK(int socket_origen);
 
 char* colaParaLogs(op_code cola);
-
+char* tipoProcesoParaLogs(process_code tipo);
 /* HAY QUE REVISARLO
 void recibirCliente(int* socket);
 void procesarSolicitud(int cod_op, int cliente); */

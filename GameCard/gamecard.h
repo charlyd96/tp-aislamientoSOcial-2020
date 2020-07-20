@@ -25,12 +25,13 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <math.h>
+#include <semaphore.h>
 
 #include "strings.h"
 
 
 char* pathGamecardConfig = "/home/utnso/workspace/tp-2020-1c-aislamientoSOcial/GameCard/gameCard.config";
-
+uint32_t ID_PROCESO;
 typedef struct{
 	char* directory;
 	int size;
@@ -89,13 +90,13 @@ void iniciar_directorio_basico();
 void crear_directorio_pokemon(char* nombre_pokemon);
 bool existe_archivo(char* path);
 
-void atender_cliente(int* socket_cliente);
-void atender_newPokemon(int *socket);
-void atender_getPokemon(int *socket);
-void atender_catchPokemon(int *socket);
+void atender_cliente(int socket_cliente);
+void atender_newPokemon(t_new_pokemon* new_pokemon);
+void atender_getPokemon(t_get_pokemon* get_pokemon);
+void atender_catchPokemon(t_catch_pokemon* catch_pokemon);
 void leer_FS_metadata (t_configuracion *config_gamecard);
 void crear_metadata (char *directorio,t_block* info_blocks);
-void* concatenar_bloques(int largo_texto, char ** lista_bloques);
+char* concatenar_bloques(int largo_texto, char ** lista_bloques);
 t_block* crear_blocks(t_new_pokemon* new_pokemon);
 void bloques_disponibles(int cantidad, t_list* bloques);
 char* get_bitmap();
@@ -108,7 +109,15 @@ t_block* actualizar_datos (char* texto,char ** lista_bloques);
 
 void levantarPuertoEscucha(void);
 int reintentar_conexion(op_code colaSuscripcion);
-void* listen_routine_colas (void *colaSuscripcion);
+void listen_routine_colas (void *colaSuscripcion);
 void subscribe();
-
+int enviarAppearedAlBroker(t_new_pokemon* new_pokemon);
+int enviarLocalizedAlBroker(t_localized_pokemon* msg_localized);
+int enviarCaughtAlBroker(t_caught_pokemon * msg_caught);
+char *getPosicionesPokemon(char* buffer, uint32_t* cant_pos);
+char *getDatosBloques(t_config *data);
+//Semaforos
+sem_t mx_file_metadata;
+sem_t mx_creacion_archivo;
+sem_t mx_w_bloques;
 #endif /* GAMECARD_H_ */
