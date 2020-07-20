@@ -97,8 +97,9 @@ int send_catch (Trainer *trainer)
 		message.pos_y=trainer->actual_objective.posy;
 		message.id_mensaje=0;
 
-		enviarCatchPokemon (socket, message);
-		trainer->ejecucion=FINISHED;
+		enviarCatchPokemon (socket, message, P_TEAM, ID_proceso);
+    trainer->ejecucion=FINISHED;
+
 		sem_post(&using_cpu); //Disponibilizar la CPU para otro entrenador
 		puts ("esperando ID");
 		recv (socket,&(message.id_mensaje),sizeof(uint32_t),MSG_WAITALL); //Recibir ID

@@ -35,6 +35,7 @@ int crearSocketCliente(char* ip, char* puerto){
 	}
 
 	freeaddrinfo(servinfo);
+	log_destroy(logger);
 	return socket_cliente;
 }
 
@@ -104,10 +105,31 @@ int aceptarCliente(int socket_servidor){
 op_code recibirOperacion(int socket_cliente){
 	op_code cod_op;
 	int recibido = recv(socket_cliente, &cod_op, sizeof(uint32_t), MSG_WAITALL);
+	//-1: error, 0: desconexión del servidor
 	if(recibido == 0 || recibido == -1){
 		return OP_UNKNOWN;
 	}
 	return cod_op;
+}
+
+process_code recibirTipoProceso(int socket_cliente){
+	process_code tipo_proceso;
+	int recibido = recv(socket_cliente, &tipo_proceso, sizeof(process_code), MSG_WAITALL);
+	//-1: error, 0: desconexión del servidor
+	if(recibido == 0 || recibido == -1){
+		return P_UNKNOWN;
+	}
+	return tipo_proceso;
+}
+
+uint32_t recibirIDProceso(int socket_cliente){
+	uint32_t id_proceso;
+	int recibido = recv(socket_cliente, &id_proceso, sizeof(uint32_t), MSG_WAITALL);
+	//-1: error, 0: desconexión del servidor
+	if(recibido == 0 || recibido == -1){
+		return 0;
+	}
+	return id_proceso;
 }
 
 int enviarACK(int socket_destino){
@@ -118,6 +140,7 @@ int enviarACK(int socket_destino){
 	if(ack_enviado == -1){
 		log_error(logger, "No se pudo enviar el ACK.");
 	}
+	log_destroy(logger);
 	return ack_enviado;
 }
 
@@ -127,9 +150,10 @@ int recibirACK(int socket_origen){
 	uint32_t ack_recibido;
 	int ack = recv(socket_origen, &ack_recibido, sizeof(uint32_t), 0);
 	if(ack == -1){
-		log_error(logger, "No se pudo enviar el ACK."); //Creo que debería decir "No se pudo recibir el ACK". Firma: Charly :D
+		log_error(logger, "No se pudo recibir el ACK."); //Creo que debería decir "No se pudo recibir el ACK". Firma: Charly :D
 														//Tratar al mensaje como que no fue recibido por el proceso. Reenviar luego de la reconexión.
 	}
+	log_destroy(logger);
 	return ack_recibido;
 }
 
@@ -137,10 +161,12 @@ int recibirACK(int socket_origen){
  * Envía un mensaje por el socket indicado
  *
  */
-int enviarMensaje(int nroSocket,op_code operacion,t_buffer* buffer){
+int enviarMensaje(int nroSocket,op_code operacion,t_buffer* buffer, process_code tipo_proceso, uint32_t id_proceso){
 	t_paquete* paquete = malloc(sizeof(t_paquete));
 
 	paquete->codigo_operacion = operacion;
+	paquete->tipo_proceso = tipo_proceso;
+	paquete->id_proceso = id_proceso;
 	paquete->buffer = buffer;
 
 	int tamanio_a_enviar;
@@ -153,10 +179,10 @@ int enviarMensaje(int nroSocket,op_code operacion,t_buffer* buffer){
 	return enviado;
 }
 
-int enviarNewPokemon(int socket_cliente, t_new_pokemon mensaje){
+int enviarNewPokemon(int socket_cliente, t_new_pokemon mensaje,process_code tipo_proceso, uint32_t id_proceso){
 	t_buffer* buffer = serializarNewPokemon(mensaje);
 
-	return enviarMensaje(socket_cliente,NEW_POKEMON,buffer);
+	return enviarMensaje(socket_cliente,NEW_POKEMON,buffer,tipo_proceso,id_proceso);
 }
 int enviarSuscripcion(int nro_socket,t_suscribe suscripcion){
 
@@ -187,31 +213,31 @@ int enviarSuscripcion(int nro_socket,t_suscribe suscripcion){
  * el campo id_mensaje_correlativo debe iniciarse en 0 en caso de no querer serializarlo
  *
  */
-int enviarAppearedPokemon(int socket_cliente, t_appeared_pokemon mensaje){
+int enviarAppearedPokemon(int socket_cliente, t_appeared_pokemon mensaje, process_code tipo_proceso, uint32_t id_proceso){
 	t_buffer* buffer = serializarAppearedPokemon(mensaje);
 
-	return enviarMensaje(socket_cliente,APPEARED_POKEMON,buffer);
+	return enviarMensaje(socket_cliente,APPEARED_POKEMON,buffer, tipo_proceso, id_proceso);
 }
-int enviarGetPokemon(int socket_cliente, t_get_pokemon mensaje){
+int enviarGetPokemon(int socket_cliente, t_get_pokemon mensaje, process_code tipo_proceso, uint32_t id_proceso){
 	t_buffer* buffer = serializarGetPokemon(mensaje);
 
-	return enviarMensaje(socket_cliente,GET_POKEMON,buffer);
+	return enviarMensaje(socket_cliente,GET_POKEMON,buffer, tipo_proceso, id_proceso);
 }
 
-int enviarLocalizedPokemon(int socket_cliente, t_localized_pokemon mensaje){
+int enviarLocalizedPokemon(int socket_cliente, t_localized_pokemon mensaje, process_code tipo_proceso, uint32_t id_proceso){
 	t_buffer* buffer = serializarLocalizedPokemon(mensaje);
 
-	return enviarMensaje(socket_cliente,LOCALIZED_POKEMON,buffer);
+	return enviarMensaje(socket_cliente,LOCALIZED_POKEMON,buffer, tipo_proceso, id_proceso);
 }
-int enviarCatchPokemon(int socket_cliente, t_catch_pokemon mensaje){
+int enviarCatchPokemon(int socket_cliente, t_catch_pokemon mensaje, process_code tipo_proceso, uint32_t id_proceso){
 	t_buffer* buffer = serializarCatchPokemon(mensaje);
 
-	return enviarMensaje(socket_cliente,CATCH_POKEMON,buffer);
+	return enviarMensaje(socket_cliente,CATCH_POKEMON,buffer, tipo_proceso, id_proceso);
 }
-int enviarCaughtPokemon(int socket_cliente, t_caught_pokemon mensaje){
+int enviarCaughtPokemon(int socket_cliente, t_caught_pokemon mensaje, process_code tipo_proceso, uint32_t id_proceso){
 	t_buffer* buffer = serializarCaughtPokemon(mensaje);
 
-	return enviarMensaje(socket_cliente,CAUGHT_POKEMON,buffer);
+	return enviarMensaje(socket_cliente,CAUGHT_POKEMON,buffer, tipo_proceso, id_proceso);
 }
 
 t_new_pokemon* recibirNewPokemon(int socket_cliente){
@@ -306,43 +332,40 @@ t_get_pokemon* recibirGetPokemon(int socket_cliente){
 	return get_pokemon;
 }
 t_localized_pokemon* recibirLocalizedPokemon(int socket_cliente){
+	printf("recibir localized\n");
 	uint32_t size_buffer, largo_nombre,cant_pos;
 	uint32_t id_mensaje_correlativo = 0;
 	uint32_t pos_x = 0;
 	uint32_t pos_y = 0;
 	uint32_t bytes_recibidos = 0;
-	char* posicionesString = "";
+	char* posicionesString = string_new();
 
 	recv(socket_cliente, &size_buffer, sizeof(uint32_t), MSG_WAITALL);
-
 	recv(socket_cliente, &largo_nombre, sizeof(uint32_t), MSG_WAITALL);
 	bytes_recibidos += sizeof(uint32_t);
-
 	char* nombre_pokemon = malloc(largo_nombre);
 	recv(socket_cliente, nombre_pokemon, largo_nombre, MSG_WAITALL);
 	bytes_recibidos += largo_nombre;
 
 	recv(socket_cliente, &cant_pos, sizeof(uint32_t), MSG_WAITALL);
 	bytes_recibidos += sizeof(uint32_t);
-
-	strcat(posicionesString,"[");
+	string_append(&posicionesString,"[");
 	//Por cada cant_pos, recibir un par de enteros (armo el formato "[1|2,2|2]")
 	for(uint32_t i = 1; i<=cant_pos; i++){
 		recv(socket_cliente, &pos_x, sizeof(uint32_t), MSG_WAITALL);
 		bytes_recibidos += sizeof(uint32_t);
 
-		strcat(posicionesString,string_itoa(pos_x));
-		strcat(posicionesString,"|");
+		string_append(&posicionesString,string_itoa(pos_x));
+		string_append(&posicionesString,"|");
 
 		recv(socket_cliente, &pos_y, sizeof(uint32_t), MSG_WAITALL);
 		bytes_recibidos += sizeof(uint32_t);
 
-		strcat(posicionesString,string_itoa(pos_y));
+		string_append(&posicionesString,string_itoa(pos_y));
 
-		if(i < cant_pos) strcat(posicionesString,",");
+		if(i < cant_pos) string_append(&posicionesString,",");
 	}
 	strcat(posicionesString,"]");
-
 	//Si me queda buffer por recibir, es el id_mensaje_correlativo
 	if(size_buffer > bytes_recibidos){
 		recv(socket_cliente, &id_mensaje_correlativo, sizeof(uint32_t), MSG_WAITALL);
@@ -415,16 +438,16 @@ t_suscribe* recibirSuscripcion(op_code tipo_suscripcion,int socket_cliente){
 	uint32_t id_proceso = 0;
 
 	recv(socket_cliente, &cola_suscribir, sizeof(op_code), MSG_WAITALL);
+	recv(socket_cliente, &id_proceso, sizeof(uint32_t), MSG_WAITALL);
 	if(tipo_suscripcion == SUSCRIBE_GAMEBOY){
 		recv(socket_cliente, &timeout, sizeof(uint32_t), MSG_WAITALL);
 	}
-	recv(socket_cliente, &id_proceso, sizeof(uint32_t), MSG_WAITALL);
 	
 	t_suscribe* suscripcion = malloc(sizeof(t_suscribe));
 	suscripcion->tipo_suscripcion = tipo_suscripcion;
 	suscripcion->cola_suscribir = cola_suscribir;
-	suscripcion->timeout = timeout;
 	suscripcion->id_proceso = id_proceso;
+	suscripcion->timeout = timeout;
 
 	return suscripcion;
 }
@@ -464,4 +487,32 @@ char* colaParaLogs(op_code cola){
 	}
 
 	return colaLog;
+}
+char* tipoProcesoParaLogs(process_code tipo){
+	char* tipo_proceso;
+
+	switch(tipo){
+		case P_GAMEBOY:{
+			tipo_proceso = "GAMEBOY";
+			break;
+		}
+		case P_GAMECARD:{
+			tipo_proceso = "GAMECARD";
+			break;
+		}
+		case P_BROKER:{
+			tipo_proceso = "BROKER";
+			break;
+		}
+		case P_TEAM:{
+			tipo_proceso = "TEAM";
+			break;
+		}
+		default:{
+			tipo_proceso = "TIPO_DESCONOCIDO";
+			break;
+		}
+	}
+
+	return tipo_proceso;
 }

@@ -32,16 +32,18 @@ int crearSocketServidor(char* ip, char* puerto);
 int aceptarCliente(int socket_servidor);
 
 op_code recibirOperacion(int socket_cliente);
+process_code recibirTipoProceso(int socket_cliente);
+uint32_t recibirIDProceso(int socket_cliente);
 
-int enviarMensaje(int nroSocket,op_code operacion,t_buffer* buffer);
+int enviarMensaje(int nroSocket,op_code operacion,t_buffer* buffer, process_code tipo_proceso, uint32_t id_proceso);
 
 //Dado un Socket, envía un mensaje del tipo NEW_POKEMON.
-int enviarNewPokemon(int socket_cliente, t_new_pokemon mensaje);
-int enviarGetPokemon(int socket_cliente, t_get_pokemon mensaje);
-int enviarCatchPokemon(int socket_cliente, t_catch_pokemon mensaje);
-int enviarAppearedPokemon(int socket_cliente, t_appeared_pokemon mensaje);
-int enviarLocalizedPokemon(int socket_cliente, t_localized_pokemon mensaje);
-int enviarCaughtPokemon(int socket_cliente, t_caught_pokemon mensaje);
+int enviarNewPokemon(int socket_cliente, t_new_pokemon mensaje, process_code tipo_proceso, uint32_t id_proceso);
+int enviarGetPokemon(int socket_cliente, t_get_pokemon mensaje, process_code tipo_proceso, uint32_t id_proceso);
+int enviarCatchPokemon(int socket_cliente, t_catch_pokemon mensaje, process_code tipo_proceso, uint32_t id_proceso);
+int enviarAppearedPokemon(int socket_cliente, t_appeared_pokemon mensaje, process_code tipo_proceso, uint32_t id_proceso);
+int enviarLocalizedPokemon(int socket_cliente, t_localized_pokemon mensaje, process_code tipo_proceso, uint32_t id_proceso);
+int enviarCaughtPokemon(int socket_cliente, t_caught_pokemon mensaje, process_code tipo_proceso, uint32_t id_proceso);
 int enviarSuscripcion(int socket_cliente,t_suscribe mensaje);
 
 //Dado un Socket, recibe un mensaje del tipo NEW_POKEMON.
@@ -57,7 +59,7 @@ int enviarACK(int socket_destino);
 int recibirACK(int socket_origen);
 
 char* colaParaLogs(op_code cola);
-
+char* tipoProcesoParaLogs(process_code tipo);
 /* HAY QUE REVISARLO
 void recibirCliente(int* socket);
 void procesarSolicitud(int cod_op, int cliente); */

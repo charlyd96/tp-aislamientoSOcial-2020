@@ -13,15 +13,17 @@ ifeq ($(config),debug)
   Team_config = debug
   Broker_config = debug
   GameBoy_config = debug
+  GameCard_config = debug
 endif
 ifeq ($(config),release)
   SharedLibrary_config = release
   Team_config = release
   Broker_config = release
   GameBoy_config = release
+  GameCard_config = release
 endif
 
-PROJECTS := SharedLibrary Team Broker GameBoy
+PROJECTS := SharedLibrary Team Broker GameBoy GameCard
 
 .PHONY: all clean help $(PROJECTS) 
 
@@ -51,11 +53,18 @@ ifneq (,$(GameBoy_config))
 	@${MAKE} --no-print-directory -C GameBoy -f Makefile config=$(GameBoy_config)
 endif
 
+GameCard: SharedLibrary
+ifneq (,$(GameCard_config))
+	@echo "==== Building GameCard ($(GameCard_config)) ===="
+	@${MAKE} --no-print-directory -C GameCard -f Makefile config=$(GameCard_config)
+endif
+
 clean:
 	@${MAKE} --no-print-directory -C SharedLibrary -f Makefile clean
 	@${MAKE} --no-print-directory -C Team -f Makefile clean
 	@${MAKE} --no-print-directory -C Broker -f Makefile clean
 	@${MAKE} --no-print-directory -C GameBoy -f Makefile clean
+	@${MAKE} --no-print-directory -C GameCard -f Makefile clean
 
 help:
 	@echo "Usage: make [config=name] [target]"
@@ -71,5 +80,6 @@ help:
 	@echo "   Team"
 	@echo "   Broker"
 	@echo "   GameBoy"
+	@echo "   GameCard"
 	@echo ""
 	@echo "For more information, see https://github.com/premake/premake-core/wiki"

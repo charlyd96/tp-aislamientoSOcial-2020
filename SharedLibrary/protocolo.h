@@ -30,6 +30,7 @@ typedef enum {
 } op_code;
 
 typedef enum {
+	P_GAMEBOY,
 	P_BROKER,
 	P_TEAM,
 	P_GAMECARD,
@@ -51,6 +52,8 @@ typedef struct {
 
 typedef struct {
 	op_code codigo_operacion;
+	process_code tipo_proceso;
+	uint32_t id_proceso;
 	t_buffer* buffer;
 } t_paquete;
 
@@ -99,4 +102,5 @@ typedef struct{
 	uint32_t id_proceso;
 	uint32_t timeout; //Solo en caso de gameboy
 } t_suscribe;
+
 #endif /* PROTOCOLO_H_ */
