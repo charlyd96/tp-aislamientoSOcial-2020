@@ -19,7 +19,7 @@ void levantarPuertoEscucha(void){
 					log_info(logInterno,"While de aceptar cliente");
 					int cliente = aceptarCliente(socketServidorGamecard);
 					pthread_t hiloCliente;
-					pthread_create(&hiloCliente, NULL, (void*)atender_cliente, &cliente);
+					pthread_create(&hiloCliente, NULL, (void*)atender_cliente, (void*)cliente);
 
 					pthread_detach(hiloCliente);
 				}
@@ -48,7 +48,7 @@ int reintentar_conexion(op_code colaSuscripcion)
 	log_info (logGamecard, "Suscripción exitosa con la cola %s", colaParaLogs(colaSuscripcion));
 	return (socket_cliente);
 }
-void* listen_routine_colas (void *colaSuscripcion){
+void listen_routine_colas (void *colaSuscripcion){
 
 	int socket_cliente;
 	socket_cliente =reintentar_conexion((op_code)colaSuscripcion);
@@ -69,7 +69,8 @@ void* listen_routine_colas (void *colaSuscripcion){
 					uint32_t PID = recibirIDProceso(socket_cliente);
 					printf("Se conectó el proceso %s [%d]\n",tipoProcesoParaLogs(tipo_proceso),PID);
 					pthread_t thread;
-					pthread_create (&thread, NULL, (void *) atender_newPokemon, &socket_cliente);
+					pthread_create (&thread, NULL, (void *) atender_newPokemon, (void*)socket_cliente);
+					sleep (1);
 					pthread_detach (thread);
 				}
 
@@ -91,7 +92,7 @@ void* listen_routine_colas (void *colaSuscripcion){
 					uint32_t PID = recibirIDProceso(socket_cliente);
 					printf("Se conectó el proceso %s [%d]\n",tipoProcesoParaLogs(tipo_proceso),PID);
 					pthread_t thread;
-					pthread_create (&thread, NULL, (void *) atender_getPokemon, &socket_cliente);
+					pthread_create (&thread, NULL, (void *) atender_getPokemon, (void*)socket_cliente);
 					pthread_detach (thread);
 				}
 			} break;
@@ -129,15 +130,15 @@ void* listen_routine_colas (void *colaSuscripcion){
 void subscribe()
 {
 	pthread_t thread1; //OJO. Esta variable se está perdiendo
-	pthread_create (&thread1, NULL, listen_routine_colas , (int*)NEW_POKEMON);
+	pthread_create (&thread1, NULL, (void*)listen_routine_colas , (int*)NEW_POKEMON);
 	pthread_detach (thread1);
 
 	pthread_t thread2; //OJO. Esta variable se está perdiendo
-	pthread_create (&thread2, NULL, listen_routine_colas , (int*)GET_POKEMON);
+	pthread_create (&thread2, NULL, (void*) listen_routine_colas , (int*)GET_POKEMON);
 	pthread_detach (thread2);
 
 	pthread_t thread3; //OJO. Esta variable se está perdiendo
-	pthread_create (&thread3, NULL, listen_routine_colas , (int*)CATCH_POKEMON);
+	pthread_create (&thread3, NULL, (void*) listen_routine_colas , (int*)CATCH_POKEMON);
 	pthread_detach (thread3);
 }
 
@@ -231,22 +232,21 @@ bool existe_archivo(char* path){
 	}
 }
 
-void atender_cliente(int* socket){
-	int socket_cliente = *socket;
-	log_info(logGamecard, "Atender cliente %d \n",socket_cliente);
-	op_code cod_op = recibirOperacion(socket_cliente);
-	process_code tipo_proceso = recibirTipoProceso(socket_cliente);
-	uint32_t PID = recibirIDProceso(socket_cliente);
+void atender_cliente(int socket){
+	log_info(logGamecard, "Atender cliente %d \n",socket);
+	op_code cod_op = recibirOperacion(socket);
+	process_code tipo_proceso = recibirTipoProceso(socket);
+	uint32_t PID = recibirIDProceso(socket);
 	printf("Se conectó el proceso %s [%d]\n",tipoProcesoParaLogs(tipo_proceso),PID);
 	switch(cod_op){
 		case NEW_POKEMON:
-			atender_newPokemon(&socket_cliente);
+			atender_newPokemon(socket);
 			break;
 		case GET_POKEMON:
-			atender_getPokemon(&socket_cliente);
+			atender_getPokemon(socket);
 			break;
 		case CATCH_POKEMON:
-			atender_catchPokemon(&socket_cliente);
+			atender_catchPokemon(socket);
 			break;
 		default:
 			printf("La operación no es correcta");
@@ -307,10 +307,10 @@ int enviarLocalizedAlBroker(t_localized_pokemon * msg_localized){
 		return enviado;
 	}
 }
-void atender_newPokemon(int *socket){
-	t_new_pokemon* new_pokemon = recibirNewPokemon(*socket);
+void atender_newPokemon(int socket){
+	t_new_pokemon* new_pokemon = recibirNewPokemon(socket);
 	log_info(logGamecard, "Recibi NEW_POKEMON %s %d %d %d [%d]\n",new_pokemon->nombre_pokemon,new_pokemon->pos_x,new_pokemon->pos_y,new_pokemon->cantidad,new_pokemon->id_mensaje);
-	int enviado = enviarACK(*socket);
+	int enviado = enviarACK(socket);
 	if(enviado > 0){
 		log_info(logGamecard,"Se devolvió el ACK");		
 	}else{
@@ -390,7 +390,7 @@ void atender_newPokemon(int *socket){
 	//ENVIAR SIEMPRE AL BROKER, para asegurarme abro una conexión nueva
 	enviarAppearedAlBroker(new_pokemon);	
 }
-void atender_getPokemon(int *socket){
+void atender_getPokemon(int socket){
 	/**
 	 * 	1) Verificar si el Pokémon existe dentro de nuestro Filesystem. 
 	 * 		Para esto se deberá buscar dentro del directorio Pokemon, si existe el archivo con el nombre de 
@@ -403,9 +403,9 @@ void atender_getPokemon(int *socket){
 		5) Cerrar el archivo.
 		6) Conectarse al Broker y enviar el mensaje con todas las posiciones y su cantidad.
 	 */
-	t_get_pokemon* get_pokemon= recibirGetPokemon(*socket);
+	t_get_pokemon* get_pokemon= recibirGetPokemon(socket);
 	log_info(logGamecard, "Recibi GET_POKEMON %s [%d]\n",get_pokemon->nombre_pokemon,get_pokemon->id_mensaje);
-	int enviado = enviarACK(*socket);
+	int enviado = enviarACK(socket);
 	if(enviado > 0){
 		log_info(logGamecard,"Se devolvió el ACK");	
 	}else{
@@ -466,7 +466,7 @@ char *getDatosBloques(t_config * data_config){
 	int largo_texto = config_get_int_value(data_config, "SIZE");
 	return concatenar_bloques(largo_texto, lista_bloques); //Apunta buffer a todos los datos del archivo concatenados
 }
-void atender_catchPokemon(int *socket){
+void atender_catchPokemon(int socket){
 	/*
 		Verificar si el Pokémon existe dentro de nuestro Filesystem. Para esto se deberá buscar dentro del directorio Pokemon, si existe el archivo con el nombre de nuestro pokémon. En caso de no existir se deberá informar un error.
 		Verificar si se puede abrir el archivo (si no hay otro proceso que lo esté abriendo). En caso que el archivo se encuentre abierto se deberá reintentar la operación luego de un tiempo definido en el archivo de configuración.
@@ -477,9 +477,9 @@ void atender_catchPokemon(int *socket){
 		Conectarse al Broker y enviar el mensaje indicando el resultado correcto.
 
 	 */
-	t_catch_pokemon* catch_pokemon= recibirCatchPokemon(*socket);
+	t_catch_pokemon* catch_pokemon= recibirCatchPokemon(socket);
 	log_info(logGamecard, "Recibi CATCH_POKEMON %s %d %d [%d]\n",catch_pokemon->nombre_pokemon,catch_pokemon->pos_x,catch_pokemon->pos_y,catch_pokemon->id_mensaje);
-	int enviado = enviarACK(*socket);
+	int enviado = enviarACK(socket);
 	if(enviado > 0){
 		log_info(logGamecard,"Se devolvió el ACK");		
 	}else{
