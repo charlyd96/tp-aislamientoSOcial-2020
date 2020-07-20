@@ -44,9 +44,25 @@ extern t_log *logTeam;
 extern Config *config;
 
 t_list *ID_localized;
+
 pthread_mutex_t ID_localized_sem;
 
-extern int ciclos_cpu;
+sem_t terminar_appeared;
+
+sem_t terminar_caught;
+
+int socketGameboy;
+
+int socketAppeared;
+
+int socketLocalized;
+
+int socketCaught;
+
+int socketGameboyCliente;
+
+extern bool win;
+
 void* get_opcode (int socket);
 
 void process_request_recv (op_code cod_op, int socket);
