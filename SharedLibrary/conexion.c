@@ -332,43 +332,40 @@ t_get_pokemon* recibirGetPokemon(int socket_cliente){
 	return get_pokemon;
 }
 t_localized_pokemon* recibirLocalizedPokemon(int socket_cliente){
+	printf("recibir localized\n");
 	uint32_t size_buffer, largo_nombre,cant_pos;
 	uint32_t id_mensaje_correlativo = 0;
 	uint32_t pos_x = 0;
 	uint32_t pos_y = 0;
 	uint32_t bytes_recibidos = 0;
-	char* posicionesString = "";
+	char* posicionesString = string_new();
 
 	recv(socket_cliente, &size_buffer, sizeof(uint32_t), MSG_WAITALL);
-
 	recv(socket_cliente, &largo_nombre, sizeof(uint32_t), MSG_WAITALL);
 	bytes_recibidos += sizeof(uint32_t);
-
 	char* nombre_pokemon = malloc(largo_nombre);
 	recv(socket_cliente, nombre_pokemon, largo_nombre, MSG_WAITALL);
 	bytes_recibidos += largo_nombre;
 
 	recv(socket_cliente, &cant_pos, sizeof(uint32_t), MSG_WAITALL);
 	bytes_recibidos += sizeof(uint32_t);
-
-	strcat(posicionesString,"[");
+	string_append(&posicionesString,"[");
 	//Por cada cant_pos, recibir un par de enteros (armo el formato "[1|2,2|2]")
 	for(uint32_t i = 1; i<=cant_pos; i++){
 		recv(socket_cliente, &pos_x, sizeof(uint32_t), MSG_WAITALL);
 		bytes_recibidos += sizeof(uint32_t);
 
-		strcat(posicionesString,string_itoa(pos_x));
-		strcat(posicionesString,"|");
+		string_append(&posicionesString,string_itoa(pos_x));
+		string_append(&posicionesString,"|");
 
 		recv(socket_cliente, &pos_y, sizeof(uint32_t), MSG_WAITALL);
 		bytes_recibidos += sizeof(uint32_t);
 
-		strcat(posicionesString,string_itoa(pos_y));
+		string_append(&posicionesString,string_itoa(pos_y));
 
-		if(i < cant_pos) strcat(posicionesString,",");
+		if(i < cant_pos) string_append(&posicionesString,",");
 	}
 	strcat(posicionesString,"]");
-
 	//Si me queda buffer por recibir, es el id_mensaje_correlativo
 	if(size_buffer > bytes_recibidos){
 		recv(socket_cliente, &id_mensaje_correlativo, sizeof(uint32_t), MSG_WAITALL);

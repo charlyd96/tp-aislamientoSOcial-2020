@@ -59,6 +59,7 @@ void* listen_routine_colas (void *colaSuscripcion){
 		{
 			while(1)
 			{
+				printf("Recibir new");
 				op_code cod_op = recibirOperacion(socket_cliente);
 				if (cod_op==OP_UNKNOWN)
 					socket_cliente = reintentar_conexion((op_code) colaSuscripcion);
@@ -79,6 +80,7 @@ void* listen_routine_colas (void *colaSuscripcion){
 		{
 			while(1)
 			{
+				printf("Recibir get");
 				op_code cod_op = recibirOperacion(socket_cliente);
 
 				if (cod_op==OP_UNKNOWN)
@@ -99,6 +101,7 @@ void* listen_routine_colas (void *colaSuscripcion){
 		{
 			while(1)
 			{
+				printf("Recibir catch");
 				op_code cod_op = recibirOperacion(socket_cliente);
 				if (cod_op==OP_UNKNOWN)
 					socket_cliente = reintentar_conexion((op_code) colaSuscripcion);
@@ -265,6 +268,13 @@ int enviarAppearedAlBroker(t_new_pokemon * new_pokemon){
 		int app_enviado = enviarAppearedPokemon(socket_cliente, *appeared_pokemon, P_GAMECARD, ID_PROCESO);
 		if(app_enviado > 0){
 			log_info(logGamecard,"Se devolvió APPEARED_POKEMON %s %d %d [%d]",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y,appeared_pokemon->id_mensaje_correlativo);
+			//Reutilizo esta funcion para el id_mensaje
+			uint32_t id_mensaje = recibirIDProceso(socket_cliente);
+			if(id_mensaje>0){
+				log_info(logGamecard,"APPEARED con correlativo [%d] recibió ID_MENSAJE %d",appeared_pokemon->id_mensaje_correlativo,id_mensaje);
+			}else{
+				log_info(logGamecard,"Error al recibir el ID para APPEARED con correlativo [%d]",appeared_pokemon->id_mensaje_correlativo);
+			}
 		}else{
 			log_warning(logGamecard,"No se pudo devolver el appeared");
 		}
@@ -282,6 +292,13 @@ int enviarLocalizedAlBroker(t_localized_pokemon * msg_localized){
 		int enviado = enviarLocalizedPokemon(socket_cliente,*msg_localized,P_GAMECARD,ID_PROCESO);
 		if(enviado > 0){
 			log_info(logGamecard,"Se devolvió LOCALIZED_POKEMON %s %d %s [%d]",msg_localized->nombre_pokemon,msg_localized->cant_pos,msg_localized->posiciones,msg_localized->id_mensaje_correlativo);
+			//Reutilizo esta funcion para el id_mensaje
+			uint32_t id_mensaje = recibirIDProceso(socket_cliente);
+			if(id_mensaje>0){
+				log_info(logGamecard,"LOCALIZED con correlativo [%d] recibió ID_MENSAJE %d",msg_localized->id_mensaje_correlativo,id_mensaje);
+			}else{
+				log_info(logGamecard,"Error al recibir el ID para LOCALIZED con correlativo [%d]",msg_localized->id_mensaje_correlativo);
+			}
 		}else{
 			log_warning(logGamecard,"No se pudo devolver el LOCALIZED");
 		}

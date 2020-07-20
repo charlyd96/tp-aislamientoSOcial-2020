@@ -153,7 +153,7 @@ int buscarParticionLibre(uint32_t largo_stream){
 	} else if (algoritmo == BF) {
 		log_info(logBrokerInterno, "Algoritmo Best Fit.");
 		//Inicializo dif en tamaño max memoria, así el primer candidato será válido
-		int diferenciaActual = config_broker->tam_memoria;
+		uint32_t diferenciaActual = config_broker->tam_memoria;
 		int indiceCandidato = -1;
 		for (i = 0; i < largo_list; i++) {
 			t_particion* part = list_get(particiones, i);
@@ -174,7 +174,7 @@ int buscarParticionLibre(uint32_t largo_stream){
  * Busca una partición libre y de tamaño indicado
  */
 int buscarHuecoBuddy(int i){
-	int largo = list_size(particiones);
+	uint32_t largo = (uint32_t)list_size(particiones);
 	for(int x = 0; x < largo; x++){
 		t_particion* part = list_get(particiones,x);
 		//log_info(logBrokerInterno,"analizo part base %d, i %d, indice %d,libre %d",part->base,part->buddy_i,x,part->libre);
@@ -406,7 +406,7 @@ void eliminarParticionBuddy(){
 
 	//Consolidar buddys
 	bool huboConsolidacion;
-	int i_aux = i;
+	uint32_t i_aux = i;
 	do{
 		huboConsolidacion = false;
 		//Si no es la última partición
@@ -664,7 +664,7 @@ void cachearLocalizedPokemon(t_localized_pokemon* msg){
 
 	uint32_t pos_x, pos_y;
 	char** pos_list = string_get_string_as_array(msg->posiciones);
-	for(int i=0; i<(msg->cant_pos); i++){
+	for(uint32_t i=0; i<(msg->cant_pos); i++){
 		char** pos_pair = string_split(pos_list[i],"|");
 		pos_x = atoi(pos_pair[0]);
 		pos_y = atoi(pos_pair[1]);
@@ -801,7 +801,7 @@ t_localized_pokemon descachearLocalizedPokemon(void* stream, uint32_t id){
 	uint32_t pos_x, pos_y;
 	char** pos_list = string_get_string_as_array(mensaje_a_enviar.posiciones);
 
-	for(int i = 1; i <= mensaje_a_enviar.cant_pos; i++){
+	for(uint32_t i = 1; i <= mensaje_a_enviar.cant_pos; i++){
 		char** pos_pair = string_split(pos_list[i],"|");
 		pos_x = atoi(pos_pair[0]);
 		pos_y = atoi(pos_pair[1]);
@@ -908,6 +908,7 @@ void atenderCliente(int socket){
 			break;
 		}
 		case LOCALIZED_POKEMON:{
+			printf("Es localized");
 			tipoYIDProceso(socket_cliente);
 			atenderMensajeLocalizedPokemon(socket_cliente);
 			break;
@@ -947,13 +948,14 @@ void atenderMensajeNewPokemon(int socket_cliente){
 	new_pokemon->id_mensaje = id_mensaje;
 
 	cachearNewPokemon(new_pokemon);
-
+	printf("desp cachear\n");
 	/*Acá habría que enviar sólo si NO es Game Boy, vamos a consultar porque también
 	hay un log del Game Boy como que recibe mensaje, en este caso si se lo enviamos también*/
 	int tam_lista_suscriptores = list_size(cola_new->suscriptores);
-	
+	printf("cant suscriptores %d\n",tam_lista_suscriptores);
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_new->suscriptores, j);
+		printf("Se envia NEW al socket %d\n",suscriptor->socket_suscriptor);
 		enviarNewPokemon(suscriptor->socket_suscriptor, *new_pokemon,P_BROKER,0);
 	}
 }
@@ -1081,7 +1083,7 @@ void atenderMensajeLocalizedPokemon(int socket_cliente){
 
 	// 3. Llegada de un nuevo mensaje a una cola de mensajes.
 	log_info(logBroker, "Llegó un Mensaje LOCALIZED_POKEMON %s %d %s [%d]\n",localized_pokemon->nombre_pokemon,localized_pokemon->cant_pos,localized_pokemon->posiciones,localized_pokemon->id_mensaje_correlativo);
-	log_info(logBrokerInterno, "Llegó un Mensaje LOCALIZED_POKEMON.");
+	log_info(logBrokerInterno, "Llegó un Mensaje LOCALIZED_POKEMON %s %d %s [%d]\n",localized_pokemon->nombre_pokemon,localized_pokemon->cant_pos,localized_pokemon->posiciones,localized_pokemon->id_mensaje_correlativo);
 
 	uint32_t id_mensaje;
 
@@ -1149,7 +1151,7 @@ void atenderSuscripcionGameCard(int socket_cliente){
 	suscriptor->socket_suscriptor = socket_cliente;
 	log_info(logBrokerInterno, "Socket Game Card %d", suscriptor->socket_suscriptor);
 	suscriptor->id_suscriptor = suscribe_gamecard->id_proceso;
-	log_info(logBrokerInterno, "ID Game Card %d", suscriptor->socket_suscriptor);
+	log_info(logBrokerInterno, "ID Game Card %d", suscriptor->id_suscriptor);
 
 	suscribir(suscriptor, suscribe_gamecard->cola_suscribir);
 
