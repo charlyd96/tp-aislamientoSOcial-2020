@@ -115,7 +115,7 @@ int Trainer_handler_create(void);
 /*  Inicializa el proceso Team   */
 void Team_Init(void);
 
-void* listen_routine_gameboy (void);
+void listen_routine_gameboy (void);
 
 void send_trainer_to_exec (void);
 
@@ -127,7 +127,7 @@ void imprimir_lista (t_list *get_list);
 
 void enviar_mensajes_get (t_list *get_list);
 
-void* listen_routine_colas (void *conexion);
+void listen_routine_colas (void *conexion);
 
 void informarIDlocalized(uint32_t id);
 
@@ -135,7 +135,7 @@ void SJFSD_exec (void);
 
 void SJFCD_exec (void);
 
-double  actualizar_estimacion (); //Ver cómo agregar el parámetro Trainer *
+double actualizar_estimacion (); //Ver cómo agregar el parámetro Trainer *
 
 void ordenar_lista_ready(void);
 

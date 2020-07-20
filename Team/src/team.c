@@ -228,7 +228,7 @@ int Trainer_handler_create ()
     void  create_thread (void *train)
     { 
         Trainer* trainer= train;      
-        error = pthread_create( &(trainer->thread_id), NULL, trainer_routine, trainer);
+        error = pthread_create( &(trainer->thread_id), NULL, (void*)trainer_routine, trainer);
         pthread_detach (trainer->thread_id);
     }
 
@@ -289,7 +289,7 @@ int Trainer_handler_create ()
     return (error);
     
 
-}
+} 
 
 // ============================================================================================================
 //    *************** Función que abre un socket de escucha para recibir mensajes del Gameboy *****************
@@ -309,15 +309,15 @@ void listen_new_pokemons (void)
 void subscribe (void)
 {
 	pthread_t thread1; //OJO. Esta variable se está perdiendo
-	pthread_create (&thread1, NULL, listen_routine_colas , (int*)APPEARED_POKEMON);
+	pthread_create (&thread1, NULL, (void *)listen_routine_colas , (int*)APPEARED_POKEMON);
 	pthread_detach (thread1);
 
 	pthread_t thread2; //OJO. Esta variable se está perdiendo
-	pthread_create (&thread2, NULL, listen_routine_colas , (int*)LOCALIZED_POKEMON);
+	pthread_create (&thread2, NULL, (void *)listen_routine_colas , (int*)LOCALIZED_POKEMON);
 	pthread_detach (thread2);
   
 	pthread_t thread3; //OJO. Esta variable se está perdiendo
-	pthread_create (&thread3, NULL, listen_routine_colas , (int*)CAUGHT_POKEMON);
+	pthread_create (&thread3, NULL, (void *)listen_routine_colas , (int*)CAUGHT_POKEMON);
 	pthread_detach (thread3);
 }
 
