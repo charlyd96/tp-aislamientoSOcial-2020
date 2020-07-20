@@ -173,6 +173,7 @@ int buscarParticionLibre(uint32_t largo_stream){
 /**
  * Busca una partición libre y de tamaño indicado
  */
+
 int buscarHuecoBuddy(int i){
 	uint32_t largo = (uint32_t)list_size(particiones);
 	for(int x = 0; x < largo; x++){
@@ -211,7 +212,7 @@ void partirBuddy(int indice){
  * algoritmo recursivo para buscar una partición buddy adecuada.
  * se van partiendo a la mitad los buddys de ser necesario
  */
-int obtenerHuecoBuddy(int i){
+int obtenerHuecoBuddy(uint32_t i){
 	int indice;
 
 	//Condición de salida de la recursividad
@@ -329,9 +330,8 @@ void buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint3
 		part_libre->time_ultima_ref = current_time; //Hora actual del sistema
 
 		list_replace(particiones,indice,part_libre);
-		log_info(logBroker, "ID_MENSAJE %d, asigno partición base %d y i %d",id, part_libre->base,part_libre->buddy_i);
-		//log_info(logBrokerInterno, "ID_MENSAJE %d, asigno partición base %d y i %d",id, part_libre->base,part_libre->buddy_i);
-
+		log_info(logBrokerInterno, "ID_MENSAJE %d, asigno partición base %d y i %d",id, part_libre->base,part_libre->buddy_i);
+	
 		char* cola = colaParaLogs(part_libre->tipo_mensaje);
 
 		// 6. Almacenado de un mensaje dentro de la memoria (indicando posición de inicio de su partición).
@@ -847,9 +847,9 @@ void dump_cache(){
 		particion_buscada = list_get(particiones, i);
 
 		if(particion_buscada->libre == 0){
-			fprintf(archivo_dump, "Partición %d: %05p - %05p.		[X]		Size: %db		LRU: %ld.%06ld		Cola:%d		ID:%d\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), particion_buscada->tamanio, particion_buscada->time_ultima_ref.tv_sec, particion_buscada->time_ultima_ref.tv_usec, particion_buscada->tipo_mensaje, particion_buscada->id);
+			fprintf(archivo_dump, "Partición %d: %p - %p.		[X]		Size: %db		LRU: %ld.%06ld		Cola:%d		ID:%d\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), particion_buscada->tamanio, particion_buscada->time_ultima_ref.tv_sec, particion_buscada->time_ultima_ref.tv_usec, particion_buscada->tipo_mensaje, particion_buscada->id);
 		}else{
-			fprintf(archivo_dump, "Partición %d: %05p - %05p.		[L]		Size: %db\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), particion_buscada->tamanio);
+			fprintf(archivo_dump, "Partición %d: %p - %p.		[L]		Size: %db\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), particion_buscada->tamanio);
 		}
 	}
 
@@ -948,15 +948,19 @@ void atenderMensajeNewPokemon(int socket_cliente){
 	new_pokemon->id_mensaje = id_mensaje;
 
 	cachearNewPokemon(new_pokemon);
-	printf("desp cachear\n");
 	/*Acá habría que enviar sólo si NO es Game Boy, vamos a consultar porque también
 	hay un log del Game Boy como que recibe mensaje, en este caso si se lo enviamos también*/
 	int tam_lista_suscriptores = list_size(cola_new->suscriptores);
-	printf("cant suscriptores %d\n",tam_lista_suscriptores);
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_new->suscriptores, j);
-		printf("Se envia NEW al socket %d\n",suscriptor->socket_suscriptor);
-		enviarNewPokemon(suscriptor->socket_suscriptor, *new_pokemon,P_BROKER,0);
+		int enviado = enviarNewPokemon(suscriptor->socket_suscriptor, *new_pokemon,P_BROKER,0);
+		if(enviado > 0){
+			log_info(logBrokerInterno, "Se reenvió NEW_POKEMON %s %d %d %d [%d] al socket %d", new_pokemon->nombre_pokemon, new_pokemon->pos_x, new_pokemon->pos_y, new_pokemon->cantidad, new_pokemon->id_mensaje,suscriptor->socket_suscriptor);
+			uint32_t ack = recibirACK(suscriptor->socket_suscriptor);
+			log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
+		}else{
+			log_info(logBrokerInterno,"No se pudo enviar el NEW_POKEMON [%d] al suscriptor con socket %d",new_pokemon->id_mensaje,suscriptor->socket_suscriptor);
+		}
 	}
 }
 
@@ -989,7 +993,14 @@ void atenderMensajeAppearedPokemon(int socket_cliente){
 	
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_appeared->suscriptores, j);
-		enviarAppearedPokemon(suscriptor->socket_suscriptor, *appeared_pokemon,P_BROKER,0);
+		int enviado = enviarAppearedPokemon(suscriptor->socket_suscriptor, *appeared_pokemon,P_BROKER,0);
+		if(enviado > 0){
+			log_info(logBrokerInterno, "Se reenvió APPEARED_POKEMON %s %d %d [%d] al socket %d", appeared_pokemon->nombre_pokemon, appeared_pokemon->pos_x, appeared_pokemon->pos_y, appeared_pokemon->id_mensaje_correlativo,suscriptor->socket_suscriptor);
+			uint32_t ack = recibirACK(suscriptor->socket_suscriptor);
+			log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
+		}else{
+			log_info(logBrokerInterno,"No se pudo enviar el APPEARED_POKEMON %s %d %d [%d] al socket %d", appeared_pokemon->nombre_pokemon, appeared_pokemon->pos_x, appeared_pokemon->pos_y, appeared_pokemon->id_mensaje_correlativo,suscriptor->socket_suscriptor);
+		}
 	}
 }
 
@@ -1015,7 +1026,14 @@ void atenderMensajeCatchPokemon(int socket_cliente){
 	
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_catch->suscriptores, j);
-		enviarCatchPokemon(suscriptor->socket_suscriptor, *catch_pokemon,P_BROKER,0);
+		int enviado = enviarCatchPokemon(suscriptor->socket_suscriptor, *catch_pokemon,P_BROKER,0);
+		if(enviado > 0){
+			log_info(logBrokerInterno, "Se reenvió CATCH_POKEMON %s %d %d [%d] al socket %d", catch_pokemon->nombre_pokemon, catch_pokemon->pos_x, catch_pokemon->pos_y, catch_pokemon->id_mensaje,suscriptor->socket_suscriptor);
+			uint32_t ack = recibirACK(suscriptor->socket_suscriptor);
+			log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
+		}else{
+			log_info(logBrokerInterno,"No se pudo enviar el CATCH_POKEMON %s %d %d [%d] al socket %d", catch_pokemon->nombre_pokemon, catch_pokemon->pos_x, catch_pokemon->pos_y, catch_pokemon->id_mensaje,suscriptor->socket_suscriptor);
+		}
 	}
 }
 
@@ -1074,7 +1092,14 @@ void atenderMensajeGetPokemon(int socket_cliente){
 	
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_get->suscriptores, j);
-		enviarGetPokemon(suscriptor->socket_suscriptor, *get_pokemon,P_BROKER,0);
+		int enviado = enviarGetPokemon(suscriptor->socket_suscriptor, *get_pokemon,P_BROKER,0);
+		if(enviado > 0){
+			log_info(logBrokerInterno, "Se reenvió GET_POKEMON %s [%d] al socket %d", get_pokemon->nombre_pokemon, get_pokemon->id_mensaje,suscriptor->socket_suscriptor);
+			uint32_t ack = recibirACK(suscriptor->socket_suscriptor);
+			log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
+		}else{
+			log_info(logBrokerInterno,"No se pudo enviar el GET_POKEMON %s [%d] al socket %d", get_pokemon->nombre_pokemon, get_pokemon->id_mensaje,suscriptor->socket_suscriptor);
+		}
 	}
 }
 
@@ -1100,7 +1125,14 @@ void atenderMensajeLocalizedPokemon(int socket_cliente){
 	
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_localized->suscriptores, j);
-		enviarLocalizedPokemon(suscriptor->socket_suscriptor, *localized_pokemon,P_BROKER,0);
+		int enviado = enviarLocalizedPokemon(suscriptor->socket_suscriptor, *localized_pokemon,P_BROKER,0);
+		if(enviado > 0){
+			log_info(logBrokerInterno, "Se reenvió LOCALIZED_POKEMON %s %d %s [%d] al socket %d", localized_pokemon->nombre_pokemon,localized_pokemon->cant_pos,localized_pokemon->posiciones,localized_pokemon->id_mensaje_correlativo,suscriptor->socket_suscriptor);
+			uint32_t ack = recibirACK(suscriptor->socket_suscriptor);
+			log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
+		}else{
+			log_info(logBrokerInterno,"No se pudo enviar el LOCALIZED_POKEMON %s %d %s [%d] al socket %d", localized_pokemon->nombre_pokemon,localized_pokemon->cant_pos,localized_pokemon->posiciones,localized_pokemon->id_mensaje_correlativo,suscriptor->socket_suscriptor);
+		}
 	}
 }
 
@@ -1123,18 +1155,15 @@ void atenderSuscripcionTeam(int socket_cliente){
 
 	switch(suscribe_team->cola_suscribir){
 		case APPEARED_POKEMON:{
-			enviarAppearedPokemonCacheados(socket_cliente, suscribe_team->cola_suscribir);
-		//	confirmacionDeRecepcionTeam(socket_cliente, suscribe_team->id_proceso);
+			enviarAppearedPokemonCacheados(socket_cliente, suscribe_team);
 			break;
 		}
 		case CAUGHT_POKEMON:{
-			enviarCaughtPokemonCacheados(socket_cliente, suscribe_team->cola_suscribir);
-		//	confirmacionDeRecepcionTeam(socket_cliente, suscribe_team->id_proceso);
+			enviarCaughtPokemonCacheados(socket_cliente, suscribe_team);
 			break;
 		}
 		case LOCALIZED_POKEMON:{
-			enviarLocalizedPokemonCacheados(socket_cliente, suscribe_team->cola_suscribir);
-		//	confirmacionDeRecepcionTeam(socket_cliente, suscribe_team->id_proceso);
+			enviarLocalizedPokemonCacheados(socket_cliente, suscribe_team);
 			break;
 		}
 		default:{
@@ -1163,18 +1192,15 @@ void atenderSuscripcionGameCard(int socket_cliente){
 
 	switch(suscribe_gamecard->cola_suscribir){
 		case NEW_POKEMON:{
-			enviarNewPokemonCacheados(socket_cliente, suscribe_gamecard->cola_suscribir);
-		//	confirmacionDeRecepcionGameCard(socket_cliente, suscribe_gamecard->id_proceso);
+			enviarNewPokemonCacheados(socket_cliente, suscribe_gamecard);
 			break;
 		}
 		case CATCH_POKEMON:{
-			enviarCatchPokemonCacheados(socket_cliente, suscribe_gamecard->cola_suscribir);
-		//	confirmacionDeRecepcionGameCard(socket_cliente, suscribe_gamecard->id_proceso);
+			enviarCatchPokemonCacheados(socket_cliente, suscribe_gamecard);
 			break;
 		}
 		case GET_POKEMON:{
-			enviarGetPokemonCacheados(socket_cliente, suscribe_gamecard->cola_suscribir);
-		//	confirmacionDeRecepcionGameCard(socket_cliente, suscribe_gamecard->id_proceso);
+			enviarGetPokemonCacheados(socket_cliente, suscribe_gamecard);
 			break;
 		}
 		default:{
@@ -1198,32 +1224,32 @@ void atenderSuscripcionGameBoy(int socket_cliente){
 	char* cola = colaParaLogs(suscribe_gameboy->cola_suscribir);
 
 	// 2. Suscripción de un proceso a una cola de mensajes.
-	log_info(logBroker, "Se suscribe el Game Boy a la Cola de Mensajes %s", cola);
-	log_info(logBrokerInterno, "Se suscribe el Game Boy a la Cola de Mensajes %s", cola);
+	log_info(logBroker, "Se suscribe el Game Boy %d a la Cola de Mensajes %s", suscribe_gameboy->id_proceso, cola);
+	log_info(logBrokerInterno, "Se suscribe el Game Boy %d a la Cola de Mensajes %s", suscribe_gameboy->id_proceso, cola);
 
 	switch(suscribe_gameboy->cola_suscribir){
 		case NEW_POKEMON:{
-			enviarNewPokemonCacheados(socket_cliente, suscribe_gameboy->cola_suscribir);
+			enviarNewPokemonCacheados(socket_cliente, suscribe_gameboy);
 			break;
 		}
 		case APPEARED_POKEMON:{
-			enviarAppearedPokemonCacheados(socket_cliente, suscribe_gameboy->cola_suscribir);
+			enviarAppearedPokemonCacheados(socket_cliente, suscribe_gameboy);
 			break;
 		}
 		case CATCH_POKEMON:{
-			enviarCatchPokemonCacheados(socket_cliente, suscribe_gameboy->cola_suscribir);
+			enviarCatchPokemonCacheados(socket_cliente, suscribe_gameboy);
 			break;
 		}
 		case CAUGHT_POKEMON:{
-			enviarCaughtPokemonCacheados(socket_cliente, suscribe_gameboy->cola_suscribir);
+			enviarCaughtPokemonCacheados(socket_cliente, suscribe_gameboy);
 			break;
 		}
 		case GET_POKEMON:{
-			enviarGetPokemonCacheados(socket_cliente, suscribe_gameboy->cola_suscribir);
+			enviarGetPokemonCacheados(socket_cliente, suscribe_gameboy);
 			break;
 		}
 		/*case LOCALIZED_POKEMON:{
-			enviarLocalizedPokemonCacheados(socket_cliente, suscribe_gameboy->cola_suscribir);
+			enviarLocalizedPokemonCacheados(socket_cliente, suscribe_gameboy->cola_suscribir, suscribe_gameboy->id_proceso);
 			break;
 		}*/
 		default:{
@@ -1233,7 +1259,7 @@ void atenderSuscripcionGameBoy(int socket_cliente){
 	}
 
 	sleep(suscribe_gameboy->timeout);
-	desuscribir(index,suscribe_gameboy->cola_suscribir);
+	desuscribir(index,suscribe_gameboy->cola_suscribir, suscribe_gameboy->id_proceso);
 	close(socket_cliente);
 	free(suscriptor);
 	free(suscribe_gameboy);
@@ -1293,66 +1319,66 @@ int suscribir(t_suscriptor* suscriptor, op_code cola){
 	return index;
 }
 
-void desuscribir(int index,op_code cola){
+void desuscribir(int index,op_code cola, uint32_t id_proceso){
 	switch(cola){
 		case NEW_POKEMON:{
 			sem_wait(&mensajes_new); // No se puede sacar si la Cola de Mensajes está vacía
 			pthread_mutex_lock(&sem_cola_new);
 			list_remove(cola_new->suscriptores,index);
-			// 2. Suscripción de un proceso a una cola de mensajes.
-			log_info(logBroker, "Finaliza la suscripción de Game Boy de la cola NEW_POKEMON");
-			log_info(logBrokerInterno, "Finaliza la suscripción de Game Boy de la cola NEW_POKEMON");
 			pthread_mutex_unlock(&sem_cola_new);
+			// 2. Suscripción de un proceso a una cola de mensajes.
+			log_info(logBroker, "Finaliza la suscripción del Game Boy %d de la cola NEW_POKEMON", id_proceso);
+			log_info(logBrokerInterno, "Finaliza la suscripción del Game Boy %d de la cola NEW_POKEMON", id_proceso);
 			break;
 		}
 		case APPEARED_POKEMON:{
 			sem_wait(&mensajes_appeared);
 			pthread_mutex_lock(&sem_cola_appeared);
 			list_remove(cola_appeared->suscriptores,index);
-			// 2. Suscripción de un proceso a una cola de mensajes.
-			log_info(logBroker, "Finaliza la suscripción de Game Boy de la cola APPEARED_POKEMON");
-			log_info(logBrokerInterno, "Finaliza la suscripción de Game Boy de la cola APPEARED_POKEMON");
 			pthread_mutex_unlock(&sem_cola_appeared);
+			// 2. Suscripción de un proceso a una cola de mensajes.
+			log_info(logBroker, "Finaliza la suscripción del Game Boy %d de la cola APPEARED_POKEMON", id_proceso);
+			log_info(logBrokerInterno, "Finaliza la suscripción del Game Boy %d de la cola APPEARED_POKEMON", id_proceso);
 			break;
 		}
 		case CATCH_POKEMON:{
 			sem_wait(&mensajes_catch);
 			pthread_mutex_lock(&sem_cola_catch);
 			list_remove(cola_catch->suscriptores,index);
-			// 2. Suscripción de un proceso a una cola de mensajes.
-			log_info(logBroker, "Finaliza la suscripción de Game Boy de la cola CATCH_POKEMON");
-			log_info(logBrokerInterno, "Finaliza la suscripción de Game Boy de la cola CATCH_POKEMON");
 			pthread_mutex_unlock(&sem_cola_catch);
+			// 2. Suscripción de un proceso a una cola de mensajes.
+			log_info(logBroker, "Finaliza la suscripción del Game Boy %d de la cola CATCH_POKEMON", id_proceso);
+			log_info(logBrokerInterno, "Finaliza la suscripción del Game Boy %d de la cola CATCH_POKEMON", id_proceso);
 			break;
 		}
 		case CAUGHT_POKEMON:{
 			sem_wait(&mensajes_caught);
 			pthread_mutex_lock(&sem_cola_caught);
 			list_remove(cola_caught->suscriptores,index);
-			// 2. Suscripción de un proceso a una cola de mensajes.
-			log_info(logBroker, "Finaliza la suscripción de Game Boy de la cola CAUGHT_POKEMON");
-			log_info(logBrokerInterno, "Finaliza la suscripción de Game Boy de la cola CAUGHT_POKEMON");
 			pthread_mutex_unlock(&sem_cola_caught);
+			// 2. Suscripción de un proceso a una cola de mensajes.
+			log_info(logBroker, "Finaliza la suscripción del Game Boy %d de la cola CAUGHT_POKEMON", id_proceso);
+			log_info(logBrokerInterno, "Finaliza la suscripción del Game Boy %d de la cola CAUGHT_POKEMON", id_proceso);
 			break;
 		}
 		case GET_POKEMON:{
 			sem_wait(&mensajes_get);
 			pthread_mutex_lock(&sem_cola_get);
 			list_remove(cola_get->suscriptores,index);
-			// 2. Suscripción de un proceso a una cola de mensajes.
-			log_info(logBroker, "Finaliza la suscripción de Game Boy de la cola GET_POKEMON");
-			log_info(logBrokerInterno, "Finaliza la suscripción de Game Boy de la cola GET_POKEMON");
 			pthread_mutex_unlock(&sem_cola_get);
+			// 2. Suscripción de un proceso a una cola de mensajes.
+			log_info(logBroker, "Finaliza la suscripción del Game Boy %d de la cola GET_POKEMON", id_proceso);
+			log_info(logBrokerInterno, "Finaliza la suscripción del Game Boy %d de la cola GET_POKEMON", id_proceso);
 			break;
 		}
 		case LOCALIZED_POKEMON:{
 			sem_wait(&mensajes_localized);
 			pthread_mutex_lock(&sem_cola_localized);
 			list_remove(cola_localized->suscriptores,index);
-			// 2. Suscripción de un proceso a una cola de mensajes.
-			log_info(logBroker, "Finaliza la suscripción de Game Boy de la cola LOCALIZED_POKEMON");
-			log_info(logBrokerInterno, "Finaliza la suscripción de Game Boy de la cola LOCALIZED_POKEMON");
 			pthread_mutex_unlock(&sem_cola_localized);
+			// 2. Suscripción de un proceso a una cola de mensajes.
+			log_info(logBroker, "Finaliza la suscripción del Game Boy %d de la cola LOCALIZED_POKEMON", id_proceso);
+			log_info(logBrokerInterno, "Finaliza la suscripción del Game Boy %d de la cola LOCALIZED_POKEMON", id_proceso);
 			break;
 		}
 		default:
@@ -1365,6 +1391,7 @@ void encolarNewPokemon(t_new_pokemon* mensaje){
 	nodo_new->mensaje = mensaje;
 	nodo_new->susc_enviados = list_create();
 	nodo_new->susc_ack = list_create();
+	nodo_new->susc_no_ack = list_create();
 
 	list_add(cola_new->nodos,nodo_new);
 }
@@ -1374,6 +1401,7 @@ void encolarAppearedPokemon(t_appeared_pokemon* mensaje){
 	nodo_appeared->mensaje = mensaje;
 	nodo_appeared->susc_enviados = list_create();
 	nodo_appeared->susc_ack = list_create();
+	nodo_appeared->susc_no_ack = list_create();
 
 	list_add(cola_appeared->nodos,nodo_appeared);
 }
@@ -1383,6 +1411,7 @@ void encolarCatchPokemon(t_catch_pokemon* mensaje){
 	nodo_catch->mensaje = mensaje;
 	nodo_catch->susc_enviados = list_create();
 	nodo_catch->susc_ack = list_create();
+	nodo_catch->susc_no_ack = list_create();
 
 	list_add(cola_catch->nodos,nodo_catch);
 }
@@ -1392,6 +1421,7 @@ void encolarCaughtPokemon(t_caught_pokemon* mensaje){
 	nodo_caught->mensaje = mensaje;
 	nodo_caught->susc_enviados = list_create();
 	nodo_caught->susc_ack = list_create();
+	nodo_caught->susc_no_ack = list_create();
 
 	list_add(cola_caught->nodos,nodo_caught);
 }
@@ -1401,6 +1431,7 @@ void encolarGetPokemon(t_get_pokemon* mensaje){
 	nodo_get->mensaje = mensaje;
 	nodo_get->susc_enviados = list_create();
 	nodo_get->susc_ack = list_create();
+	nodo_get->susc_no_ack = list_create();
 
 	list_add(cola_get->nodos,nodo_get);
 }
@@ -1410,6 +1441,7 @@ void encolarLocalizedPokemon(t_localized_pokemon* mensaje){
 	nodo_localized->mensaje = mensaje;
 	nodo_localized->susc_enviados = list_create();
 	nodo_localized->susc_ack = list_create();
+	nodo_localized->susc_no_ack = list_create();
 
 	list_add(cola_localized->nodos,nodo_localized);
 }
@@ -1418,28 +1450,28 @@ void encolarLocalizedPokemon(t_localized_pokemon* mensaje){
 
 void tipoYIDProceso(int socket_cliente){
 	process_code tipo_proceso = recibirTipoProceso(socket_cliente);
-	log_info(logBrokerInterno, "Tipo de Proceso %d", tipo_proceso);
+	// log_info(logBrokerInterno, "Tipo de Proceso %d", tipo_proceso);
 	uint32_t id_proceso = recibirIDProceso(socket_cliente);
 	log_info(logBrokerInterno, "ID de Proceso %d", id_proceso);
 			
 	switch(tipo_proceso){
+		case P_TEAM:{
+			// 1. Conexión de un proceso al broker.
+			log_info(logBroker, "Se conectó el Team %d.", id_proceso);
+			log_info(logBrokerInterno, "Se conectó el Team %d.", id_proceso);
+			break;	
+		}
 		case P_GAMECARD:{
-		// 1. Conexión de un proceso al broker.
-		log_info(logBroker, "Se conectó el Game Card %d.", id_proceso);
-		log_info(logBrokerInterno, "Se conectó el Game Card %d.", id_proceso);
-		break;
+			// 1. Conexión de un proceso al broker.
+			log_info(logBroker, "Se conectó el Game Card %d.", id_proceso);
+			log_info(logBrokerInterno, "Se conectó el Game Card %d.", id_proceso);
+			break;
 		}
 		case P_GAMEBOY:{
-		// 1. Conexión de un proceso al broker.
-		log_info(logBroker, "Se conectó el Game Boy %d.", id_proceso);
-		log_info(logBrokerInterno, "Se conectó el Game Boy %d.", id_proceso);
-		break;
-		}
-		case P_TEAM:{
-		// 1. Conexión de un proceso al broker.
-		log_info(logBroker, "Se conectó el Team %d.", id_proceso);
-		log_info(logBrokerInterno, "Se conectó el Team %d.", id_proceso);
-		break;	
+			// 1. Conexión de un proceso al broker.
+			log_info(logBroker, "Se conectó el Game Boy %d.", id_proceso);
+			log_info(logBrokerInterno, "Se conectó el Game Boy %d.", id_proceso);
+			break;
 		}
 		default:{
 			log_info(logBrokerInterno, "Verificar el Tipo de Proceso y/o ID de Proceso enviado.");
@@ -1471,14 +1503,14 @@ int devolverID(int socket,uint32_t* id_mensaje){
 	return enviado;
 }
 
-void enviarNewPokemonCacheados(int socket, op_code tipo_mensaje){
+void enviarNewPokemonCacheados(int socket, t_suscribe* suscriptor){
 	int tam_lista = list_size(particiones);
 	t_particion* particion_buscada;
 
 	for(int i = 0; i < tam_lista ; i++){
 		particion_buscada = list_get(particiones, i);
 
-		if(particion_buscada->libre == 0 && particion_buscada->tipo_mensaje == tipo_mensaje){
+		if(particion_buscada->libre == 0 && particion_buscada->tipo_mensaje == suscriptor->cola_suscribir){
 			void* stream = malloc(particion_buscada->tamanio);
 			memcpy(stream, cache + particion_buscada->base, particion_buscada->tamanio);
 
@@ -1496,32 +1528,53 @@ void enviarNewPokemonCacheados(int socket, op_code tipo_mensaje){
 			int ack = recibirACK(socket);
 			log_info(logBrokerInterno, "ACK %d", ack);
 
-			list_add(nodo_new->susc_enviados, socket);
+			list_add(nodo_new->susc_enviados, suscriptor->id_proceso);
 
 			char* cola = colaParaLogs(particion_buscada->tipo_mensaje);
 
 			if(enviado == -1){
+				// 4. Envío de un mensaje a un suscriptor específico.
 				log_error(logBroker, "NO se envió el Mensaje.");
 				log_error(logBrokerInterno, "NO se envió el Mensaje.");
 			}else{
-				// 4. Envío de un mensaje a un suscriptor específico.
-				log_info(logBroker, "Se envió el Mensaje: %s %s %d %d %d con ID de Mensaje %d.", cola, descacheado->nombre_pokemon, descacheado->pos_x, descacheado->pos_y, descacheado->cantidad, descacheado->id_mensaje);
-				log_info(logBrokerInterno, "Se envió el Mensaje: %s %s %d %d %d con ID de Mensaje %d->", cola, descacheado->nombre_pokemon, descacheado->pos_x, descacheado->pos_y, descacheado->cantidad, descacheado->id_mensaje);
+				switch(suscriptor->tipo_suscripcion){
+					case SUSCRIBE_TEAM:{
+						// 4. Envío de un mensaje a un suscriptor específico.
+						log_info(logBroker, "NO se debe enviar este Mensaje al Team.");
+						log_info(logBrokerInterno, "NO se debe enviar este Mensaje al Team.");
+						break;
+					}
+					case SUSCRIBE_GAMECARD:{
+						// 4. Envío de un mensaje a un suscriptor específico.
+						log_info(logBroker, "Se envió el Mensaje: %s %s %d %d %d con ID de Mensaje %d al Game Card %d.", cola, descacheado->nombre_pokemon, descacheado->pos_x, descacheado->pos_y, descacheado->cantidad, descacheado->id_mensaje, suscriptor->id_proceso);
+						log_info(logBrokerInterno, "Se envió el Mensaje: %s %s %d %d %d con ID de Mensaje %d al Game Card %d,", cola, descacheado->nombre_pokemon, descacheado->pos_x, descacheado->pos_y, descacheado->cantidad, descacheado->id_mensaje, suscriptor->id_proceso);
+						confirmacionDeRecepcionGameCard(ack, suscriptor, descacheado->id_mensaje);
+						break;
+					}
+					case SUSCRIBE_GAMEBOY:{
+						// 4. Envío de un mensaje a un suscriptor específico.
+						log_info(logBroker, "Se envió el Mensaje: %s %s %d %d %d con ID de Mensaje %d al Game Boy %d.", cola, descacheado->nombre_pokemon, descacheado->pos_x, descacheado->pos_y, descacheado->cantidad, descacheado->id_mensaje, suscriptor->id_proceso);
+						log_info(logBrokerInterno, "Se envió el Mensaje: %s %s %d %d %d con ID de Mensaje %d al Game Boy %d,", cola, descacheado->nombre_pokemon, descacheado->pos_x, descacheado->pos_y, descacheado->cantidad, descacheado->id_mensaje, suscriptor->id_proceso);
+						confirmacionDeRecepcionGameBoy(ack, suscriptor, descacheado->id_mensaje);
+						break;
+					}
+				}
 			}
+	
 			free(descacheado);
 			free(stream);
 		}
 	}
 }
 
-void enviarAppearedPokemonCacheados(int socket, op_code tipo_mensaje){
+void enviarAppearedPokemonCacheados(int socket, t_suscribe* suscriptor){
 	int tam_lista = list_size(particiones);
 	t_particion* particion_buscada;
 
 	for(int i = 0; i < tam_lista ; i++){
 		particion_buscada = list_get(particiones, i);
 
-		if(particion_buscada->libre == 0 && particion_buscada->tipo_mensaje == tipo_mensaje){
+		if(particion_buscada->libre == 0 && particion_buscada->tipo_mensaje == suscriptor->cola_suscribir){
 			void* stream = malloc(particion_buscada->tamanio);
 			memcpy(stream, cache + particion_buscada->base, particion_buscada->tamanio);
 
@@ -1541,31 +1594,52 @@ void enviarAppearedPokemonCacheados(int socket, op_code tipo_mensaje){
 			int ack = recibirACK(socket);
 			log_info(logBrokerInterno, "ACK %d", ack);
 
-			list_add(nodo_appeared->susc_enviados, socket);
+			list_add(nodo_appeared->susc_enviados, suscriptor->id_proceso);
 
 			char* cola = colaParaLogs(particion_buscada->tipo_mensaje);
 
 			if(enviado == -1){
-				log_info(logBroker, "NO se envia");
-				log_info(logBrokerInterno, "NO se envia");
-			}else{
 				// 4. Envío de un mensaje a un suscriptor específico.
-				log_info(logBroker, "Se envió el Mensaje: %s %s %d %d con ID de Mensaje Correlativo %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.id_mensaje_correlativo);
-				log_info(logBrokerInterno, "Se envió el Mensaje: %s %s %d %d con ID de Mensaje Correlativo %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.id_mensaje_correlativo);
+				log_error(logBroker, "NO se envió el Mensaje.");
+				log_error(logBrokerInterno, "NO se envió el Mensaje.");
+			}else{
+				switch(suscriptor->tipo_suscripcion){
+					case SUSCRIBE_TEAM:{
+						// 4. Envío de un mensaje a un suscriptor específico.
+						log_info(logBroker, "Se envió el Mensaje: %s %s %d %d con ID de Mensaje Correlativo %d al Team %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.id_mensaje_correlativo, suscriptor->id_proceso);
+						log_info(logBrokerInterno, "Se envió el Mensaje: %s %s %d %d con ID de Mensaje Correlativo %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.id_mensaje_correlativo, suscriptor->id_proceso);
+						confirmacionDeRecepcionTeam(ack, suscriptor, descacheado.id_mensaje_correlativo);
+						break;
+					}
+					case SUSCRIBE_GAMECARD:{
+						// 4. Envío de un mensaje a un suscriptor específico.
+						log_info(logBroker, "NO se debe enviar este Mensaje al Game Card.");
+						log_info(logBrokerInterno, "NO se debe enviar este Mensaje al Game Card.");
+						break;
+					}
+					case SUSCRIBE_GAMEBOY:{
+						// 4. Envío de un mensaje a un suscriptor específico.
+						log_info(logBroker, "Se envió el Mensaje: %s %s %d %d con ID de Mensaje Correlativo %d al Game Boy %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.id_mensaje_correlativo, suscriptor->id_proceso);
+						log_info(logBrokerInterno, "Se envió el Mensaje: %s %s %d %d con ID de Mensaje Correlativo %d al Game Boy %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.id_mensaje_correlativo, suscriptor->id_proceso);
+						confirmacionDeRecepcionGameBoy(ack, suscriptor, descacheado.id_mensaje_correlativo);
+						break;
+					}
+				}
 			}
+			
 			free(stream);
 		}
 	}
 }
 
-void enviarCatchPokemonCacheados(int socket, op_code tipo_mensaje){
+void enviarCatchPokemonCacheados(int socket, t_suscribe* suscriptor){
 	int tam_lista = list_size(particiones);
 	t_particion* particion_buscada;
 
 	for(int i = 0; i < tam_lista ; i++){
 		particion_buscada = list_get(particiones, i);
 
-		if(particion_buscada->libre == 0 && particion_buscada->tipo_mensaje == tipo_mensaje){
+		if(particion_buscada->libre == 0 && particion_buscada->tipo_mensaje == suscriptor->cola_suscribir){
 			void* stream = malloc(particion_buscada->tamanio);
 			memcpy(stream, cache + particion_buscada->base, particion_buscada->tamanio);
 
@@ -1585,7 +1659,7 @@ void enviarCatchPokemonCacheados(int socket, op_code tipo_mensaje){
 			int ack = recibirACK(socket);
 			log_info(logBrokerInterno, "ACK %d", ack);
 
-			list_add(nodo_catch->susc_enviados, socket);
+			list_add(nodo_catch->susc_enviados, suscriptor->id_proceso);
 
 			char* cola = colaParaLogs(particion_buscada->tipo_mensaje);
 
@@ -1593,23 +1667,43 @@ void enviarCatchPokemonCacheados(int socket, op_code tipo_mensaje){
 				log_error(logBroker, "NO se envió el Mensaje.");
 				log_error(logBrokerInterno, "NO se envió el Mensaje.");
 			}else{
-				// 4. Envío de un mensaje a un suscriptor específico.
-				log_info(logBroker, "Se envió el Mensaje: %s %s %d %d con ID de Mensaje %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.id_mensaje);
-				log_info(logBrokerInterno, "Se envió el Mensaje: %s %s %d %d con ID de Mensaje %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.id_mensaje);
+				switch(suscriptor->tipo_suscripcion){
+					case SUSCRIBE_TEAM:{
+						// 4. Envío de un mensaje a un suscriptor específico.
+						log_info(logBroker, "NO se debe enviar este Mensaje al Team.");
+						log_info(logBrokerInterno, "NO se debe enviar este Mensaje al Team.");
+						break;
+					}
+					case SUSCRIBE_GAMECARD:{
+						// 4. Envío de un mensaje a un suscriptor específico.
+						log_info(logBroker, "Se envió el Mensaje: %s %s %d %d con ID de Mensaje %d al Game Card %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.id_mensaje, suscriptor->id_proceso);
+						log_info(logBrokerInterno, "Se envió el Mensaje: %s %s %d %d con ID de Mensaje %d al Game Card %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.id_mensaje, suscriptor->id_proceso);
+						confirmacionDeRecepcionGameCard(ack, suscriptor, descacheado.id_mensaje);
+						break;
+					}
+					case SUSCRIBE_GAMEBOY:{
+						// 4. Envío de un mensaje a un suscriptor específico.
+						log_info(logBroker, "Se envió el Mensaje: %s %s %d %d con ID de Mensaje %d al Game Boy %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.id_mensaje, suscriptor->id_proceso);
+						log_info(logBrokerInterno, "Se envió el Mensaje: %s %s %d %d con ID de Mensaje %d al Game Boy %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.id_mensaje, suscriptor->id_proceso);
+						confirmacionDeRecepcionGameBoy(ack, suscriptor, descacheado.id_mensaje);
+						break;
+					}
+				}
 			}
+
 			free(stream);
 		}
 	}
 }
 
-void enviarCaughtPokemonCacheados(int socket, op_code tipo_mensaje){
+void enviarCaughtPokemonCacheados(int socket, t_suscribe* suscriptor){
 	int tam_lista = list_size(particiones);
 	t_particion* particion_buscada;
 
 	for(int i = 0; i < tam_lista ; i++) {
 		particion_buscada = list_get(particiones, i);
 
-		if(particion_buscada->libre == 0 && particion_buscada->tipo_mensaje == tipo_mensaje){
+		if(particion_buscada->libre == 0 && particion_buscada->tipo_mensaje == suscriptor->cola_suscribir){
 			struct timeval time_aux;
 			gettimeofday(&time_aux, NULL);
 			particion_buscada->time_ultima_ref = time_aux;
@@ -1627,7 +1721,7 @@ void enviarCaughtPokemonCacheados(int socket, op_code tipo_mensaje){
 			int ack = recibirACK(socket);
 			log_info(logBrokerInterno, "ACK %d", ack);
 
-			list_add(nodo_caught->susc_enviados, socket);
+			list_add(nodo_caught->susc_enviados, suscriptor->id_proceso);
 
 			char* cola = colaParaLogs(particion_buscada->tipo_mensaje);
 
@@ -1635,23 +1729,39 @@ void enviarCaughtPokemonCacheados(int socket, op_code tipo_mensaje){
 				log_error(logBroker, "NO se envió el Mensaje.");
 				log_error(logBrokerInterno, "NO se envió el Mensaje.");
 			}else{
-				// 4. Envío de un mensaje a un suscriptor específico.
-				log_info(logBroker, "Se envió el Mensaje: %s %d con ID de Mensaje Correlativo %d.", cola, descacheado.atrapo_pokemon, descacheado.id_mensaje_correlativo);
-				log_info(logBrokerInterno, "Se envió el Mensaje: %s %d con ID de Mensaje Correlativo %d.", cola, descacheado.atrapo_pokemon, descacheado.id_mensaje_correlativo);
+				switch(suscriptor->tipo_suscripcion){
+					case SUSCRIBE_TEAM:{
+						// 4. Envío de un mensaje a un suscriptor específico.
+						log_info(logBroker, "Se envió el Mensaje: %s %d con ID de Mensaje Correlativo %d al Team %d.", cola, descacheado.atrapo_pokemon, descacheado.id_mensaje_correlativo, suscriptor->id_proceso);
+						log_info(logBrokerInterno, "Se envió el Mensaje: %s %d con ID de Mensaje Correlativo %d al Team %d.", cola, descacheado.atrapo_pokemon, descacheado.id_mensaje_correlativo, suscriptor->id_proceso);
+						confirmacionDeRecepcionTeam(ack, suscriptor, descacheado.id_mensaje_correlativo);
+					}
+					case SUSCRIBE_GAMECARD:{
+						log_info(logBroker, "NO se debe enviar este Mensaje al Game Card.");
+						log_info(logBrokerInterno, "NO se debe enviar este Mensaje al Game Card.");
+					}
+					case SUSCRIBE_GAMEBOY:{
+						// 4. Envío de un mensaje a un suscriptor específico.
+						log_info(logBroker, "Se envió el Mensaje: %s %d con ID de Mensaje Correlativo %d al Game Boy %d.", cola, descacheado.atrapo_pokemon, descacheado.id_mensaje_correlativo, suscriptor->id_proceso);
+						log_info(logBrokerInterno, "Se envió el Mensaje: %s %d con ID de Mensaje Correlativo %d al Game Boy %d.", cola, descacheado.atrapo_pokemon, descacheado.id_mensaje_correlativo, suscriptor->id_proceso);
+						confirmacionDeRecepcionGameBoy(ack, suscriptor, descacheado.id_mensaje_correlativo);			
+					}
+				}
 			}
+
 			free(stream);
 		}
 	}
 }
 
-void enviarGetPokemonCacheados(int socket, op_code tipo_mensaje){
+void enviarGetPokemonCacheados(int socket, t_suscribe* suscriptor){
 	int tam_lista = list_size(particiones);
 	t_particion* particion_buscada;
 
 	for(int i = 0; i < tam_lista ; i++) {
 		particion_buscada = list_get(particiones, i);
 
-		if(particion_buscada->libre == 0 && particion_buscada->tipo_mensaje == tipo_mensaje){
+		if(particion_buscada->libre == 0 && particion_buscada->tipo_mensaje == suscriptor->cola_suscribir){
 			void* stream = malloc(particion_buscada->tamanio);
 			memcpy(stream, cache + particion_buscada->base, particion_buscada->tamanio);
 
@@ -1670,7 +1780,7 @@ void enviarGetPokemonCacheados(int socket, op_code tipo_mensaje){
 			int ack = recibirACK(socket);
 			log_info(logBrokerInterno, "ACK %d", ack);
 
-			list_add(nodo_get->susc_enviados, socket);
+			list_add(nodo_get->susc_enviados, suscriptor->id_proceso);
 
 			char* cola = colaParaLogs(particion_buscada->tipo_mensaje);
 			
@@ -1678,23 +1788,43 @@ void enviarGetPokemonCacheados(int socket, op_code tipo_mensaje){
 				log_error(logBroker, "NO se envió el Mensaje.");
 				log_error(logBrokerInterno, "NO se envió el Mensaje.");
 			}else{
-				// 4. Envío de un mensaje a un suscriptor específico.
-				log_info(logBroker, "Se envió el Mensaje: %s %s con ID de Mensaje %d.", cola, descacheado->nombre_pokemon, descacheado->id_mensaje);
-				log_info(logBrokerInterno, "Se envió el Mensaje: %s %s con ID de Mensaje %d.", cola, descacheado->nombre_pokemon, descacheado->id_mensaje);
+				switch(suscriptor->tipo_suscripcion){
+					case SUSCRIBE_TEAM:{
+						// 4. Envío de un mensaje a un suscriptor específico.
+						log_info(logBroker, "NO se debe enviar este Mensaje al Team.");
+						log_info(logBrokerInterno, "NO se debe enviar este Mensaje al Team.");
+						break;
+					}
+					case SUSCRIBE_GAMECARD:{
+						// 4. Envío de un mensaje a un suscriptor específico.
+						log_info(logBroker, "Se envió el Mensaje: %s %s con ID de Mensaje %d.", cola, descacheado->nombre_pokemon, descacheado->id_mensaje);
+						log_info(logBrokerInterno, "Se envió el Mensaje: %s %s con ID de Mensaje %d.", cola, descacheado->nombre_pokemon, descacheado->id_mensaje);
+						confirmacionDeRecepcionGameCard(ack, suscriptor, descacheado->id_mensaje);
+						break;
+					}
+					case SUSCRIBE_GAMEBOY:{
+						// 4. Envío de un mensaje a un suscriptor específico.
+						log_info(logBroker, "Se envió el Mensaje: %s %s con ID de Mensaje %d.", cola, descacheado->nombre_pokemon, descacheado->id_mensaje);
+						log_info(logBrokerInterno, "Se envió el Mensaje: %s %s con ID de Mensaje %d.", cola, descacheado->nombre_pokemon, descacheado->id_mensaje);
+						confirmacionDeRecepcionGameBoy(ack, suscriptor, descacheado->id_mensaje);
+						break;
+					}
+				}
 			}
+
 			free(stream);
 		}
 	}
 }
 
-void enviarLocalizedPokemonCacheados(int socket, op_code tipo_mensaje){
+void enviarLocalizedPokemonCacheados(int socket, t_suscribe* suscriptor){
 	int tam_lista = list_size(particiones);
 	t_particion* particion_buscada;
 
 	for(int i = 0; i < tam_lista ; i++) {
 		particion_buscada = list_get(particiones, i);
 
-		if(particion_buscada->libre == 0 && particion_buscada->tipo_mensaje == tipo_mensaje){
+		if(particion_buscada->libre == 0 && particion_buscada->tipo_mensaje == suscriptor->cola_suscribir){
 			void* stream = malloc(particion_buscada->tamanio);
 			memcpy(stream, cache + particion_buscada->base, particion_buscada->tamanio);
 
@@ -1728,9 +1858,9 @@ void enviarLocalizedPokemonCacheados(int socket, op_code tipo_mensaje){
 			gettimeofday(&time_aux, NULL);
 			particion_buscada->time_ultima_ref = time_aux;
 
-			enviarLocalizedPokemon(socket, descacheado,P_BROKER,0);
+			int enviado = enviarLocalizedPokemon(socket, descacheado,P_BROKER,0);
 
-			list_add(nodo_localized->susc_enviados, socket);
+			list_add(nodo_localized->susc_enviados, suscriptor->id_proceso);
 
 			int ack = recibirACK(socket);
 			log_info(logBrokerInterno, "ACK %d", ack);
@@ -1738,34 +1868,78 @@ void enviarLocalizedPokemonCacheados(int socket, op_code tipo_mensaje){
 	}
 }
 
-void confirmacionDeRecepcionTeam(int socket, t_suscribe* suscribe_team){
-	int ack = recibirACK(socket);
-	log_info(logBrokerInterno, "ACK %d", ack);
-	if(recibirACK(socket) == 1){
+void confirmacionDeRecepcionTeam(int ack, t_suscribe* suscribe_team, uint32_t id_mensaje){
+	if(ack == 1){
 		// 5. Confirmación de recepción de un suscriptor al envío de un mensaje previo.
-		log_info(logBroker, "Confirmación de Recepción del Mensaje del Suscriptor Team %d.", suscribe_team->id_proceso);
-		log_info(logBrokerInterno, "Confirmación de Recepción del Mensaje del Suscriptor Team %d.", suscribe_team->id_proceso);
+		log_info(logBroker, "Confirmación de Recepción del Mensaje con ID %d del Suscriptor Team %d.", id_mensaje, suscribe_team->id_proceso);
+		log_info(logBrokerInterno, "Confirmación de Recepción del Mensaje con ID %d del Suscriptor Team %d.", id_mensaje, suscribe_team->id_proceso);
 		// agregar el suscriptor a la lista de los que retornaron ACK
 	}else{
-		log_info(logBroker, "El Team %d NO recibió el Mensaje.", suscribe_team->id_proceso);
-		log_info(logBrokerInterno, "El Team %d NO recibió el Mensaje.", suscribe_team->id_proceso);
+		log_info(logBroker, "El Team %d NO recibió el Mensaje con ID %d.", suscribe_team->id_proceso, id_mensaje);
+		log_info(logBrokerInterno, "El Team %d NO recibió el Mensaje con ID %d.", suscribe_team->id_proceso, id_mensaje);
+
+		switch(suscribe_team->cola_suscribir){
+			case APPEARED_POKEMON: list_add(nodo_appeared->susc_no_ack, suscribe_team->id_proceso);
+				break;
+			case CAUGHT_POKEMON: list_add(nodo_caught->susc_no_ack, suscribe_team->id_proceso);
+				break;
+			case LOCALIZED_POKEMON: list_add(nodo_localized->susc_no_ack, suscribe_team->id_proceso);
+				break;
+		}
 	}
 }
 
-void confirmacionDeRecepcionGameCard(int socket, t_suscribe* suscribe_gamecard){
-	if(recibirACK(socket) == 1){
+void confirmacionDeRecepcionGameCard(int ack, t_suscribe* suscribe_gamecard, uint32_t id_mensaje){
+	if(ack == 1){
 		// 5. Confirmación de recepción de un suscriptor al envío de un mensaje previo.
-		log_info(logBroker, "Confirmación de Recepción del Mensaje del Suscriptor Game Card %d.", suscribe_gamecard->id_proceso);
-		log_info(logBrokerInterno, "Confirmación de Recepción del Mensaje del Suscriptor GameCard %d.", suscribe_gamecard->id_proceso);
+		log_info(logBroker, "Confirmación de Recepción del Mensaje con ID %d del Suscriptor Game Card %d.", id_mensaje, suscribe_gamecard->id_proceso);
+		log_info(logBrokerInterno, "Confirmación de Recepción del Mensaje con ID %d del Suscriptor GameCard %d.", id_mensaje, suscribe_gamecard->id_proceso);
 	}else{
-		log_info(logBroker, "El Game Card %d NO recibió el Mensaje.", suscribe_gamecard->id_proceso);
-		log_info(logBrokerInterno, "El Game Card %d NO recibió el Mensaje.", suscribe_gamecard->id_proceso);
+		log_info(logBroker, "El Game Card %d NO recibió el Mensaje con ID %d.", suscribe_gamecard->id_proceso, id_mensaje);
+		log_info(logBrokerInterno, "El Game Card %d NO recibió el Mensaje con ID %d.", suscribe_gamecard->id_proceso, id_mensaje);
+
+		switch(suscribe_gamecard->cola_suscribir){
+			case NEW_POKEMON: list_add(nodo_new->susc_no_ack, suscribe_gamecard->id_proceso);
+				break;
+			case CATCH_POKEMON: list_add(nodo_catch->susc_no_ack, suscribe_gamecard->id_proceso);
+				break;
+			case GET_POKEMON: list_add(nodo_get->susc_no_ack, suscribe_gamecard->id_proceso);
+				break;
+		}
+	}
+}
+
+void confirmacionDeRecepcionGameBoy(int ack, t_suscribe* suscribe_gameboy, uint32_t id_mensaje){
+	if(ack == 1){
+		// 5. Confirmación de recepción de un suscriptor al envío de un mensaje previo.
+		log_info(logBroker, "Confirmación de Recepción del Mensaje con ID %d del Suscriptor Game Boy %d.", id_mensaje, suscribe_gameboy->id_proceso);
+		log_info(logBrokerInterno, "Confirmación de Recepción del Mensaje con ID %d del Suscriptor Game Boy %d.", id_mensaje, suscribe_gameboy->id_proceso);
+	}else{
+		log_info(logBroker, "El Game Boy %d NO recibió el Mensaje con ID %d.", suscribe_gameboy->id_proceso, id_mensaje);
+		log_info(logBrokerInterno, "El Game Boy %d NO recibió el Mensaje con ID %d.", suscribe_gameboy->id_proceso, id_mensaje);
+	
+		switch(suscribe_gameboy->cola_suscribir){
+			case NEW_POKEMON: list_add(nodo_new->susc_no_ack, suscribe_gameboy->id_proceso);
+				break;
+			case APPEARED_POKEMON: list_add(nodo_appeared->susc_no_ack, suscribe_gameboy->id_proceso);
+				break;
+			case CATCH_POKEMON: list_add(nodo_catch->susc_no_ack, suscribe_gameboy->id_proceso);
+				break;
+			case CAUGHT_POKEMON: list_add(nodo_caught->susc_no_ack, suscribe_gameboy->id_proceso);
+				break;
+			case GET_POKEMON: list_add(nodo_get->susc_no_ack, suscribe_gameboy->id_proceso);
+				break;
+			case LOCALIZED_POKEMON: list_add(nodo_localized->susc_no_ack, suscribe_gameboy->id_proceso);
+				break;
+		}
 	}
 }
 
 int main(void){
-	logBroker = log_create("broker.log", "Broker", 1, LOG_LEVEL_INFO);
+	logBroker = log_create("broker.log", "Broker", 0, LOG_LEVEL_INFO);
 	logBrokerInterno = log_create("brokerInterno.log", "Broker Interno", 1, LOG_LEVEL_INFO);
+
+	log_info(logBroker, "****************************************** PROCESO BROKER ******************************************");
 
 	inicializarColas();
 	inicializarSemaforos();
@@ -1777,7 +1951,7 @@ int main(void){
 
 	if(socketServidorBroker != -1){
 		log_info(logBrokerInterno,"Socket Servidor %d.", socketServidorBroker);
-
+		
 		signal(SIGUSR1, &controlador_de_seniales);
 
 		while(1){
@@ -1799,7 +1973,6 @@ int main(void){
 
 	log_destroy(logBrokerInterno);
 	log_destroy(logBroker);
-	//destruir particiones
 	list_destroy(particiones);
 	return 0;
 } 

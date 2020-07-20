@@ -113,6 +113,7 @@ void listen_routine_colas (void *colaSuscripcion);
 void subscribe();
 int enviarAppearedAlBroker(t_new_pokemon* new_pokemon);
 int enviarLocalizedAlBroker(t_localized_pokemon* msg_localized);
+int enviarCaughtAlBroker(t_caught_pokemon * msg_caught);
 char *getPosicionesPokemon(char* buffer, uint32_t* cant_pos);
 char *getDatosBloques(t_config *data);
 //Semaforos
