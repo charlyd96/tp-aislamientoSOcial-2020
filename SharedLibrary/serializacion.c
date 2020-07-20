@@ -201,6 +201,7 @@ t_buffer* serializarLocalizedPokemon(t_localized_pokemon mensaje){
 	offset += sizeof(uint32_t);
 
 	//Serializo un par de coordenadas por cada elemento de la lista de posiciones
+	if (mensaje.cant_pos != 0){
 	char** pos_list = string_get_string_as_array(mensaje.posiciones);
 	for(i=0; i<mensaje.cant_pos; i++){
 		char** pos_pair = string_split(pos_list[i],"|");
@@ -211,6 +212,7 @@ t_buffer* serializarLocalizedPokemon(t_localized_pokemon mensaje){
 		offset += sizeof(uint32_t);
 		memcpy(stream + offset, &(pos_y), sizeof(uint32_t));
 		offset += sizeof(uint32_t);
+	}
 	}
 
 	if(mensaje.id_mensaje_correlativo != 0){
