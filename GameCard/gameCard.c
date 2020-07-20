@@ -286,7 +286,8 @@ void atender_cliente(int socket){
 int enviarAppearedAlBroker(t_new_pokemon * new_pokemon){
 	int socket_cliente = crearSocketCliente (config_gamecard->ip_broker,config_gamecard->puerto_broker);
 	if(socket_cliente <= 0){
-		// log_info(logGamecard,"No se pudo conectar al broker para enviar APPEARED");
+		log_info(logGamecard,"No se pudo conectar al broker para enviar APPEARED");
+		close(socket_cliente);
 		return socket_cliente;
 	}else{
 		t_appeared_pokemon* appeared_pokemon = malloc(sizeof(t_appeared_pokemon));
@@ -317,6 +318,7 @@ int enviarLocalizedAlBroker(t_localized_pokemon * msg_localized){
 	int socket_cliente = crearSocketCliente (config_gamecard->ip_broker,config_gamecard->puerto_broker);
 	if(socket_cliente <= 0){
 		log_info(logGamecard,"No se pudo conectar al broker para enviar el LOCALIZED");
+		close(socket_cliente);
 		return socket_cliente;
 	}else{
 		int enviado = enviarLocalizedPokemon(socket_cliente,*msg_localized,P_GAMECARD,ID_PROCESO);
@@ -334,6 +336,31 @@ int enviarLocalizedAlBroker(t_localized_pokemon * msg_localized){
 		}
 		close(socket_cliente);
 		free(msg_localized);
+		return enviado;
+	}
+}
+int enviarCaughtAlBroker(t_caught_pokemon * msg_caught){
+	int socket_cliente = crearSocketCliente (config_gamecard->ip_broker,config_gamecard->puerto_broker);
+	if(socket_cliente <= 0){
+		log_info(logGamecard,"No se pudo conectar al broker para enviar el CAUGHT");
+		close(socket_cliente);
+		return socket_cliente;
+	}else{
+		int enviado = enviarCaughtPokemon(socket_cliente,*msg_caught,P_GAMECARD,ID_PROCESO);
+		if(enviado > 0){
+			log_info(logGamecard,"Se devolvió CAUGHT_POKEMON %d [%d]",msg_caught->atrapo_pokemon,msg_caught->id_mensaje_correlativo);
+			//Reutilizo esta funcion para el id_mensaje
+			uint32_t id_mensaje = recibirIDProceso(socket_cliente);
+			if(id_mensaje>0){
+				log_info(logGamecard,"CAUGHT_POKEMON con correlativo [%d] recibió ID_MENSAJE %d",msg_caught->id_mensaje_correlativo,id_mensaje);
+			}else{
+				log_info(logGamecard,"Error al recibir el ID para CAUGHT_POKEMON con correlativo [%d]",msg_caught->id_mensaje_correlativo);
+			}
+		}else{
+			log_warning(logGamecard,"No se pudo devolver el CAUGHT_POKEMON");
+		}
+		close(socket_cliente);
+		free(msg_caught);
 		return enviado;
 	}
 }
@@ -493,7 +520,12 @@ void atender_catchPokemon(t_catch_pokemon* catch_pokemon){
 		Conectarse al Broker y enviar el mensaje indicando el resultado correcto.
 
 	 */
+	//De manera provisoria devolver siempre CAUGHT SI
+	t_caught_pokemon* msg_caught = malloc(sizeof(t_caught_pokemon));
+	msg_caught->atrapo_pokemon = 1;
+	msg_caught->id_mensaje_correlativo = catch_pokemon->id_mensaje;
 	
+	enviarCaughtAlBroker(msg_caught);
 }
 /**
  * Recolecta todas las posiciones conocidas del pokemon y arma un string array
