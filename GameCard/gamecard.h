@@ -91,9 +91,9 @@ void crear_directorio_pokemon(char* nombre_pokemon);
 bool existe_archivo(char* path);
 
 void atender_cliente(int socket_cliente);
-void atender_newPokemon(int socket);
-void atender_getPokemon(int socket);
-void atender_catchPokemon(int socket);
+void atender_newPokemon(t_new_pokemon* new_pokemon);
+void atender_getPokemon(t_get_pokemon* get_pokemon);
+void atender_catchPokemon(t_catch_pokemon* catch_pokemon);
 void leer_FS_metadata (t_configuracion *config_gamecard);
 void crear_metadata (char *directorio,t_block* info_blocks);
 char* concatenar_bloques(int largo_texto, char ** lista_bloques);
