@@ -470,7 +470,7 @@ void atender_getPokemon(t_get_pokemon* get_pokemon){
 	msg_localized->cant_pos = cant_posiciones;
 	msg_localized->posiciones = posiciones;
 	msg_localized->id_mensaje_correlativo = get_pokemon->id_mensaje;
-	printf("antes enviar LOCALIZED_POKEMON %s %d %s [%d]\n",msg_localized->nombre_pokemon,msg_localized->cant_pos,msg_localized->posiciones,msg_localized->id_mensaje_correlativo);
+	// printf("antes enviar LOCALIZED_POKEMON %s %d %s [%d]\n",msg_localized->nombre_pokemon,msg_localized->cant_pos,msg_localized->posiciones,msg_localized->id_mensaje_correlativo);
 	// 6) Conectarse al Broker y enviar el mensaje con todas las posiciones y su cantidad.
 	enviarLocalizedAlBroker(msg_localized);
 }
