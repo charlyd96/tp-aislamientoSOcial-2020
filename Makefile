@@ -13,26 +13,17 @@ ifeq ($(config),debug)
   Team_config = debug
   Broker_config = debug
   GameBoy_config = debug
-<<<<<<< HEAD
   GameCard_config = debug
-=======
->>>>>>> Broker
 endif
 ifeq ($(config),release)
   SharedLibrary_config = release
   Team_config = release
   Broker_config = release
   GameBoy_config = release
-<<<<<<< HEAD
   GameCard_config = release
 endif
 
 PROJECTS := SharedLibrary Team Broker GameBoy GameCard
-=======
-endif
-
-PROJECTS := SharedLibrary Team Broker GameBoy
->>>>>>> Broker
 
 .PHONY: all clean help $(PROJECTS) 
 
@@ -62,24 +53,18 @@ ifneq (,$(GameBoy_config))
 	@${MAKE} --no-print-directory -C GameBoy -f Makefile config=$(GameBoy_config)
 endif
 
-<<<<<<< HEAD
 GameCard: SharedLibrary
 ifneq (,$(GameCard_config))
 	@echo "==== Building GameCard ($(GameCard_config)) ===="
 	@${MAKE} --no-print-directory -C GameCard -f Makefile config=$(GameCard_config)
 endif
 
-=======
->>>>>>> Broker
 clean:
 	@${MAKE} --no-print-directory -C SharedLibrary -f Makefile clean
 	@${MAKE} --no-print-directory -C Team -f Makefile clean
 	@${MAKE} --no-print-directory -C Broker -f Makefile clean
 	@${MAKE} --no-print-directory -C GameBoy -f Makefile clean
-<<<<<<< HEAD
 	@${MAKE} --no-print-directory -C GameCard -f Makefile clean
-=======
->>>>>>> Broker
 
 help:
 	@echo "Usage: make [config=name] [target]"
@@ -95,9 +80,6 @@ help:
 	@echo "   Team"
 	@echo "   Broker"
 	@echo "   GameBoy"
-<<<<<<< HEAD
 	@echo "   GameCard"
-=======
->>>>>>> Broker
 	@echo ""
 	@echo "For more information, see https://github.com/premake/premake-core/wiki"

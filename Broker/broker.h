@@ -52,36 +52,42 @@ typedef struct {
 typedef struct {
 	t_list* susc_enviados;
 	t_list* susc_ack;
+	t_list* susc_no_ack;
 	t_new_pokemon* mensaje;
 } t_nodo_cola_new;
 
 typedef struct {
 	t_list* susc_enviados;
 	t_list* susc_ack;
+	t_list* susc_no_ack;
 	t_appeared_pokemon* mensaje;
 } t_nodo_cola_appeared;
 
 typedef struct {
 	t_list* susc_enviados;
 	t_list* susc_ack;
+	t_list* susc_no_ack;
 	t_get_pokemon* mensaje;
 } t_nodo_cola_get;
 
 typedef struct {
 	t_list* susc_enviados;
 	t_list* susc_ack;
+	t_list* susc_no_ack;
 	t_localized_pokemon* mensaje;
 } t_nodo_cola_localized;
 
 typedef struct {
 	t_list* susc_enviados;
 	t_list* susc_ack;
+	t_list* susc_no_ack;
 	t_catch_pokemon* mensaje;
 } t_nodo_cola_catch;
 
 typedef struct {
 	t_list* susc_enviados;
 	t_list* susc_ack;
+	t_list* susc_no_ack;
 	t_caught_pokemon* mensaje;
 } t_nodo_cola_caught;
 
@@ -208,7 +214,7 @@ void atenderSuscripcionGameBoy(int socket);
 
 /// PROCESAMIENTO
 int suscribir(t_suscriptor* suscriptor, op_code cola);
-void desuscribir(int index, op_code cola);
+void desuscribir(int index, op_code cola, uint32_t id_proceso);
 
 void encolarNewPokemon(t_new_pokemon* msg);
 void encolarAppearedPokemon(t_appeared_pokemon* msg);
@@ -239,8 +245,8 @@ int victimaSegunFIFO();
 int victimaSegunLRU();
 // BUDDY
 void partirBuddy(int indice);
-int obtenerHuecoBuddy(int i);
-int buscarHuecoBuddy(int i);
+int obtenerHuecoBuddy(uint32_t i);
+int buscarHuecoBuddy(uint32_t i);
 void eliminarParticionBuddy();
 
 t_new_pokemon* descachearNewPokemon(void* stream, uint32_t id);
@@ -258,14 +264,15 @@ void controlador_de_seniales(int signal);
 void tipoYIDProceso(int socket);
 int devolverID(int socket,uint32_t*id);
 
-void enviarNewPokemonCacheados(int socket, op_code tipo_mensaje);
-void enviarAppearedPokemonCacheados(int socket, op_code tipo_mensaje);
-void enviarCatchPokemonCacheados(int socket, op_code tipo_mensaje);
-void enviarCaughtPokemonCacheados(int socket, op_code tipo_mensaje);
-void enviarGetPokemonCacheados(int socket, op_code tipo_mensaje);
-void enviarLocalizedPokemonCacheados(int socket, op_code tipo_mensaje);
+void enviarNewPokemonCacheados(int socket, t_suscribe* suscriptor);
+void enviarAppearedPokemonCacheados(int socket, t_suscribe* suscriptor);
+void enviarCatchPokemonCacheados(int socket, t_suscribe* suscriptor);
+void enviarCaughtPokemonCacheados(int socket, t_suscribe* suscriptor);
+void enviarGetPokemonCacheados(int socket, t_suscribe* suscriptor);
+void enviarLocalizedPokemonCacheados(int socket, t_suscribe* suscriptor);
 
-void confirmacionDeRecepcionTeam(int socket, t_suscribe* suscribe_team);
-void confirmacionDeRecepcionGameCard(int socket, t_suscribe* suscribe_gamecard);
+void confirmacionDeRecepcionTeam(int socket, t_suscribe* suscribe_team, uint32_t id_mensaje);
+void confirmacionDeRecepcionGameCard(int socket, t_suscribe* suscribe_gamecard, uint32_t id_mensaje);
+void confirmacionDeRecepcionGameBoy(int ack, t_suscribe* suscribe_gameboy, uint32_t id_mensaje);
 
 #endif /* BROKER_H_ */
