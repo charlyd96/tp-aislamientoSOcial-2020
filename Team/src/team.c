@@ -97,10 +97,12 @@ void imprimir_lista (t_list *lista)
 /* Consumidor de cola Ready */
 void fifo_exec (void)
 {
+    
     while (1)
     {
         sem_wait ( &qr_sem1 );
         sem_wait ( &qr_sem2 );
+        puts ("pase fifo fifo");
         if (win) break;  
         Trainer* trainer= list_remove (ReadyQueue, 0);
         trainer->actual_status= EXEC;
@@ -136,7 +138,6 @@ void RR_exec (void)
 
 void SJFSD_exec (void)
 {
-    puts ("********************************************************************SJF-SD***********************************************************vv");
     while (1) //Este while debería ser "mientras team no haya ganado"
     {
         sem_wait ( &qr_sem1 );
@@ -161,7 +162,6 @@ void SJFSD_exec (void)
 
 void SJFCD_exec (void)
 {
-    puts ("\n\n\n\n\n\n\n\n\n\n\n\n\n\n**************SJFCD - CON DESALOJO ----------------------------------\n\n\n\n\n\n\n\n");
     while (1) //Este while debería ser "mientras team no haya ganado"
     {
         sem_wait ( &qr_sem1 );
@@ -178,6 +178,7 @@ void SJFCD_exec (void)
         trainer->rafagaAux=trainer->rafagaEstimada;
         sem_post ( &(trainer->trainer_sem) );
         sem_wait (&using_cpu);
+         puts ("wait");
         if (trainer->ejecucion==FINISHED)
         {
         trainer->rafagaEstimada = trainer->rafagaAux;

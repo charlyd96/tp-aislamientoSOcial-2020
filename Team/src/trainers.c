@@ -81,7 +81,8 @@ void* trainer_to_catch()
                 trainer->actual_objective.posy = actual_pokemon->posy;
                 trainer->actual_objective.name = actual_pokemon->name; 
                 trainer->actual_status= READY;
-                trainer->actual_operation= OP_EXECUTING_CATCH;        
+                trainer->actual_operation= OP_EXECUTING_CATCH; 
+                trainer->ejecucion=PENDING;       
                 printf ("El entrenador %d se planificó para atrapar un %s ubicado en (%d,%d)\n", trainer->index,trainer->actual_objective.name,actual_pokemon->posx,actual_pokemon->posy);
                 send_trainer_to_ready (trainers, index, OP_EXECUTING_CATCH); 
                 index=-1;
@@ -127,7 +128,7 @@ void send_trainer_to_ready (t_list *lista, int index, Operation op) //Eliminar e
             list_add (ReadyQueue , list_get (lista, index) );
             sem_post (&qr_sem2);
             sem_post (&qr_sem1);
-            //log_info (internalLogTeam, "Se planificó a Ready al entrenador %d para atrapar un pokemon", index);
+            log_info (internalLogTeam, "Se planificó a Ready al entrenador %d para atrapar un pokemon", index);
             break;
         }
         case OP_EXECUTING_DEADLOCK:
@@ -179,12 +180,9 @@ void remover_objetivo_global_auxiliar(char *name_pokemon)
         return (true);
         else return (false);
     }
-    puts ("previo al bloqueo");
     pthread_mutex_lock (&auxglobal_sem);
-    puts ("ingreso zona critica");
     list_remove_by_condition(aux_global_objective, remover);
     pthread_mutex_unlock (&auxglobal_sem);
-    puts ("salgo zona critica");
 }
 
 
@@ -252,7 +250,6 @@ void mover_de_aux_a_global(char *name)
 
 void mover_pokemon_al_mapa (mapPokemons *nuevo_pokemon)
 {
-    puts ("agregando pokemon al mapa");
     sem_wait(&poklist_sem2);
     list_add(mapped_pokemons, nuevo_pokemon );
     sem_post(&poklist_sem);
@@ -316,15 +313,6 @@ void send_trainer_to_exec (void)
 
         default:;
     }
-
-    /*
-    if (!strcmp(config->planning_algorithm, "SJF"))
-    pthread_create(&thread, NULL, trainer_exec,config);
-
-    if (!strcmp(config->planning_algorithm, "SJF-CD"))
-    pthread_create(&thread, NULL, trainer_exec,config);
-    pthread_detach(thread);
-    */
 }
 
 /*Desbloquea la planificación si todos los entrenadores quedaron bloqueados por deadlock o terminaron, para habilitar la fase de recuperación de Dadlock*/
@@ -350,9 +338,11 @@ void desbloquear_planificacion(void)
 void* trainer_routine (void *train)
 {
     Trainer *trainer=train;
+    trainer->ejecucion=EXECUTING; //Esto es para que SJF-CD valgrind no arroje que se está haciendo una comparación con un valor no inicializado
     sem_wait(&(trainer)->trainer_sem); //Bloqueo post-inicilización
+   
     while (trainer->actual_status != EXIT)
-    {
+    {              
 		switch (trainer->actual_operation)
 		{
 			case OP_EXECUTING_CATCH:
@@ -395,7 +385,6 @@ void* trainer_routine (void *train)
 
 				} else //Caught=0
 					{
-                        //list_add (global_objective, aux_global_objective) //Esto está escrito así nomás
                         log_error (internalLogTeam, "El entrenador %d no pudo cazar a %s en (%d,%d)",trainer->index, trainer->actual_objective.name,trainer->actual_objective.posx, trainer->actual_objective.posy);
                         mover_objetivo_a_lista_global(trainer->actual_objective.name); //Vuelvo a setear el objetivo global
                         nuevos_pokemones_CAUGHT_NO (trainer->actual_objective.name); //Intento agregar un pokemon de esa especie al mapa
@@ -429,7 +418,7 @@ void* trainer_routine (void *train)
                 break;
             }
 				
-				default: puts ("Operación no váasdadlida"); //exit (INVALID_TRAINER_OP);
+				default: puts ("Operación no válida"); //exit (INVALID_TRAINER_OP);
 		}
     }
     
@@ -823,8 +812,8 @@ void move_trainer_to_objective (Trainer *trainer, Operation op)
             Ty=&(trainer->posy);
             Px=&(trainer->objetivo.posx);
             Py=&(trainer->objetivo.posy);
-            log_info (internalLogTeam, "El entrenador %d empezó a ejecutar una recuperación de DEADLOCK con el entrenador %d", 
-            trainer->index, ( (Trainer *) list_get(deadlock_list, (trainer->objetivo.index_objective)))->index);
+            //log_info (internalLogTeam, "El entrenador %d empezó a ejecutar una recuperación de DEADLOCK con el entrenador %d", 
+            //trainer->index, ( (Trainer *) list_get(deadlock_list, (trainer->objetivo.index_objective)))->index);
             break;
         }    
 
@@ -912,7 +901,7 @@ void consumir_cpu(Trainer *trainer)
                 if ( ((Trainer *)list_get(ReadyQueue, 0))->rafagaEstimada > trainer->rafagaEstimada ) //Comparo la lista ordenada con el entrenador actual en ejecución
                 {//Seguir ejecutando
                 puts ("****************************************************************seguir ejecutando************************************************************************");
-                printf ("Rafaga estimada actual: %f\nRafaga estimada nuesvo entrenador:%f\n",trainer->rafagaEstimada, ((Trainer *)list_get(ReadyQueue, 0))->rafagaEstimada );
+                printf ("Rafaga estimada actual: %f\nRafaga estimada nuevo entrenador:%f\n",trainer->rafagaEstimada, ((Trainer *)list_get(ReadyQueue, 0))->rafagaEstimada );
                 sem_post(&qr_sem2); //Disponibilizar la cola ready
                 }
                 else 
@@ -940,7 +929,6 @@ void consumir_cpu(Trainer *trainer)
 
 void liberar_listas_entrenador(Trainer *trainer)
 {
-    printf ("\n\n\n\n\n**********Liberando entrenador %d***********\n\n\n\n\n", trainer->index);
     list_destroy (trainer->personal_objective);
     list_destroy_and_destroy_elements (trainer->bag,free);
 }

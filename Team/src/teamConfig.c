@@ -91,6 +91,7 @@ void Team_load_trainers_config(void)
         entrenadores->posx=atoi(*posicion) ;
         entrenadores->posy=atoi(*(posicion +1) );
         entrenadores->actual_status= NEW;
+
         free (*(posicion));
         free (*(posicion+1));
       
@@ -192,7 +193,11 @@ void Team_load_global_config()
     algoritmo=SJFSD;
     else if (!strcmp (config->planning_algorithm, "SJF-CD"))
     algoritmo=SJFCD;
-    else exit (BAD_SCHEDULING_ALGORITHM);
+    else 
+    {
+        log_error (internalLogTeam,"El algoritmo de planificación no es correcto");
+        exit (BAD_SCHEDULING_ALGORITHM);
+    }
 
     /* Just to test the correct reading from the configurations file to the globals configurations*/
     if (PRINT_TEST == 1)

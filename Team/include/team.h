@@ -75,11 +75,11 @@ sem_t qr_sem2;
 
 sem_t terminar_ejecucion;
 
-/* Errores para identificar estado en la ejecución de los hilos - para RR y SJF - específico de cada ráfaga*/
+/* Errores para identificar estado en la ejecución de los hilos para RR y SJF. Representa el estado específico de cada ráfaga*/
 typedef enum
 {
     FINISHED,       //Finalizo su ráfaga de ejecución correctamente
-    PENDING,        //Fue desalojado por el planificador y aún tiene instrucciones por ejecutar de la ŕafaga
+    PENDING,        //Fue desalojado por el planificador y aún tiene instrucciones por ejecutar de la ráfaga
     EXECUTING       //Se encuentra ejecutando su ráfaga
 } exec_error;
 
