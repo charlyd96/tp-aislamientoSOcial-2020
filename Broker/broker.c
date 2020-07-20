@@ -174,7 +174,7 @@ int buscarParticionLibre(uint32_t largo_stream){
  * Busca una partición libre y de tamaño indicado
  */
 
-int buscarHuecoBuddy(int i){
+int buscarHuecoBuddy(uint32_t i){
 	uint32_t largo = (uint32_t)list_size(particiones);
 	for(int x = 0; x < largo; x++){
 		t_particion* part = list_get(particiones,x);
@@ -846,11 +846,25 @@ void dump_cache(){
 
 		particion_buscada = list_get(particiones, i);
 
-		if(particion_buscada->libre == 0){
-			fprintf(archivo_dump, "Partición %d: %p - %p.		[X]		Size: %db		LRU: %ld.%06ld		Cola:%d		ID:%d\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), particion_buscada->tamanio, particion_buscada->time_ultima_ref.tv_sec, particion_buscada->time_ultima_ref.tv_usec, particion_buscada->tipo_mensaje, particion_buscada->id);
-		}else{
-			fprintf(archivo_dump, "Partición %d: %p - %p.		[L]		Size: %db\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), particion_buscada->tamanio);
+		switch(config_broker->algoritmo_memoria){
+			case PD:{
+				if(particion_buscada->libre == 0){
+					fprintf(archivo_dump, "Partición %d: %p - %p.		[X]		Size: %db		LRU: %ld.%06ld		Cola:%d		ID:%d\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), particion_buscada->tamanio, particion_buscada->time_ultima_ref.tv_sec, particion_buscada->time_ultima_ref.tv_usec, particion_buscada->tipo_mensaje, particion_buscada->id);
+				}else{
+					fprintf(archivo_dump, "Partición %d: %p - %p.		[L]		Size: %db\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), particion_buscada->tamanio);
+				}
+				break;
+			}
+			case BUDDY:{
+				if(particion_buscada->libre == 0){
+					fprintf(archivo_dump, "Partición %d: %p - %p.		[X]		Size: %db		LRU: %ld.%06ld		Cola:%d		ID:%d\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), (int)pow(2, particion_buscada->buddy_i), particion_buscada->time_ultima_ref.tv_sec, particion_buscada->time_ultima_ref.tv_usec, particion_buscada->tipo_mensaje, particion_buscada->id);
+				}else{
+					fprintf(archivo_dump, "Partición %d: %p - %p.		[L]		Size: %db\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), (int)pow(2, particion_buscada->buddy_i));
+				}
+				break;
+			}
 		}
+		
 	}
 
 	fprintf(archivo_dump, "-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n");
