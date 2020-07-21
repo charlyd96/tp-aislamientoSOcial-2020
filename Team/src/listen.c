@@ -55,8 +55,8 @@ void process_request_recv (op_code cod_op, int socket_cliente)
 				{
 				t_localized_pokemon* mensaje_localized= recibirLocalizedPokemon(socket_cliente);
 				enviarACK(socket_cliente);
-				//log_info (internalLogTeam, "Mensaje recibido: %s %s %d %d",colaParaLogs((int)cod_op),mensaje_appeared->nombre_pokemon,mensaje_appeared->pos_x,mensaje_appeared->pos_y);
-				//procesar_localized(mensaje_localized);
+				log_info (internalLogTeam, "Mensaje recibido: %s %d %s [%d]",colaParaLogs((int)cod_op),mensaje_localized->nombre_pokemon,mensaje_localized->cant_pos,mensaje_localized->id_mensaje_correlativo);
+				procesar_localized(mensaje_localized);
 				break;
 				}
 
@@ -232,51 +232,76 @@ int reintentar_conexion(op_code colaSuscripcion)
 	return (socket_cliente);
 }
 
-void procesar_appeared(t_appeared_pokemon *appeared_pokemon)
+void procesar_appeared(t_appeared_pokemon *mensaje_appeared)
 {
-	nuevo_pokemon operacion = tratar_nuevo_pokemon (appeared_pokemon->nombre_pokemon);
+	nuevo_pokemon operacion = tratar_nuevo_pokemon (mensaje_appeared->nombre_pokemon);
 	printf ("Operacio: %d\n",operacion);
 	switch (operacion)
 	{
 		case GUARDAR:
 		{
 			mapPokemons *pokemon_to_add = malloc (sizeof(mapPokemons));
-			pokemon_to_add-> name = string_duplicate (appeared_pokemon->nombre_pokemon);
-			pokemon_to_add-> posx = appeared_pokemon->pos_x;
-			pokemon_to_add-> posy= appeared_pokemon->pos_y;
+			pokemon_to_add-> name = string_duplicate (mensaje_appeared->nombre_pokemon);
+			pokemon_to_add-> posx = mensaje_appeared->pos_x;
+			pokemon_to_add-> posy= mensaje_appeared->pos_y;
 			sem_wait(&poklist_sem2);
 			list_add(mapped_pokemons, pokemon_to_add );
 			sem_post(&poklist_sem);
 			sem_post(&poklist_sem2);
-			liberar_appeared(appeared_pokemon);
+			liberar_appeared(mensaje_appeared);
 			break;
 		}
 
 		case GUARDAR_AUX:
 		{
 			mapPokemons *pokemon_to_add = malloc (sizeof(mapPokemons));
-			pokemon_to_add-> name = string_duplicate (appeared_pokemon->nombre_pokemon);
-			pokemon_to_add-> posx = appeared_pokemon->pos_x;
-			pokemon_to_add-> posy= appeared_pokemon->pos_y;
+			pokemon_to_add-> name = string_duplicate (mensaje_appeared->nombre_pokemon);
+			pokemon_to_add-> posx = mensaje_appeared->pos_x;
+			pokemon_to_add-> posy= mensaje_appeared->pos_y;
 			sem_wait(&poklistAux_sem2); //Verificar si es necesario el esquema de productor consumidor
 			list_add(mapped_pokemons_aux, pokemon_to_add );
 			sem_post(&poklistAux_sem1);
 			sem_post(&poklistAux_sem2);
-			liberar_appeared(appeared_pokemon);
+			liberar_appeared(mensaje_appeared);
 			break;
 		}
 
 		case DESCARTAR:
 		{
-			liberar_appeared(appeared_pokemon);
+			liberar_appeared(mensaje_appeared);
 			break;
 		}
 		default: 
 		{
-			liberar_appeared(appeared_pokemon);
+			liberar_appeared(mensaje_appeared);
 			log_error (internalLogTeam, "Operación desconocida al recibir appeared");
 		}
 	}
+}
+
+void procesar_localized(t_localized_pokemon *mensaje_localized)
+{
+	if (mensaje_localized->cant_pos == 0)
+	{
+		//liberar_localized(mensaje_localized);
+	}
+	else
+	{
+		char **coordenadas;
+		char **posiciones = string_get_string_as_array(mensaje_localized->posiciones);
+		for (int i=0; *(posiciones+i) != NULL; i++)
+		{
+			coordenadas= string_split(*(posiciones+i), "|" );
+			uint32_t pos_x= atoi (*(coordenadas));
+			uint32_t pos_y= atoi (*(coordenadas +1));
+			t_appeared_pokemon *mensaje_appeared;
+			mensaje_appeared->nombre_pokemon = mensaje_localized->nombre_pokemon;
+			mensaje_appeared->pos_x=pos_x;
+			mensaje_appeared->pos_y=pos_y;
+			procesar_appeared(mensaje_appeared);
+		}
+	}
+
 }
 
 void procesar_caught (t_caught_pokemon *mensaje_caught)
