@@ -28,6 +28,7 @@
 #include <semaphore.h>
 
 #include "strings.h"
+#include "destroyer.h"
 
 
 char* pathGamecardConfig = "/home/utnso/workspace/tp-2020-1c-aislamientoSOcial/GameCard/gameCard.config";

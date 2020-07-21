@@ -16,7 +16,7 @@ void levantarPuertoEscucha(void){
 	}else{
 		log_info(logGamecard, "Socket Servidor %d\n", socketServidorGamecard);
 		while(1){ //Verificar la condición de salida de este while
-					log_info(logInterno,"While de aceptar cliente");
+					// log_info(logInterno,"While de aceptar cliente");
 					int cliente = aceptarCliente(socketServidorGamecard);
 					int enviado = enviarACK(cliente);
 					if(enviado > 0){
@@ -566,7 +566,7 @@ char *getPosicionesPokemon(char *buffer, uint32_t* cant_pos){
 		string_append(&posiciones_string,posicion);
 
 		free(pos_guion);
-		free(posx_posy);
+		free_split(posx_posy);
 		free(posicion);
 		free(linea_actual);
 	}
@@ -576,7 +576,7 @@ char *getPosicionesPokemon(char *buffer, uint32_t* cant_pos){
 	free(posiciones_string);
 	string_append(&posiciones_string_fix,"]");
 	(*cant_pos) = i;
-	free(linea);
+	free_split(linea);
 	return posiciones_string_fix;
 }
 char* escribir_bloque(int block_number, int block_size, char* texto, int* largo_texto){
@@ -758,7 +758,6 @@ char* agregar_pokemon(char *buffer, t_new_pokemon* new_pokemon){
 			}
 		}
 		// printf("Nuevos datos:\n%s\n",nuevo_buffer);
-		return nuevo_buffer;
 	}
 	else{
 		//Si es una linea nueva (la posición no existía)
@@ -769,8 +768,9 @@ char* agregar_pokemon(char *buffer, t_new_pokemon* new_pokemon){
 		nueva_linea = string_from_format("%s%lu\n",posicion,new_pokemon->cantidad);
 		printf("No hubo coincidencia. Se agrega la linea: %s",nueva_linea);
 		string_append(&nuevo_buffer,nueva_linea);
-		return nuevo_buffer;
 	}
+	free_split(split);
+	return nuevo_buffer;
 }
 
 char* editar_posicion(char* linea,int cantidad, char* texto_posicion){
