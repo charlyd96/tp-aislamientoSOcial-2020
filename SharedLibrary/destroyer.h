@@ -1,6 +1,8 @@
-#ifndef DESTROYER_H_
-#define DESTROYER_H_
+
+#ifndef INCLUDE_DESTROYER_H_
+#define INCLUDE_DESTROYER_H_
 
 void free_split (char **string);
 
-#endif /* DESTROYER_H_ */
+#endif /* INCLUDE_DESTROYER_H_ */
+

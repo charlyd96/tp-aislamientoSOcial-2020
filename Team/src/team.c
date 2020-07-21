@@ -179,6 +179,7 @@ void SJFCD_exec (void)
         sem_post ( &(trainer->trainer_sem) );
         sem_wait (&using_cpu);
          puts ("wait");
+         printf ("Ejecucion: %d\n",trainer->ejecucion);
         if (trainer->ejecucion==FINISHED)
         {
         trainer->rafagaEstimada = trainer->rafagaAux;
@@ -189,6 +190,7 @@ void SJFCD_exec (void)
         {
         newTrainerToReady=true;
         list_add (ReadyQueue, trainer);
+        puts ("\n\n\n\nEN EN EL ELSE\n\n\n\n\n");
         sem_post (&qr_sem2);
         sem_post (&qr_sem1);
         } 
@@ -228,7 +230,7 @@ int Trainer_handler_create ()
     void  create_thread (void *train)
     { 
         Trainer* trainer= train;      
-        error = pthread_create( &(trainer->thread_id), NULL, trainer_routine, trainer);
+        error = pthread_create( &(trainer->thread_id), NULL, (void*)trainer_routine, trainer);
         pthread_detach (trainer->thread_id);
     }
 
@@ -289,7 +291,7 @@ int Trainer_handler_create ()
     return (error);
     
 
-}
+} 
 
 // ============================================================================================================
 //    *************** Función que abre un socket de escucha para recibir mensajes del Gameboy *****************
@@ -309,15 +311,15 @@ void listen_new_pokemons (void)
 void subscribe (void)
 {
 	pthread_t thread1; //OJO. Esta variable se está perdiendo
-	pthread_create (&thread1, NULL, listen_routine_colas , (int*)APPEARED_POKEMON);
+	pthread_create (&thread1, NULL, (void *)listen_routine_colas , (int*)APPEARED_POKEMON);
 	pthread_detach (thread1);
 
 	pthread_t thread2; //OJO. Esta variable se está perdiendo
-	pthread_create (&thread2, NULL, listen_routine_colas , (int*)LOCALIZED_POKEMON);
+	pthread_create (&thread2, NULL, (void *)listen_routine_colas , (int*)LOCALIZED_POKEMON);
 	pthread_detach (thread2);
   
 	pthread_t thread3; //OJO. Esta variable se está perdiendo
-	pthread_create (&thread3, NULL, listen_routine_colas , (int*)CAUGHT_POKEMON);
+	pthread_create (&thread3, NULL, (void *)listen_routine_colas , (int*)CAUGHT_POKEMON);
 	pthread_detach (thread3);
 }
 
@@ -367,6 +369,8 @@ void inicializar_semaforos (void)
     sem_init (&trainer_count, 0, 0);					
     sem_init (&using_cpu, 0,0);
     sem_init (&terminar_ejecucion, 0, 0);
+    sem_init (&terminar_localized, 0, 1);
+
 }
 
 void cerar_semaforos (void)

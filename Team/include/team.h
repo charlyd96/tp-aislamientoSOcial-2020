@@ -75,12 +75,15 @@ sem_t qr_sem2;
 
 sem_t terminar_ejecucion;
 
+extern sem_t terminar_localized;
+
 /* Errores para identificar estado en la ejecución de los hilos para RR y SJF. Representa el estado específico de cada ráfaga*/
 typedef enum
 {
     FINISHED,       //Finalizo su ráfaga de ejecución correctamente
     PENDING,        //Fue desalojado por el planificador y aún tiene instrucciones por ejecutar de la ráfaga
-    EXECUTING       //Se encuentra ejecutando su ráfaga
+    EXECUTING,      //Se encuentra ejecutando su ráfaga
+    NONE            //Estado por default al ingresar por primera vez a Ready. Flujo NEW===>READY
 } exec_error;
 
 
@@ -115,7 +118,7 @@ int Trainer_handler_create(void);
 /*  Inicializa el proceso Team   */
 void Team_Init(void);
 
-void* listen_routine_gameboy (void);
+void listen_routine_gameboy (void);
 
 void send_trainer_to_exec (void);
 
@@ -127,7 +130,7 @@ void imprimir_lista (t_list *get_list);
 
 void enviar_mensajes_get (t_list *get_list);
 
-void* listen_routine_colas (void *conexion);
+void listen_routine_colas (void *conexion);
 
 void informarIDlocalized(uint32_t id);
 
@@ -135,7 +138,7 @@ void SJFSD_exec (void);
 
 void SJFCD_exec (void);
 
-double  actualizar_estimacion (); //Ver cómo agregar el parámetro Trainer *
+double actualizar_estimacion (); //Ver cómo agregar el parámetro Trainer *
 
 void ordenar_lista_ready(void);
 
