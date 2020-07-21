@@ -18,6 +18,12 @@ void levantarPuertoEscucha(void){
 		while(1){ //Verificar la condición de salida de este while
 					log_info(logInterno,"While de aceptar cliente");
 					int cliente = aceptarCliente(socketServidorGamecard);
+					int enviado = enviarACK(cliente);
+					if(enviado > 0){
+						log_info("Se devolvió el ACK al gameboy, socket %d",cliente);
+					}else{
+						log_info("ERROR al devolver ACK al gameboy, socket %d",cliente);
+					}
 					pthread_t hiloCliente;
 					pthread_create(&hiloCliente, NULL, (void*)atender_cliente, (void*)cliente);
 
@@ -495,6 +501,8 @@ void atender_getPokemon(t_get_pokemon* get_pokemon){
 		free(buffer);
 	}else{
 		//Error -> enviar localized vacio
+		sleep(config_gamecard->tiempo_retardo_operacion);
+
 	}
 	t_localized_pokemon* msg_localized = malloc(sizeof(t_localized_pokemon));
 	msg_localized->nombre_pokemon = get_pokemon->nombre_pokemon;
