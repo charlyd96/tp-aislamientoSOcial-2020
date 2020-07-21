@@ -342,6 +342,9 @@ int enviarLocalizedAlBroker(t_localized_pokemon * msg_localized){
 			log_warning(logGamecard,"No se pudo devolver el LOCALIZED");
 		}
 		close(socket_cliente);
+		if(msg_localized->cant_pos > 0)
+			free(msg_localized->posiciones);
+		free(msg_localized->nombre_pokemon);
 		free(msg_localized);
 		return enviado;
 	}
@@ -398,8 +401,9 @@ void atender_newPokemon(t_new_pokemon* new_pokemon){
 
 		//Si el archivo está abierto, espero y reintento luego del delay
 		while(archivoAbierto == true){
-			printf("[NEW] Consulto /%s -> ESTÁ ABIERTO, se aguarda reintento\n",new_pokemon->nombre_pokemon);
 			sem_post(&mx_file_metadata);
+			printf("[NEW] Consulto /%s -> ESTÁ ABIERTO, se aguarda reintento\n",new_pokemon->nombre_pokemon);
+			config_destroy(data_config);
 
 			sleep(config_gamecard->tiempo_reintento_operacion);
 
@@ -519,10 +523,10 @@ void atender_getPokemon(t_get_pokemon* get_pokemon){
 	msg_localized->id_mensaje_correlativo = get_pokemon->id_mensaje;
 	// printf("antes enviar LOCALIZED_POKEMON %s %d %s [%u]\n",msg_localized->nombre_pokemon,msg_localized->cant_pos,msg_localized->posiciones,msg_localized->id_mensaje_correlativo);
 	// 6) Conectarse al Broker y enviar el mensaje con todas las posiciones y su cantidad.
-	
-	free(get_pokemon);
-	free(pathMetadata);
 	enviarLocalizedAlBroker(msg_localized);
+	free(get_pokemon);
+	// free(get_pokemon->nombre_pokemon);
+	free(pathMetadata);
 }
 /**
  * Concatena todo el contenido de los bloques y lo devuelve en formato string
@@ -566,17 +570,17 @@ char *getPosicionesPokemon(char *buffer, uint32_t* cant_pos){
 	for (i=0; linea[i] != NULL ; i++) {
 		//Cada linea es del formato 10-2=1
 		//Split por '=' => ["10-2","1"]
-		char* linea_actual = linea[i];
-		char* pos_guion = *(string_split(linea_actual,"=")); //Tomo la primer posicion del char** que devuelve el split
+		char** split_aux = string_split(linea[i],"=");
+		char* pos_guion = split_aux[0]; //Tomo la primer posicion del char** que devuelve el split
 		char** posx_posy = string_split(pos_guion,"-"); //Separo las dos pos. por el guion => ["10","2"]
 
 		char* posicion = string_from_format("%s|%s,",*(posx_posy + 0),*(posx_posy + 1));
 		string_append(&posiciones_string,posicion);
 
-		free(pos_guion);
+		// free(pos_guion);
 		free_split(posx_posy);
+		free_split(split_aux);
 		free(posicion);
-		free(linea_actual);
 	}
 	//Elimino la última ","
 	//Hago este cambio a variable auxiliar para eliminar memory leak
@@ -676,11 +680,9 @@ void modificar_bitmap(char* bitmap, ){
 
 char* get_bitmap(){
 	char* pathBitmap = string_from_format ("%s/Metadata/Bitmap.bin", config_gamecard->punto_montaje);
-	// puts("get bitmap\n");
-	char *addr; 
-	int fd;
+	char * addr;
 	struct stat file_st;
-
+	int fd;
 	if( -1 == (fd = open(pathBitmap, O_RDWR))) /* open file in read/write mode*/
 	{
 		perror("Error opened file \n");
@@ -691,11 +693,28 @@ char* get_bitmap(){
 	addr = mmap(NULL,file_st.st_size, PROT_WRITE, MAP_SHARED, fd, 0); /* map file  */
 	if(addr == MAP_FAILED) /* check mapping successful */
 	{
-	perror("Error  mapping \n");
-	exit(1);
+		perror("Error  mapping \n");
+		exit(1);
 	}
+	close(fd);
 	free(pathBitmap);
 	return addr;
+}
+void unmap_bitmap(char* addr){
+	char* pathBitmap = string_from_format ("%s/Metadata/Bitmap.bin", config_gamecard->punto_montaje);
+	int fd;
+	struct stat file_st;
+
+	if( -1 == (fd = open(pathBitmap, O_RDWR))) /* open file in read/write mode*/
+	{
+		perror("Error opened file \n");
+	}
+
+	fstat(fd, &file_st); /* Load file status */
+
+	munmap(addr,file_st.st_size);
+	close(fd);
+	free(pathBitmap);
 }
 
 void crear_directorio_pokemon(char* pokemon){
@@ -795,9 +814,11 @@ char* editar_posicion(char* linea,int cantidad, char* texto_posicion){
 	//Calculo el largo del dato que me interesa (la cantidad de pokemones)
 	int length = strlen(linea) - largo_pos;  //largo total - largo posición
 	//Substring para recuperar el 5
-	int cantidad_actual = atoi(string_substring(linea, largo_pos, length));
+	char* substring_aux = string_substring(linea, largo_pos, length);
+	int cantidad_actual = atoi(substring_aux);
 	char* nueva_linea = string_from_format("%s%d\n",texto_posicion,cantidad_actual+cantidad);
 	free(cantidad_actual);
+	free(substring_aux);
 	return nueva_linea;
 }
 
@@ -819,9 +840,9 @@ t_block* actualizar_datos (char* texto,char ** lista_bloques) {
 
 	string_append(&blocks_text,"[");
 	
-	char* bitmap = malloc(total_bloques+1);
+	
 	sem_wait(&mx_w_bloques);
-	bitmap = get_bitmap();
+	char *bitmap = get_bitmap();
 	printf("\nBITMAP antes de escribir:\n%s \n", bitmap);
 	//Para "fusionar" los bloques al escribir una nueva linea, lo más fácil es marcar como libres
 	//los bloques de este pokemon, y el 2do for va a escribir todo de nuevo + la nueva linea
@@ -859,6 +880,7 @@ t_block* actualizar_datos (char* texto,char ** lista_bloques) {
 	strcpy(info_block->blocks,blocks_text);
 	printf("\nBITMAP después de escribir:\n%s \n", bitmap);
 
+	unmap_bitmap(bitmap);
 	free(blocks_text);
 	return info_block;
 }

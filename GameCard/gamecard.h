@@ -115,6 +115,7 @@ int enviarLocalizedAlBroker(t_localized_pokemon* msg_localized);
 int enviarCaughtAlBroker(t_caught_pokemon * msg_caught);
 char *getPosicionesPokemon(char* buffer, uint32_t* cant_pos);
 char *getDatosBloques(t_config *data);
+void unmap_bitmap(char* addr);
 //Semaforos
 sem_t mx_file_metadata;
 sem_t mx_creacion_archivo;
