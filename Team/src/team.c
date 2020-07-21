@@ -179,6 +179,7 @@ void SJFCD_exec (void)
         sem_post ( &(trainer->trainer_sem) );
         sem_wait (&using_cpu);
          puts ("wait");
+         printf ("Ejecucion: %d\n",trainer->ejecucion);
         if (trainer->ejecucion==FINISHED)
         {
         trainer->rafagaEstimada = trainer->rafagaAux;
@@ -189,6 +190,7 @@ void SJFCD_exec (void)
         {
         newTrainerToReady=true;
         list_add (ReadyQueue, trainer);
+        puts ("\n\n\n\nEN EN EL ELSE\n\n\n\n\n");
         sem_post (&qr_sem2);
         sem_post (&qr_sem1);
         } 
@@ -367,6 +369,8 @@ void inicializar_semaforos (void)
     sem_init (&trainer_count, 0, 0);					
     sem_init (&using_cpu, 0,0);
     sem_init (&terminar_ejecucion, 0, 0);
+    sem_init (&terminar_localized, 0, 1);
+
 }
 
 void cerar_semaforos (void)

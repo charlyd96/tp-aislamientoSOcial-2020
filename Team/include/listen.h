@@ -50,6 +50,8 @@ sem_t terminar_appeared;
 
 sem_t terminar_caught;
 
+sem_t terminar_localized;
+
 int socketGameboy;
 
 int socketAppeared;
