@@ -45,18 +45,16 @@ void process_request_recv (op_code cod_op, int socket_cliente)
     	{
 			case APPEARED_POKEMON:
 				{
-				recibirTipoProceso(socket_cliente);
-				recibirIDProceso(socket_cliente);
 				t_appeared_pokemon* mensaje_appeared= recibirAppearedPokemon(socket_cliente);
+				enviarACK(socket_cliente);
 				log_info (internalLogTeam, "Mensaje recibido: %s %s %d %d",colaParaLogs((int)cod_op),mensaje_appeared->nombre_pokemon,mensaje_appeared->pos_x,mensaje_appeared->pos_y);
 				procesar_appeared(mensaje_appeared);
 				break;
 				}
 			case LOCALIZED_POKEMON:
 				{
-				recibirTipoProceso(socket_cliente);
-				recibirIDProceso(socket_cliente);
 				t_localized_pokemon* mensaje_localized= recibirLocalizedPokemon(socket_cliente);
+				enviarACK(socket_cliente);
 				//log_info (internalLogTeam, "Mensaje recibido: %s %s %d %d",colaParaLogs((int)cod_op),mensaje_appeared->nombre_pokemon,mensaje_appeared->pos_x,mensaje_appeared->pos_y);
 				//procesar_localized(mensaje_localized);
 				break;
@@ -64,9 +62,8 @@ void process_request_recv (op_code cod_op, int socket_cliente)
 
 			case CAUGHT_POKEMON:
 				{
-				recibirTipoProceso(socket_cliente);
-				recibirIDProceso(socket_cliente);
 				t_caught_pokemon* mensaje_caught= recibirCaughtPokemon(socket_cliente);
+				enviarACK(socket_cliente);
 				log_info (internalLogTeam, "Mensaje recibido: %s %d %d",colaParaLogs((int)cod_op),mensaje_caught->atrapo_pokemon, mensaje_caught->id_mensaje_correlativo);
 				procesar_caught(mensaje_caught);
 				break;					

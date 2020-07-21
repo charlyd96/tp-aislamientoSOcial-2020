@@ -12,6 +12,7 @@
 #include <commons/string.h>
 #include "../include/team.h"
 #include "../include/trainers.h"
+#include <destroyer.h>
 
 
 
@@ -238,14 +239,14 @@ void Team_load_global_config()
 
 
 
-
+/*
 void free_split (char **string)
 {
     for (int i=0; *(string + i) != NULL ; i++)
     free (*(string+i));
     free (string);
 }
-
+*/
 void _free_sub_list (void* elemento)
 {
     list_destroy_and_destroy_elements ( ( (Trainer *) elemento)->personal_objective, free);
