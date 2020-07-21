@@ -120,9 +120,9 @@ typedef struct
 }catch_internal;
 
 
-void * trainer_routine (void *trainer);
+void trainer_routine (Trainer *trainer);
 
-void * trainer_to_catch (void);
+void trainer_to_catch (void);
 
 void send_trainer_to_ready (t_list *lista, int index, Operation op);
 
@@ -146,7 +146,7 @@ void trainer_to_deadlock(Trainer *trainer);
 
 int deadlock_recovery (void); //Algoritmo de recuperación de dadlock 
 
-int intercambiar(Trainer *trainer1, Trainer *trainer2);
+void intercambiar(Trainer *trainer1, Trainer *trainer2);
 
 bool detectar_deadlock (Trainer* trainer);
 

@@ -181,7 +181,7 @@ t_buffer* serializarGetPokemon(t_get_pokemon mensaje){
  */
 t_buffer* serializarLocalizedPokemon(t_localized_pokemon mensaje){
 	t_buffer* buffer = malloc(sizeof(t_buffer));
-	uint32_t largo_nombre  = strlen(mensaje.nombre_pokemon) + 1;
+	uint32_t largo_nombre  = (uint32_t)strlen(mensaje.nombre_pokemon) + 1;
 	uint32_t i = 0;
 	uint32_t pos_x, pos_y;
 	buffer->size = 2* sizeof(uint32_t) + largo_nombre + 2*(sizeof(uint32_t) * mensaje.cant_pos);
@@ -201,9 +201,11 @@ t_buffer* serializarLocalizedPokemon(t_localized_pokemon mensaje){
 	offset += sizeof(uint32_t);
 
 	//Serializo un par de coordenadas por cada elemento de la lista de posiciones
+	if (mensaje.cant_pos != 0){
 	char** pos_list = string_get_string_as_array(mensaje.posiciones);
 	for(i=0; i<mensaje.cant_pos; i++){
-		char** pos_pair = string_split(pos_list[i],"|");
+		char* pos_actual = pos_list[i];
+		char** pos_pair = string_split(pos_actual,"|");
 		pos_x = atoi(pos_pair[0]);
 		pos_y = atoi(pos_pair[1]);
 
@@ -211,8 +213,12 @@ t_buffer* serializarLocalizedPokemon(t_localized_pokemon mensaje){
 		offset += sizeof(uint32_t);
 		memcpy(stream + offset, &(pos_y), sizeof(uint32_t));
 		offset += sizeof(uint32_t);
+		free(pos_actual);
+		free(pos_pair);
 	}
-
+	free(pos_list);
+	}
+	
 	if(mensaje.id_mensaje_correlativo != 0){
 		memcpy(stream + offset, &(mensaje.id_mensaje_correlativo), sizeof(uint32_t));
 		offset += sizeof(uint32_t);

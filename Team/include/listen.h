@@ -29,7 +29,6 @@ typedef enum
     GUARDAR,
     GUARDAR_AUX,
     DESCARTAR
-
 } nuevo_pokemon;  
 
 extern t_list *mapped_pokemons;
@@ -63,19 +62,19 @@ int socketGameboyCliente;
 
 extern bool win;
 
-void* get_opcode (int socket);
+void get_opcode (int socket);
 
 void process_request_recv (op_code cod_op, int socket);
 
 int send_catch (Trainer *trainer);
 
-int procesar_caught(void *mensaje_caught);
-
-void * send_catch_routine (void * train);
-
 int reintentar_conexion(op_code colaSuscripcion);
 
-void procesar_appeared (void *mensaje);
+void procesar_appeared(t_appeared_pokemon *mensaje);
+
+void procesar_localized(t_localized_pokemon *mensaje);
+
+void procesar_caught(t_caught_pokemon *mensaje);
 
 char* colaParaLogs(op_code cola);
 
@@ -84,7 +83,6 @@ nuevo_pokemon tratar_nuevo_pokemon (char *nombre_pokemon);
 int informarIDcaught(uint32_t id, sem_t *trainer_sem);
 
 void informarIDlocalized(uint32_t id);
-
 
 void liberar_appeared (t_appeared_pokemon *mensaje);
 #endif /* INCLUDE_LISTEN_H_ */

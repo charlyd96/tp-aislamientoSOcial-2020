@@ -29,9 +29,11 @@ int main(int argc, char **argv)
     logTeam= log_create ("logTeam.log", "Team", 1,LOG_LEVEL_INFO);
     Team_Init (); //Obtiene configuraciones y entrenadores, los localiza y define el objetivo global
 
+    subscribe (); //Crea tres hilos para suscribirse a las tres colas de mensajes
+    
     t_list *GET_list = Team_GET_generate(); //Obtiene lista de objetivos globales para enviar mensajes GET
     
-    subscribe (); //Crea tres hilos para suscribirse a las tres colas de mensajes
+    
     send_trainer_to_exec();
 
     enviar_mensajes_get(GET_list); //Envía los mensajes GET al Broker y libera la lista

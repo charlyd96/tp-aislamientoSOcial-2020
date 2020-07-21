@@ -12,6 +12,7 @@
 #include <commons/string.h>
 #include "../include/team.h"
 #include "../include/trainers.h"
+#include <destroyer.h>
 
 
 
@@ -26,7 +27,7 @@ t_config* get_config()
     t_config* ret =  config_create("../team.config");
     if (ret == NULL)
     log_error  (internalLogTeam, "No se pudieron leer las configuraciones");
-    else log_info (internalLogTeam, "Configuraciones leidas correctamente");
+    else log_info (internalLogTeam, "Archivo de configuración leído correctamente");
     return ret;
 }
 
@@ -77,14 +78,25 @@ void Team_load_trainers_config(void)
    
     pthread_mutex_init(&ID_caught_sem, NULL);
 
-    /*  Creo un puntero a estructura del tipo Trainer para ir creando cada entrenador leído por archivo de configuración.
+    /*  Creo un puntero a estructura del tipo Trainer para ir creando cada entrenador leído por archivo de configuración. 
         Estas estructuras se van apuntando en nodos de una lista global t_list *trainers                                    */
     Trainer *entrenadores;
     int index=0;
+    int i=0;
 
     /* -------------- Del archivo de configuración hacia lista de entrenadores --------------------- */
-    for (int i=0; *(pos_trainers_to_array + i) !=NULL ; i++)
+    for (i=0; *(pos_trainers_to_array + i) !=NULL ; i++)
     {
+        if (*(pok_in_bag_to_array + i) ==NULL )
+        {
+            log_error(internalLogTeam, "Error en los pokemones atrapados en el archivo de configuracion");
+            exit(-1);
+        }
+        if (*(trainers_obj_to_array+ i) ==NULL )
+        {
+            log_error(internalLogTeam, "Error en los objetivos en el archivo de configuracion");
+            exit(-1);
+        }
         entrenadores=malloc (sizeof(Trainer));
 
         char **posicion = string_split(*(pos_trainers_to_array + i), "|");
@@ -117,31 +129,30 @@ void Team_load_trainers_config(void)
         {
             entrenadores->actual_status=BLOCKED_DEADLOCK;
             trainer_to_deadlock(entrenadores);
-            printf ("Trainer %d va a deadlock\n", entrenadores->index);
         }
         else if (comparar_listas(entrenadores->bag, entrenadores->personal_objective))
         {
             entrenadores->actual_status=EXIT;
-            printf ("Trainer %d va a exit\n", entrenadores->index);
             sem_post(&entrenadores->trainer_sem); 
-        } else 
-            {
-            sem_post (&trainer_count);
-            puts ("sem post");
-            }
+        } else sem_post (&trainer_count);
 
         index++;
         /*  Añado el entrenador creado, ya cada uno con su lista bag y lista de objetivos, a la lista de entrenadores */
         list_add(trainers, entrenadores);
 
         /*  Añado los objetivos de cada entrenador a la lista de objetivos globales */
-        list_add_all (global_objective, entrenadores->personal_objective); // Sacara el list_duplicate //Ver si se puede poner un list_duplicate. Ya se cambió. Antes estaba duplicar_lista
+        list_add_all (global_objective, entrenadores->personal_objective); 
         list_add_all (bag_global,entrenadores->bag);
         
         /*  Libero memoria innecesaria generada por la función string_split de las commons  */
         free (posicion);
         free (mochila);
         free (objetivos);
+    }
+    if (*(pos_trainers_to_array + i) != NULL || *(pok_in_bag_to_array + i) != NULL || *(trainers_obj_to_array + i) != NULL)
+    {
+        log_error (internalLogTeam, "Error al cargar los datos de los entrenadores desde el archivo de configuración");
+        exit (-1);
     }
 
 
@@ -163,6 +174,7 @@ void Team_load_trainers_config(void)
     list_iterate(trainers, _imprimir_lista);
 
     config_destroy (config_aux);
+    log_info (internalLogTeam,"Se cargaron correctamente los datos de los entrenadores");
 }
 
 // ============================================================================================================
@@ -213,8 +225,8 @@ void Team_load_global_config()
         printf ("IP_TEAM= %s\n", config->team_IP);
         printf ("PUERTO_TEAM= %s\n", config->team_port);
     }
-
-
+    
+    log_info (internalLogTeam,"Se cargaron correctamente las configuraciones globales del Team");
 }
 
 
@@ -227,14 +239,14 @@ void Team_load_global_config()
 
 
 
-
+/*
 void free_split (char **string)
 {
     for (int i=0; *(string + i) != NULL ; i++)
     free (*(string+i));
     free (string);
 }
-
+*/
 void _free_sub_list (void* elemento)
 {
     list_destroy_and_destroy_elements ( ( (Trainer *) elemento)->personal_objective, free);
