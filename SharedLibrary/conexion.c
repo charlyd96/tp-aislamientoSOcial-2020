@@ -309,14 +309,15 @@ t_get_pokemon* recibirGetPokemon(int socket_cliente){
 	uint32_t size_buffer, largo_nombre;
 	uint32_t id_mensaje = 0;
 	uint32_t bytes_recibidos = 0;
+	t_get_pokemon* get_pokemon = malloc(sizeof(t_get_pokemon));
 
 	recv(socket_cliente, &size_buffer, sizeof(uint32_t), MSG_WAITALL);
 
 	recv(socket_cliente, &largo_nombre, sizeof(uint32_t), MSG_WAITALL);
 	bytes_recibidos += sizeof(uint32_t);
 
-	char* nombre_pokemon = malloc(largo_nombre);
-	recv(socket_cliente, nombre_pokemon, largo_nombre, MSG_WAITALL);
+	get_pokemon->nombre_pokemon = malloc(largo_nombre);
+	recv(socket_cliente, get_pokemon->nombre_pokemon, largo_nombre, MSG_WAITALL);
 	bytes_recibidos += largo_nombre;
 
 	//Si me queda buffer por recibir, es el id_mensaje
@@ -325,8 +326,6 @@ t_get_pokemon* recibirGetPokemon(int socket_cliente){
 		bytes_recibidos += sizeof(uint32_t);
 	}
 
-	t_get_pokemon* get_pokemon = malloc(sizeof(t_get_pokemon));
-	get_pokemon->nombre_pokemon = nombre_pokemon;
 	get_pokemon->id_mensaje = id_mensaje;
 
 	return get_pokemon;
