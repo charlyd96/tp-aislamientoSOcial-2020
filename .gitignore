@@ -66,3 +66,5 @@ dkms.conf
 GameCard/.autotools
 .vscode/settings.json
 .vscode
+SharedLibrary/Makefile
+SharedLibrary/Makefile

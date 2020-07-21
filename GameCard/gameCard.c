@@ -425,7 +425,8 @@ void atender_newPokemon(t_new_pokemon* new_pokemon){
 		sleep(config_gamecard->tiempo_retardo_operacion);
 
 		//Cierro archivo
-		config_set_value(data_config,"SIZE",string_itoa(info_block->size));
+		char* size_text = string_itoa(info_block->size);
+		config_set_value(data_config,"SIZE",size_text);
 		config_set_value(data_config,"BLOCKS",info_block->blocks);
 		
 		config_set_value(data_config,"OPEN","N");
@@ -433,6 +434,9 @@ void atender_newPokemon(t_new_pokemon* new_pokemon){
 
 		config_destroy(data_config);
 		free(buffer);
+		free_split(lista_bloques);
+		destroy_t_block(info_block);
+		free(size_text);
 		}
 	else{ //Si no existe, creo el directorio del pokemon
 		crear_directorio_pokemon(new_pokemon->nombre_pokemon);
@@ -442,13 +446,17 @@ void atender_newPokemon(t_new_pokemon* new_pokemon){
 
 		crear_metadata(new_pokemon->nombre_pokemon,info_block);
 		sem_post(&mx_creacion_archivo);
+		destroy_t_block(info_block);
 	}
 	//Ya sea que agregué o creé el pokemon, respondo el appeared
 	//NOTA: Contemplar el caso en que no se pueda agregar el pokemon al FS, en ese caso no devolver appeared
 	
 	//ENVIAR SIEMPRE AL BROKER, para asegurarme abro una conexión nueva
 	enviarAppearedAlBroker(new_pokemon);
-	free(pathMetadata);	
+	free(pathMetadata);
+	free(new_pokemon->nombre_pokemon);	
+	free(new_pokemon);
+	
 }
 void atender_getPokemon(t_get_pokemon* get_pokemon){
 	/**
@@ -525,7 +533,7 @@ char *getDatosBloques(t_config * data_config){
 	char * buffer = concatenar_bloques(largo_texto, lista_bloques); //Apunta buffer a todos los datos del archivo concatenados
 	log_info(logGamecard,"Datos archivo:\n%s\n",buffer);
 
-	free(lista_bloques);
+	free_split(lista_bloques);
 	return buffer;
 }
 void atender_catchPokemon(t_catch_pokemon* catch_pokemon){
@@ -596,7 +604,7 @@ char* escribir_bloque(int block_number, int block_size, char* texto, int* largo_
 		}
 	else{
 		bytes_copiados = *largo_texto;
-		block_texto = malloc((*largo_texto));
+		block_texto = malloc((*largo_texto) + 1);
 		
 		memcpy(block_texto, texto, (*largo_texto));
 		//Agrego un \0 porque fputs sino no sabe hasta donde copiar (agrega basura al final)
@@ -606,6 +614,7 @@ char* escribir_bloque(int block_number, int block_size, char* texto, int* largo_
 
 	fputs(block_texto,archivo);
 	texto_final = string_substring_from(texto,bytes_copiados);
+	free(texto);
 	(*largo_texto) = strlen(texto_final);
 	// log_info(logInterno, "Path: %s \n Texto: %s \n largo_texto: %d\n",path_metadata,texto_final,(* largo_texto));
 	fclose (archivo);
@@ -685,7 +694,7 @@ char* get_bitmap(){
 	perror("Error  mapping \n");
 	exit(1);
 	}
-	
+	free(pathBitmap);
 	return addr;
 }
 
@@ -703,6 +712,7 @@ void crear_directorio_pokemon(char* pokemon){
 		log_error(logInterno, "ERROR: No se pudo crear directorio o ya existe /%s", pokemon); 
 		exit (CREATE_DIRECTORY_ERROR);
 	}
+	free(pathFiles);
 }
 
 /**=================================================================================================================
@@ -723,6 +733,8 @@ void crear_metadata (char *pokemon,t_block* info_block) {
 	config_save(config_metadata);
 	config_destroy (config_metadata);
 
+	free(path_metadata);
+	free(size);
 }
 
 char* agregar_pokemon(char *buffer, t_new_pokemon* new_pokemon){
@@ -770,6 +782,8 @@ char* agregar_pokemon(char *buffer, t_new_pokemon* new_pokemon){
 		string_append(&nuevo_buffer,nueva_linea);
 	}
 	free_split(split);
+	free(nueva_linea);
+	free(posicion);
 	return nuevo_buffer;
 }
 
@@ -783,7 +797,7 @@ char* editar_posicion(char* linea,int cantidad, char* texto_posicion){
 	//Substring para recuperar el 5
 	int cantidad_actual = atoi(string_substring(linea, largo_pos, length));
 	char* nueva_linea = string_from_format("%s%d\n",texto_posicion,cantidad_actual+cantidad);
-
+	free(cantidad_actual);
 	return nueva_linea;
 }
 
@@ -824,10 +838,16 @@ t_block* actualizar_datos (char* texto,char ** lista_bloques) {
 			bitmap[i] = '1';
 			contador_avance_bloque++;
 
-			if(contador_avance_bloque == cant_bloques)
-				string_append(&blocks_text,string_from_format("%d",block_number));
-			else
-				string_append(&blocks_text,string_from_format("%d,",block_number));
+			if(contador_avance_bloque == cant_bloques){
+				char* string_aux =string_from_format("%d",block_number);
+				string_append(&blocks_text,string_aux);
+				free(string_aux);
+			}
+			else{
+				char* string_aux =string_from_format("%d,",block_number);
+				string_append(&blocks_text,string_aux);
+				free(string_aux);
+			}
 		}
 		
 	}
@@ -838,6 +858,8 @@ t_block* actualizar_datos (char* texto,char ** lista_bloques) {
     info_block->blocks=malloc(strlen(blocks_text)+1);
 	strcpy(info_block->blocks,blocks_text);
 	printf("\nBITMAP después de escribir:\n%s \n", bitmap);
+
+	free(blocks_text);
 	return info_block;
 }
 
@@ -863,6 +885,8 @@ char* concatenar_bloques(int largo_texto, char ** lista_bloques){ //Acá puede p
 	for (int i=0; *(lista_bloques +i) != NULL; i++) {
 		
 		char *dir_bloque=string_from_format ("%s/Blocks/%s.bin",config_gamecard->punto_montaje,*(lista_bloques+i));
+		printf("path archivo %s\n",dir_bloque);
+		
 		int archivo=open (dir_bloque, O_RDWR);
 		// printf("%c",*(lista_bloques+i));
 		if (archivo != -1) {
@@ -891,4 +915,9 @@ int cantidad_bloques(int largo_texto, int block_size){
 	float div = (float)largo_texto/(float)block_size;
 	double cant = ceil(div);
 	return (int)cant;
+}
+// --------------------------- funciones destroyer -----------------------------------
+void destroy_t_block(t_block * block){
+    free(block->blocks);
+    free(block);
 }
