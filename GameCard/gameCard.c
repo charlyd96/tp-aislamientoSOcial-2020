@@ -20,9 +20,9 @@ void levantarPuertoEscucha(void){
 					int cliente = aceptarCliente(socketServidorGamecard);
 					int enviado = enviarACK(cliente);
 					if(enviado > 0){
-						log_info("Se devolvió el ACK al gameboy, socket %d",cliente);
+						log_info(logGamecard,"Se devolvió el ACK al gameboy, socket %d",cliente);
 					}else{
-						log_info("ERROR al devolver ACK al gameboy, socket %d",cliente);
+						log_info(logGamecard,"ERROR al devolver ACK al gameboy, socket %d",cliente);
 					}
 					pthread_t hiloCliente;
 					pthread_create(&hiloCliente, NULL, (void*)atender_cliente, (void*)cliente);
@@ -65,7 +65,7 @@ void listen_routine_colas (void *colaSuscripcion){
 		{
 			while(1)
 			{
-				printf("Recibir new");
+				printf("Recibir new\n");
 				op_code cod_op = recibirOperacion(socket_cliente);
 				if (cod_op==OP_UNKNOWN)
 					socket_cliente = reintentar_conexion((op_code) colaSuscripcion);
@@ -94,7 +94,7 @@ void listen_routine_colas (void *colaSuscripcion){
 		{
 			while(1)
 			{
-				printf("Recibir get");
+				printf("Recibir get\n");
 				op_code cod_op = recibirOperacion(socket_cliente);
 
 				if (cod_op==OP_UNKNOWN)
@@ -123,7 +123,7 @@ void listen_routine_colas (void *colaSuscripcion){
 		{
 			while(1)
 			{
-				printf("Recibir catch");
+				printf("Recibir catch\n");
 				op_code cod_op = recibirOperacion(socket_cliente);
 				if (cod_op==OP_UNKNOWN)
 					socket_cliente = reintentar_conexion((op_code) colaSuscripcion);
@@ -423,16 +423,12 @@ void atender_newPokemon(t_new_pokemon* new_pokemon){
 		char* nuevo_buffer = agregar_pokemon(buffer, new_pokemon);
 		char **lista_bloques=config_get_array_value(data_config, "BLOCKS");
 		t_block* info_block = actualizar_datos(nuevo_buffer, lista_bloques);
-		crear_metadata(new_pokemon->nombre_pokemon,info_block);
+		actualizar_metadata(data_config,info_block);
 
 		//Retardo simulando IO
 		sleep(config_gamecard->tiempo_retardo_operacion);
 
-		//Cierro archivo
-		char* size_text = string_itoa(info_block->size);
-		config_set_value(data_config,"SIZE",size_text);
-		config_set_value(data_config,"BLOCKS",info_block->blocks);
-		
+		//Cierro archivo		
 		config_set_value(data_config,"OPEN","N");
 		config_save(data_config);
 
@@ -440,7 +436,6 @@ void atender_newPokemon(t_new_pokemon* new_pokemon){
 		free(buffer);
 		free_split(lista_bloques);
 		destroy_t_block(info_block);
-		free(size_text);
 		}
 	else{ //Si no existe, creo el directorio del pokemon
 		crear_directorio_pokemon(new_pokemon->nombre_pokemon);
@@ -488,6 +483,7 @@ void atender_getPokemon(t_get_pokemon* get_pokemon){
 		while(archivoAbierto == true){
 			printf("[GET] Consulto /%s -> ESTÁ ABIERTO, se aguarda reintento\n",get_pokemon->nombre_pokemon);
 			sem_post(&mx_file_metadata);
+			config_destroy(data_config);
 
 			sleep(config_gamecard->tiempo_reintento_operacion);
 
@@ -542,21 +538,87 @@ char *getDatosBloques(t_config * data_config){
 }
 void atender_catchPokemon(t_catch_pokemon* catch_pokemon){
 	/*
-		Verificar si el Pokémon existe dentro de nuestro Filesystem. Para esto se deberá buscar dentro del directorio Pokemon, si existe el archivo con el nombre de nuestro pokémon. En caso de no existir se deberá informar un error.
-		Verificar si se puede abrir el archivo (si no hay otro proceso que lo esté abriendo). En caso que el archivo se encuentre abierto se deberá reintentar la operación luego de un tiempo definido en el archivo de configuración.
-		Verificar si las posiciones ya existen dentro del archivo. En caso de no existir se debe informar un error.
-		En caso que la cantidad del Pokémon sea “1”, se debe eliminar la línea. En caso contrario se debe decrementar la cantidad en uno.
-		Esperar la cantidad de segundos definidos por archivo de configuración
-		Cerrar el archivo.
-		Conectarse al Broker y enviar el mensaje indicando el resultado correcto.
+		1) Verificar si el Pokémon existe dentro de nuestro Filesystem. Para esto se deberá buscar 
+		dentro del directorio Pokemon, si existe el archivo con el nombre de nuestro pokémon. En caso 
+		de no existir se deberá informar un error.
+		2) Verificar si se puede abrir el archivo (si no hay otro proceso que lo esté abriendo). 
+		En caso que el archivo se encuentre abierto se deberá reintentar la operación luego de un 
+		tiempo definido en el archivo de configuración.
+		3) Verificar si las posiciones ya existen dentro del archivo. En caso de no existir se debe 
+		informar un error.
+		4) En caso que la cantidad del Pokémon sea “1”, se debe eliminar la línea. En caso contrario se 
+		debe decrementar la cantidad en uno.
+		5) Esperar la cantidad de segundos definidos por archivo de configuración
+		6) Cerrar el archivo.
+		7) Conectarse al Broker y enviar el mensaje indicando el resultado correcto.
 
 	 */
-	//De manera provisoria devolver siempre CAUGHT SI
+	char* pathMetadata = string_from_format("%s/Files/%s/Metadata.bin", config_gamecard->punto_montaje, catch_pokemon->nombre_pokemon);
+	uint32_t atrapo_pokemon = 0;
+	//1)
+	if(existe_archivo(pathMetadata)){
+		sem_wait(&mx_file_metadata);
+		
+		// 2) 
+		t_config *data_config = config_create (pathMetadata);
+		bool archivoAbierto = strcmp(config_get_string_value(data_config,"OPEN"),"Y") == 0;
+		while(archivoAbierto == true){
+			printf("[CATCH] Consulto /%s -> ESTÁ ABIERTO, se aguarda reintento\n",catch_pokemon->nombre_pokemon);
+			sem_post(&mx_file_metadata);
+			config_destroy(data_config);
+
+			sleep(config_gamecard->tiempo_reintento_operacion);
+
+			sem_wait(&mx_file_metadata);
+			data_config = config_create(pathMetadata);
+			archivoAbierto = strcmp(config_get_string_value(data_config,"OPEN"),"Y") == 0;
+		}
+		printf("[CATCH] Consulto /%s -> ESTÁ CERRADO, se realiza la operación\n",catch_pokemon->nombre_pokemon);
+		//Seteo OPEN=Y en el archivo
+		config_set_value(data_config,"OPEN","Y");
+		config_save(data_config);
+		sem_post(&mx_file_metadata);
+		// 3) Verificar si la posición existe
+		char* buffer = getDatosBloques(data_config);
+		char * pos_string = string_from_format("%u-%u=",catch_pokemon->pos_x,catch_pokemon->pos_y);
+		int* indice = malloc(sizeof(int));
+		int cantidad_existente = cantidadPokemonesEnPosicion(pos_string,buffer,indice);
+
+		if(cantidad_existente == -1){ //-1 si no existe
+			log_info(logGamecard,"ERROR CATCH: El pokemon %s no existe en la posición %u-%u",catch_pokemon->nombre_pokemon,catch_pokemon->pos_x,catch_pokemon->pos_y);
+		}else{ //Hay 1 o más pokemones
+			//Descontar
+			char* nuevo_buffer = descontarPokemonEnLinea(*indice,pos_string,buffer,cantidad_existente-1);
+			char **lista_bloques=config_get_array_value(data_config, "BLOCKS");
+			t_block* info_block = actualizar_datos(nuevo_buffer, lista_bloques);
+			actualizar_metadata(data_config,info_block);
+			atrapo_pokemon = 1;
+			free_split(lista_bloques);
+			destroy_t_block(info_block);
+		}
+		free(pos_string);
+		free(indice);
+		// 4) Esperar la cantidad de segundos definidos por archivo de configuración
+		sleep(config_gamecard->tiempo_retardo_operacion);
+		// 5) Cerrar el archivo.
+		config_set_value(data_config,"OPEN","N");
+		config_save(data_config);
+		config_destroy(data_config);
+		free(buffer);
+	}else{
+		//Error -> enviar localized vacio
+		log_info(logGamecard,"ERROR CATCH: El directorio del pokemon %s no existe",catch_pokemon->nombre_pokemon);
+		atrapo_pokemon = 0;
+	}
+	
 	t_caught_pokemon* msg_caught = malloc(sizeof(t_caught_pokemon));
-	msg_caught->atrapo_pokemon = 1;
+	msg_caught->atrapo_pokemon = atrapo_pokemon;
 	msg_caught->id_mensaje_correlativo = catch_pokemon->id_mensaje;
 	
 	enviarCaughtAlBroker(msg_caught);
+	free(pathMetadata);
+	free(catch_pokemon->nombre_pokemon);
+	free(catch_pokemon);
 }
 /**
  * Recolecta todas las posiciones conocidas del pokemon y arma un string array
@@ -734,9 +796,9 @@ void crear_directorio_pokemon(char* pokemon){
 	free(pathFiles);
 }
 
-/**=================================================================================================================
- * Esta función debería recibir un t_metadata para poder crear/actualizar la metadata luego de modificar los bloques
- * =================================================================================================================
+/**
+	Esta función se llama ante un NEW pokemon si este no existe.
+	Crea el archivo metadata para el pokemon luego de haber escrito sus bloques.
 */
 void crear_metadata (char *pokemon,t_block* info_block) {
 	char *path_metadata= string_from_format ("%s/Files/%s/Metadata.bin",config_gamecard->punto_montaje, pokemon);
@@ -753,6 +815,20 @@ void crear_metadata (char *pokemon,t_block* info_block) {
 	config_destroy (config_metadata);
 
 	free(path_metadata);
+	free(size);
+}
+/**
+	Esta función se llama ante un catch exitoso (descontar o borrar linea) y ante un NEW de un pokemon
+	ya existente (aumentar cantidad).
+	Establece la metadata de los bloques que se modificaron.
+*/
+void actualizar_metadata (t_config* config_metadata,t_block* info_block) {
+	char* size = string_from_format("%d",info_block->size);
+
+	config_set_value(config_metadata, "SIZE",size );
+	config_set_value(config_metadata, "BLOCKS", info_block->blocks); 
+	config_save(config_metadata);
+
 	free(size);
 }
 
@@ -817,9 +893,59 @@ char* editar_posicion(char* linea,int cantidad, char* texto_posicion){
 	char* substring_aux = string_substring(linea, largo_pos, length);
 	int cantidad_actual = atoi(substring_aux);
 	char* nueva_linea = string_from_format("%s%d\n",texto_posicion,cantidad_actual+cantidad);
-	free(cantidad_actual);
 	free(substring_aux);
 	return nueva_linea;
+}
+int obtenerCantidadEnLinea(char* linea){
+	//Divido "2-2=10" => ["2-2","10"]
+	char ** split = string_split(linea,"=");
+
+	int cantidad = atoi(split[1]);
+	free_split(split);
+	return cantidad;
+}
+int cantidadPokemonesEnPosicion(char* pos_string,char* buffer,int* indice){
+	char** lineas = string_split(buffer,"\n");
+	bool encontrado = false;
+	int cantidad = -1;
+	for(int i = 0; lineas[i] != NULL && encontrado == false; i++){
+		if(string_starts_with(lineas[i],pos_string)){
+			printf("Coincidencia con linea %s\n",lineas[i]);
+			encontrado = true;
+			*indice = i;
+			cantidad = obtenerCantidadEnLinea(lineas[i]);
+			printf("La cantidad es: %d\n",cantidad);
+		}
+	}
+	free_split(lineas);
+	return cantidad;
+}
+char* descontarPokemonEnLinea(int indice,char*pos_string,char* buffer,int nueva_cant){
+	char** lineas = string_split(buffer,"\n");
+	char* nuevo_buffer = string_new();
+
+	for(int i=0; lineas[i] != NULL; i++){
+		//Si es la linea que busco, la reemplazo/elimino
+		if(i == indice){
+			if(nueva_cant>0){
+				//Armo nueva linea, concateno la posición "2-2=" con la nueva cantidad "9\n"
+				char* nueva_linea = string_new();
+				char* cant_string = string_from_format("%u\n",nueva_cant);
+				string_append(&nueva_linea,pos_string);
+				string_append(&nueva_linea,cant_string);
+
+				string_append(&nuevo_buffer,nueva_linea);
+				
+				free(cant_string);
+				free(nueva_linea);
+			}//else no hago nada, se elimina la linea
+		}else{
+			string_append(&nuevo_buffer,lineas[i]);
+			string_append(&nuevo_buffer,"\n");
+		}
+	}
+	free_split(lineas);
+	return nuevo_buffer;
 }
 
 t_block* actualizar_datos (char* texto,char ** lista_bloques) {
@@ -851,6 +977,9 @@ t_block* actualizar_datos (char* texto,char ** lista_bloques) {
 			bitmap[atoi(lista_bloques[k])] = '0';
 		}
 	}
+	//NOTA: si se eliminan todas las lineas y el texto queda vacío, no se sobreescriben
+	//el bitmap se libera y el contenido de los bloques pasa a ser basura
+	//Chequear si esto es perjudicial para los test, se podrían blanquear
 	for(int i = 0; i < total_bloques && cant_bloques > contador_avance_bloque; i++)
 	{
 		if (bitmap[i] == '0') {
