@@ -1056,8 +1056,8 @@ void atenderMensajeCaughtPokemon(int socket_cliente){
 
 	if(caught_pokemon->id_mensaje_correlativo >= 0){
 		// 3. Llegada de un nuevo mensaje a una cola de mensajes.
-		log_info(logBroker, "Llegó un Mensaje CAUGHT_POKEMON %d %d.",caught_pokemon->id_mensaje_correlativo,caught_pokemon->atrapo_pokemon);
-		log_info(logBrokerInterno, "Llegó un Mensaje CAUGHT_POKEMON %d %d.",caught_pokemon->id_mensaje_correlativo,caught_pokemon->atrapo_pokemon);
+		log_info(logBroker, "Llegó un Mensaje CAUGHT_POKEMON %d [%d].",caught_pokemon->atrapo_pokemon,caught_pokemon->id_mensaje_correlativo);
+		log_info(logBrokerInterno, "Llegó un Mensaje CAUGHT_POKEMON %d [%d].",caught_pokemon->atrapo_pokemon,caught_pokemon->id_mensaje_correlativo);
 	}else{
 		// 3. Llegada de un nuevo mensaje a una cola de mensajes.
 		log_info(logBroker, "Llegó un Mensaje CAUGHT_POKEMON %d.",caught_pokemon->atrapo_pokemon);

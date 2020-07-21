@@ -21,6 +21,7 @@
 #include <commons/log.h>
 #include "protocolo.h"
 #include "serializacion.h"
+#include "destroyer.h"
 
 //Dado un ip y un puerto, crea un Socket Cliente para la comunicación con un Servidor.
 int crearSocketCliente(char* ip, char* puerto);
