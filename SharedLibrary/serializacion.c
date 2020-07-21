@@ -9,12 +9,16 @@
 
 void* serializarPaquete(t_paquete* paquete, int *bytes)
 {
-	int largo = sizeof(op_code) + sizeof(uint32_t) + paquete->buffer->size;
+	int largo = sizeof(op_code) + sizeof(process_code) + 2 * sizeof(uint32_t) + paquete->buffer->size;
 	int offset = 0;
 	void * serializado = malloc(largo);
 
 	memcpy(serializado + offset, &(paquete->codigo_operacion), sizeof(paquete->codigo_operacion));
 	offset += sizeof(paquete->codigo_operacion);
+	memcpy(serializado + offset, &(paquete->tipo_proceso), sizeof(paquete->tipo_proceso));
+	offset += sizeof(paquete->tipo_proceso);
+	memcpy(serializado + offset, &(paquete->id_proceso), sizeof(paquete->id_proceso));
+	offset += sizeof(paquete->id_proceso);
 	memcpy(serializado + offset, &(paquete->buffer->size), sizeof(paquete->buffer->size));
 	offset += sizeof(paquete->buffer->size);
 	memcpy(serializado + offset, paquete->buffer->stream, paquete->buffer->size);
@@ -177,7 +181,7 @@ t_buffer* serializarGetPokemon(t_get_pokemon mensaje){
  */
 t_buffer* serializarLocalizedPokemon(t_localized_pokemon mensaje){
 	t_buffer* buffer = malloc(sizeof(t_buffer));
-	uint32_t largo_nombre  = strlen(mensaje.nombre_pokemon) + 1;
+	uint32_t largo_nombre  = (uint32_t)strlen(mensaje.nombre_pokemon) + 1;
 	uint32_t i = 0;
 	uint32_t pos_x, pos_y;
 	buffer->size = 2* sizeof(uint32_t) + largo_nombre + 2*(sizeof(uint32_t) * mensaje.cant_pos);
@@ -197,18 +201,23 @@ t_buffer* serializarLocalizedPokemon(t_localized_pokemon mensaje){
 	offset += sizeof(uint32_t);
 
 	//Serializo un par de coordenadas por cada elemento de la lista de posiciones
-	char** pos_list = string_get_string_as_array(mensaje.posiciones);
-	for(i=0; i<mensaje.cant_pos; i++){
-		char** pos_pair = string_split(pos_list[i],"|");
-		pos_x = atoi(pos_pair[0]);
-		pos_y = atoi(pos_pair[1]);
+	if (mensaje.cant_pos != 0){
+		char** pos_list = string_get_string_as_array(mensaje.posiciones);
+		for(i=0; i<mensaje.cant_pos; i++){
+			char** pos_pair = string_split(pos_list[i],"|");
+			pos_x = atoi(pos_pair[0]);
+			pos_y = atoi(pos_pair[1]);
 
-		memcpy(stream + offset, &(pos_x), sizeof(uint32_t));
-		offset += sizeof(uint32_t);
-		memcpy(stream + offset, &(pos_y), sizeof(uint32_t));
-		offset += sizeof(uint32_t);
+			memcpy(stream + offset, &(pos_x), sizeof(uint32_t));
+			offset += sizeof(uint32_t);
+			memcpy(stream + offset, &(pos_y), sizeof(uint32_t));
+			offset += sizeof(uint32_t);
+			
+			free_split(pos_pair);
+		}
+		free(pos_list);
 	}
-
+	
 	if(mensaje.id_mensaje_correlativo != 0){
 		memcpy(stream + offset, &(mensaje.id_mensaje_correlativo), sizeof(uint32_t));
 		offset += sizeof(uint32_t);

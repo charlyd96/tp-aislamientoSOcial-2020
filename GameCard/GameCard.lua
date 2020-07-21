@@ -1,4 +1,4 @@
-project "Broker"
+project "GameCard"
 
     kind "ConsoleApp"
     language "C"

@@ -375,26 +375,114 @@ t_error_codes enviarMensajeAModulo(process_code proc, op_code ope, t_buffer* buf
 		logInfo("Conexión a %s %s:%s en socket %d",nombreModulo,ipServidor,puertoServidor,gameBoyBroker);
 		t_paquete* paquete = malloc(sizeof(t_paquete));
 		paquete->codigo_operacion = ope;
+		paquete->tipo_proceso = P_GAMEBOY;
+		paquete->id_proceso = (uint32_t)config_get_int_value(config,"ID_PROCESO");
 		paquete->buffer = buffer;
+
 		int tamanio_a_enviar;
 		void* mensajeSerializado = serializarPaquete(paquete, &tamanio_a_enviar);
 		int enviado = send(gameBoyBroker, mensajeSerializado, tamanio_a_enviar, 0);
-		close(gameBoyBroker);
 		if (enviado == -1) {
 			logInfoAux("No se envió el mensaje");
 			free(mensajeSerializado);
 			eliminarPaquete(paquete);
+			config_destroy(config);
+			close(gameBoyBroker);
 			return ERROR_SEND;
 		} else {
 			logInfo("Se enviaron %d bytes a la cola %s", enviado,getNombreCola(paquete->codigo_operacion));
+			//recibir id y loguear
+			uint32_t id_o_ack;
+
+			recv(gameBoyBroker,&id_o_ack,sizeof(uint32_t),MSG_WAITALL);
+			if(strcmp("BROKER",nombreModulo) == 0){
+				logInfoAux("Se recibió el ID_MENSAJE: %d",id_o_ack);
+			}else{
+				logInfoAux("Se recibió ACK: %d",id_o_ack);
+			}
+
 			free(mensajeSerializado);
 			eliminarPaquete(paquete);
+			close(gameBoyBroker);
+			config_destroy(config);
 			return PARSE_SUCCESS;
 		}
 	} else {
 		logInfoAux("Conexión fallida con %s", nombreModulo);
 		config_destroy(config);
 		return ERROR_SEND;
+	}
+}
+void recibirMensajes(int socket){
+	int socket_cliente = socket;
+	bool caseDefault;
+	int enviado;
+	bool seguir = true;
+	while(seguir){
+		caseDefault = false;
+		enviado = -1;
+		op_code cod_op = recibirOperacion(socket_cliente);
+		recibirTipoProceso(socket_cliente);
+		recibirIDProceso(socket_cliente);
+		logInfoAux("cod_op %d",cod_op);
+		switch(cod_op){
+			case NEW_POKEMON:{
+				t_new_pokemon* new_pokemon = recibirNewPokemon(socket_cliente);
+				logInfoAux("Llegó un Mensaje NEW_POKEMON %s %d %d %d.",new_pokemon->nombre_pokemon,new_pokemon->pos_x,new_pokemon->pos_y,new_pokemon->cantidad);
+				break;
+			}
+			case APPEARED_POKEMON:{
+				t_appeared_pokemon* appeared_pokemon = recibirAppearedPokemon(socket_cliente);
+				if(appeared_pokemon->id_mensaje_correlativo > 0){
+					logInfoAux("Llegó un Mensaje APPEARED_POKEMON %s %d %d %d.",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y, appeared_pokemon->id_mensaje_correlativo);
+				}else{
+					// 3. Llegada de un nuevo mensaje a una cola de mensajes.
+					logInfoAux("Llegó un Mensaje APPEARED_POKEMON %s %d %d.",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y);
+				}
+				break;
+			}
+			case CATCH_POKEMON:{
+				t_catch_pokemon* catch_pokemon = recibirCatchPokemon(socket_cliente);
+				logInfoAux("Llegó un Mensaje CATCH_POKEMON %s %d %d.",catch_pokemon->nombre_pokemon,catch_pokemon->pos_x,catch_pokemon->pos_y);
+
+				break;
+			}
+			case CAUGHT_POKEMON:{
+				t_caught_pokemon* caught_pokemon = recibirCaughtPokemon(socket_cliente);
+				if(caught_pokemon->id_mensaje_correlativo > 0){
+					logInfoAux("Llegó un Mensaje CAUGHT_POKEMON %d %d.",caught_pokemon->id_mensaje_correlativo,caught_pokemon->atrapo_pokemon);
+				}else{
+					// 3. Llegada de un nuevo mensaje a una cola de mensajes.
+					logInfoAux("Llegó un Mensaje CAUGHT_POKEMON %d.",caught_pokemon->atrapo_pokemon);
+				}
+				break;
+			}
+			case GET_POKEMON:{
+				t_get_pokemon* get_pokemon = recibirGetPokemon(socket_cliente);
+				logInfoAux("Llegó un Mensaje GET_POKEMON %s.",get_pokemon->nombre_pokemon);
+				break;
+			}
+			case LOCALIZED_POKEMON:{
+				t_localized_pokemon* localized_pokemon = recibirLocalizedPokemon(socket_cliente);
+				logInfoAux("Llegó un Mensaje LOCALIZED_POKEMON %s %d.",localized_pokemon->nombre_pokemon,localized_pokemon->cant_pos);
+				break;
+			}
+			default:{
+				caseDefault = true;
+				logInfoAux("No se pudo procesar un mensaje o se desconectó el BROKER.");
+				break;
+			}
+		}
+		if(caseDefault == false){
+			enviado = enviarACK(socket_cliente);
+			if(enviado != -1){
+				logInfoAux("Se envió el ACK");
+			}else{
+				logInfoAux("Error al enviar el ACK");
+			}
+		}else{
+			seguir = false;
+		}
 	}
 }
 t_error_codes suscribirse(parser_result result) {
@@ -415,16 +503,23 @@ t_error_codes suscribirse(parser_result result) {
 
 	int gameBoyBroker = crearSocketCliente(ipServidor, puertoServidor);
 	if (gameBoyBroker != -1) {
-		logInfo("Conexión a Broker %s:%s en socket %d",ipServidor,puertoServidor,gameBoyBroker);
-		t_suscribe msgSuscribe = { SUSCRIBE_GAMEBOY, result.msg_type, result.timeout };
+		logInfoAux("Enviando suscripción a Broker %s:%s en socket %d",ipServidor,puertoServidor,gameBoyBroker);
+		t_suscribe msgSuscribe = { SUSCRIBE_GAMEBOY, result.msg_type, (uint32_t)config_get_int_value(config,"ID_PROCESO"), result.timeout };
 		int enviado = enviarSuscripcion(gameBoyBroker, msgSuscribe);
 
-		close(gameBoyBroker);
 		if (enviado == -1) {
 			logInfoAux("No se envió el mensaje");
+			close(gameBoyBroker);
 			return ERROR_SEND;
 		} else {
-			logInfo("Se enviaron %d bytes a la cola %s", enviado, getNombreCola(result.msg_type));
+			logInfo("Se suscribió la cola %s (enviado %d bytes)", getNombreCola(result.msg_type),enviado);
+			//Recibir mensajes en lo que dura el timeout (en segundos)
+			recibirMensajes(gameBoyBroker);
+			/*
+			pthread_t hiloEscucha;
+			pthread_create(&hiloEscucha, NULL, (void*)recibirMensajes, (int*)gameBoyBroker);
+			pthread_detach(hiloEscucha);
+*/
 			return PARSE_SUCCESS;
 		}
 
