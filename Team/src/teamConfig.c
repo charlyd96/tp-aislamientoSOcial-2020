@@ -103,6 +103,7 @@ void Team_load_trainers_config(void)
         entrenadores->posx=atoi(*posicion) ;
         entrenadores->posy=atoi(*(posicion +1) );
         entrenadores->actual_status= NEW;
+        entrenadores->ejecucion=NONE;
 
         free (*(posicion));
         free (*(posicion+1));

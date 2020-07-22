@@ -51,15 +51,6 @@ void process_request_recv (op_code cod_op, int socket_cliente)
 				procesar_appeared(mensaje_appeared);
 				break;
 				}
-			case LOCALIZED_POKEMON:
-				{
-				t_localized_pokemon* mensaje_localized= recibirLocalizedPokemon(socket_cliente);
-				enviarACK(socket_cliente);
-				log_info (internalLogTeam, "Mensaje recibido: %s %d %s [%d]",colaParaLogs((int)cod_op),mensaje_localized->nombre_pokemon,mensaje_localized->cant_pos,mensaje_localized->id_mensaje_correlativo);
-				procesar_localized(mensaje_localized);
-				break;
-				}
-
 			case CAUGHT_POKEMON:
 				{
 				t_caught_pokemon* mensaje_caught= recibirCaughtPokemon(socket_cliente);
@@ -153,27 +144,32 @@ void listen_routine_colas (void *colaSuscripcion)
 		}
 
 		case LOCALIZED_POKEMON:
-		{
-			/*while(0)
-			{
-				op_code cod_op = recibirOperacion(socket_cliente);
-				if (win) break;
-				if (cod_op==OP_UNKNOWN)
-				socket_cliente = reintentar_conexion((op_code) colaSuscripcion);
-				else 
-				{
-				recibirTipoProceso(socket_cliente);
-				recibirIDProceso(socket_cliente);
-				t_localized_pokemon* mensaje_localized= recibirLocalizedPokemon(socket_cliente);
-				enviarACK(socket_cliente);
-				//log_info (internalLogTeam, "Mensaje recibido: %s %d %d",colaParaLogs((int)cod_op),mensaje_caught->atrapo_pokemon, mensaje_caught->id_mensaje_correlativo);
-				pthread_t thread;
-				//pthread_create (&thread, NULL, (void *) procesar_caught, (int*)mensaje_caught->id_mensaje_correlativo);
-				//pthread_detach (thread);	
-				}				
-			}*/ break;
-		}
+		{						
 
+			socketLocalized=-1;					
+			while(!win)
+			{
+				op_code cod_op = recibirOperacion(socketLocalized);
+				puts ("\n\n\nreintantar localized\n\n\n\n");
+				if (cod_op==OP_UNKNOWN)
+				{
+					sem_wait(&terminar_localized);
+					socketLocalized = reintentar_conexion((op_code) colaSuscripcion);
+					sem_post(&terminar_localized);
+				}
+				else
+				{
+					recibirTipoProceso(socketLocalized);
+					recibirIDProceso(socketLocalized);
+					t_localized_pokemon* mensaje_localized= recibirLocalizedPokemon(socketLocalized);
+					enviarACK(socketLocalized);
+					log_info (internalLogTeam, "Mensaje recibido: %s %s %d %s [%d]",colaParaLogs((int)cod_op),mensaje_localized->nombre_pokemon,mensaje_localized->cant_pos,mensaje_localized->posiciones,mensaje_localized->id_mensaje_correlativo);
+					pthread_t thread;
+					pthread_create (&thread, NULL, (void *) procesar_localized, mensaje_localized);
+					pthread_detach (thread);
+				}					
+			}puts ("cerrando caught"); break;
+		}
 		case CAUGHT_POKEMON:
 		{	
 			socketCaught=-1;					
@@ -271,6 +267,7 @@ void procesar_appeared(t_appeared_pokemon *mensaje_appeared)
 			liberar_appeared(mensaje_appeared);
 			break;
 		}
+
 		default: 
 		{
 			liberar_appeared(mensaje_appeared);
@@ -287,6 +284,7 @@ void procesar_localized(t_localized_pokemon *mensaje_localized)
 	}
 	else
 	{
+		printf ("Cantidad posiciones: %d\n", mensaje_localized->cant_pos);
 		char **coordenadas;
 		char **posiciones = string_get_string_as_array(mensaje_localized->posiciones);
 		for (int i=0; *(posiciones+i) != NULL; i++)
@@ -294,14 +292,15 @@ void procesar_localized(t_localized_pokemon *mensaje_localized)
 			coordenadas= string_split(*(posiciones+i), "|" );
 			uint32_t pos_x= atoi (*(coordenadas));
 			uint32_t pos_y= atoi (*(coordenadas +1));
-			t_appeared_pokemon *mensaje_appeared;
+			t_appeared_pokemon *mensaje_appeared = malloc (sizeof (t_appeared_pokemon));
 			mensaje_appeared->nombre_pokemon = mensaje_localized->nombre_pokemon;
 			mensaje_appeared->pos_x=pos_x;
 			mensaje_appeared->pos_y=pos_y;
 			procesar_appeared(mensaje_appeared);
 		}
+		free_split(posiciones);
+		free_split(coordenadas);
 	}
-
 }
 
 void procesar_caught (t_caught_pokemon *mensaje_caught)

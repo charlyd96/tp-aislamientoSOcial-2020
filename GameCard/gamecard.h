@@ -29,7 +29,6 @@
 
 #include "strings.h"
 
-
 char* pathGamecardConfig = "/home/utnso/workspace/tp-2020-1c-aislamientoSOcial/GameCard/gameCard.config";
 uint32_t ID_PROCESO;
 typedef struct{
@@ -116,6 +115,13 @@ int enviarLocalizedAlBroker(t_localized_pokemon* msg_localized);
 int enviarCaughtAlBroker(t_caught_pokemon * msg_caught);
 char *getPosicionesPokemon(char* buffer, uint32_t* cant_pos);
 char *getDatosBloques(t_config *data);
+void unmap_bitmap(char* addr);
+int cantidadPokemonesEnPosicion(char* posicion_texto,char*buffer,int*indice);
+int obtenerCantidadEnLinea(char* linea);
+void actualizar_metadata (t_config* config_metadata,t_block* info_block);
+char* descontarPokemonEnLinea(int indice,char*pos_string,char* buffer,int nueva_cant);
+
+void destroy_t_block(t_block * block);
 //Semaforos
 sem_t mx_file_metadata;
 sem_t mx_creacion_archivo;

@@ -202,21 +202,20 @@ t_buffer* serializarLocalizedPokemon(t_localized_pokemon mensaje){
 
 	//Serializo un par de coordenadas por cada elemento de la lista de posiciones
 	if (mensaje.cant_pos != 0){
-	char** pos_list = string_get_string_as_array(mensaje.posiciones);
-	for(i=0; i<mensaje.cant_pos; i++){
-		char* pos_actual = pos_list[i];
-		char** pos_pair = string_split(pos_actual,"|");
-		pos_x = atoi(pos_pair[0]);
-		pos_y = atoi(pos_pair[1]);
+		char** pos_list = string_get_string_as_array(mensaje.posiciones);
+		for(i=0; i<mensaje.cant_pos; i++){
+			char** pos_pair = string_split(pos_list[i],"|");
+			pos_x = atoi(pos_pair[0]);
+			pos_y = atoi(pos_pair[1]);
 
-		memcpy(stream + offset, &(pos_x), sizeof(uint32_t));
-		offset += sizeof(uint32_t);
-		memcpy(stream + offset, &(pos_y), sizeof(uint32_t));
-		offset += sizeof(uint32_t);
-		free(pos_actual);
-		free(pos_pair);
-	}
-	free(pos_list);
+			memcpy(stream + offset, &(pos_x), sizeof(uint32_t));
+			offset += sizeof(uint32_t);
+			memcpy(stream + offset, &(pos_y), sizeof(uint32_t));
+			offset += sizeof(uint32_t);
+			
+			free_split(pos_pair);
+		}
+		free(pos_list);
 	}
 	
 	if(mensaje.id_mensaje_correlativo != 0){
