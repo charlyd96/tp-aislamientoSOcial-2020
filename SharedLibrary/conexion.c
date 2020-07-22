@@ -181,7 +181,7 @@ int enviarMensaje(int nroSocket,op_code operacion,t_buffer* buffer, process_code
 	if(error_code == 0){
 		return_value = send(nroSocket, mensajeSerializado, tamanio_a_enviar, 0);
 	}else{
-		return_value = error_code;
+		return_value = -1;
 	}
 
 	free(mensajeSerializado);

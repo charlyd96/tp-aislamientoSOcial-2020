@@ -126,6 +126,7 @@ typedef struct {
 typedef struct {
 	bool libre;
 	op_code tipo_mensaje;
+	t_list* susc_enviados;
 	uint32_t id;
 	uint32_t base;
 	uint32_t tamanio;
@@ -275,4 +276,6 @@ void confirmacionDeRecepcionTeam(int socket, t_suscribe* suscribe_team, uint32_t
 void confirmacionDeRecepcionGameCard(int socket, t_suscribe* suscribe_gamecard, uint32_t id_mensaje);
 void confirmacionDeRecepcionGameBoy(int ack, t_suscribe* suscribe_gameboy, uint32_t id_mensaje);
 
+
+void agregarSuscriptor(uint32_t id_mensaje, t_suscriptor* suscriptor);
 #endif /* BROKER_H_ */
