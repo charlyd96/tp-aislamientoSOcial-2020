@@ -206,7 +206,7 @@ void partirBuddy(int indice){
 		list_replace(particiones,indice,buddy_der);
 		list_add_in_index(particiones,indice,buddy_izq);
 	}
-	// free(buddy_der);
+	//free(buddy_der);
 }
 /**
  * algoritmo recursivo para buscar una partición buddy adecuada.
@@ -306,7 +306,7 @@ void buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint3
 		list_add_in_index(particiones,indice,part_nueva);
 		//y luego eliminar/reemplazar la part_libre original
 		if(part_libre->tamanio == 0){
-			list_remove(particiones,indice+1);
+			list_remove_and_destroy_element(particiones,indice+1,free);
 		}else{
 			list_replace(particiones,indice+1,part_libre);
 		}
@@ -1232,6 +1232,7 @@ void atenderSuscripcionTeam(int socket_cliente){
 			break;
 		}
 	}
+	free(suscribe_team);
 } 
 
 void atenderSuscripcionGameCard(int socket_cliente){
@@ -1269,6 +1270,7 @@ void atenderSuscripcionGameCard(int socket_cliente){
 			break;
 		}
 	}
+	free(suscribe_gamecard);
 }
 
 void atenderSuscripcionGameBoy(int socket_cliente){
@@ -1769,7 +1771,7 @@ void enviarCatchPokemonCacheados(int socket, t_suscribe* suscriptor){
 					}
 				}
 			}
-
+			free(descacheado.nombre_pokemon);
 			free(stream);
 		}
 	}
@@ -1901,7 +1903,8 @@ void enviarGetPokemonCacheados(int socket, t_suscribe* suscriptor){
 					}
 				}
 			}
-
+			free(descacheado->nombre_pokemon);
+			free(descacheado);
 			free(stream);
 		}
 	}
@@ -2068,6 +2071,6 @@ int main(void){
 
 	log_destroy(logBrokerInterno);
 	log_destroy(logBroker);
-	list_destroy(particiones);
+	list_clean_and_destroy_elements(particiones,free);
 	return 0;
 } 
