@@ -1623,6 +1623,7 @@ void enviarNewPokemonCacheados(int socket, t_suscribe* suscriptor){
 							confirmacionDeRecepcionGameBoy(ack, suscriptor, descacheado->id_mensaje);
 							break;
 						}
+						default: break;
 					}
 				}
 				
@@ -1696,6 +1697,7 @@ void enviarAppearedPokemonCacheados(int socket, t_suscribe* suscriptor){
 							confirmacionDeRecepcionGameBoy(ack, suscriptor, descacheado.id_mensaje_correlativo);
 							break;
 						}
+						default: break;
 					}
 				}
 			}
@@ -1766,6 +1768,7 @@ void enviarCatchPokemonCacheados(int socket, t_suscribe* suscriptor){
 							confirmacionDeRecepcionGameBoy(ack, suscriptor, descacheado.id_mensaje);
 							break;
 						}
+						default: break;
 					}
 				}
 			}
@@ -1829,6 +1832,7 @@ void enviarCaughtPokemonCacheados(int socket, t_suscribe* suscriptor){
 							log_info(logBrokerInterno, "Se envió el Mensaje: %s %d con ID de Mensaje Correlativo %d al Game Boy %d.", cola, descacheado.atrapo_pokemon, descacheado.id_mensaje_correlativo, suscriptor->id_proceso);
 							confirmacionDeRecepcionGameBoy(ack, suscriptor, descacheado.id_mensaje_correlativo);			
 						}
+						default: break;
 					}
 				}
 			}
@@ -1898,6 +1902,7 @@ void enviarGetPokemonCacheados(int socket, t_suscribe* suscriptor){
 							confirmacionDeRecepcionGameBoy(ack, suscriptor, descacheado->id_mensaje);
 							break;
 						}
+						default: break;
 					}
 				}
 			}
@@ -1980,6 +1985,7 @@ void confirmacionDeRecepcionTeam(int ack, t_suscribe* suscribe_team, uint32_t id
 				break;
 			case LOCALIZED_POKEMON: list_add(nodo_localized->susc_no_ack, suscribe_team->id_proceso);
 				break;
+			default: break;
 		}
 	}
 }
@@ -2000,6 +2006,7 @@ void confirmacionDeRecepcionGameCard(int ack, t_suscribe* suscribe_gamecard, uin
 				break;
 			case GET_POKEMON: list_add(nodo_get->susc_no_ack, suscribe_gamecard->id_proceso);
 				break;
+			default: break;
 		}
 	}
 }
@@ -2026,6 +2033,7 @@ void confirmacionDeRecepcionGameBoy(int ack, t_suscribe* suscribe_gameboy, uint3
 				break;
 			case LOCALIZED_POKEMON: list_add(nodo_localized->susc_no_ack, suscribe_gameboy->id_proceso);
 				break;
+			default: break;
 		}
 	}
 }
