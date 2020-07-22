@@ -78,6 +78,7 @@ OBJECTS := \
 	$(OBJDIR)/temporal.o \
 	$(OBJDIR)/txt.o \
 	$(OBJDIR)/conexion.o \
+	$(OBJDIR)/destroyer.o \
 	$(OBJDIR)/serializacion.o \
 
 RESOURCES := \
@@ -174,6 +175,9 @@ $(OBJDIR)/txt.o: commons/txt.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/conexion.o: conexion.c
+	@echo $(notdir $<)
+	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/destroyer.o: destroyer.c
 	@echo $(notdir $<)
 	$(SILENT) $(CC) $(ALL_CFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/serializacion.o: serializacion.c
