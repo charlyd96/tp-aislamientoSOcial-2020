@@ -1008,7 +1008,7 @@ t_block* actualizar_datos (char* texto,char ** lista_bloques) {
     info_block->blocks=malloc(strlen(blocks_text)+1);
 	strcpy(info_block->blocks,blocks_text);
 	printf("\nBITMAP después de escribir:\n%s \n", bitmap);
-
+	free(texto);
 	unmap_bitmap(bitmap);
 	free(blocks_text);
 	return info_block;
