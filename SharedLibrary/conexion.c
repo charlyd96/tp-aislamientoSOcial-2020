@@ -138,7 +138,7 @@ int enviarACK(int socket_destino){
 	t_log* logger = log_create("conexion.log", "CONEXION", 0, LOG_LEVEL_ERROR);
 
 	uint32_t ack = 1;
-	int ack_enviado = send(socket_destino, &ack, sizeof(uint32_t), 0);
+	int ack_enviado = send(socket_destino, &ack, sizeof(uint32_t),MSG_NOSIGNAL);
 	if(ack_enviado == -1){
 		log_error(logger, "No se pudo enviar el ACK.");
 	}
@@ -179,7 +179,7 @@ int enviarMensaje(int nroSocket,op_code operacion,t_buffer* buffer, process_code
 	getsockopt(nroSocket, SOL_SOCKET, SO_ERROR, &error_code, &error_code_size);
 	int return_value;
 	if(error_code == 0){
-		return_value = send(nroSocket, mensajeSerializado, tamanio_a_enviar, 0);
+		return_value = send(nroSocket, mensajeSerializado, tamanio_a_enviar, MSG_NOSIGNAL);
 	}else{
 		return_value = -1;
 	}
@@ -213,7 +213,7 @@ int enviarSuscripcion(int nro_socket,t_suscribe suscripcion){
 		offset += sizeof(uint32_t);
 	}
 
-	int enviado = send(nro_socket, stream, bytes_enviar, 0);
+	int enviado = send(nro_socket, stream, bytes_enviar, MSG_NOSIGNAL);
 
 	free(stream);
 	return enviado;

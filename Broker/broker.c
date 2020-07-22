@@ -789,6 +789,10 @@ t_localized_pokemon descachearLocalizedPokemon(void* stream, uint32_t id){
 	t_localized_pokemon mensaje_a_enviar;
 	uint32_t largo_nombre = 0;
 	uint32_t offset = 0;
+	uint32_t id_mensaje_correlativo = 0;
+	uint32_t pos_x = 0;
+	uint32_t pos_y = 0;
+	char* posicionesString = string_new();
 
 	memcpy(&largo_nombre, stream + offset, sizeof(uint32_t));
 	offset += sizeof(uint32_t);
@@ -801,20 +805,23 @@ t_localized_pokemon descachearLocalizedPokemon(void* stream, uint32_t id){
 	memcpy(&(mensaje_a_enviar.cant_pos), stream + offset, sizeof(uint32_t));
 	offset += sizeof(uint32_t);
 
-	uint32_t pos_x, pos_y;
-	char** pos_list = string_get_string_as_array(mensaje_a_enviar.posiciones);
+	
+	if (mensaje_a_enviar.cant_pos >0){
+		string_append(&posicionesString,"[");
+		for (int i = 1; i<=mensaje_a_enviar.cant_pos; i++){
+			memcpy(&pos_x, stream + offset, sizeof (uint32_t));
+			offset+=sizeof(uint32_t);
+			memcpy(&pos_y, stream + offset, sizeof (uint32_t));
+			offset+=sizeof(uint32_t);
+			string_append(&posicionesString,string_itoa(pos_x));
+			string_append(&posicionesString,"|");
+			string_append(&posicionesString,string_itoa(pos_y));
 
-	for(uint32_t i = 1; i <= mensaje_a_enviar.cant_pos; i++){
-		char** pos_pair = string_split(pos_list[i],"|");
-		pos_x = atoi(pos_pair[0]);
-		pos_y = atoi(pos_pair[1]);
-
-		memcpy(&(pos_x), stream + offset, sizeof(uint32_t));
-		offset += sizeof(uint32_t);
-		memcpy(&(pos_y), stream + offset, sizeof(uint32_t));
-		offset += sizeof(uint32_t);
+			if(i < mensaje_a_enviar.cant_pos) string_append(&posicionesString,",");
+		}
+		string_append(&posicionesString,"]");
 	}
-
+	mensaje_a_enviar.posiciones=posicionesString;
 	mensaje_a_enviar.id_mensaje_correlativo = id;
 
 	return mensaje_a_enviar;
@@ -2023,40 +2030,27 @@ void enviarLocalizedPokemonCacheados(int socket, t_suscribe* suscriptor){
 				gettimeofday(&time_aux, NULL);
 				particion_buscada->time_ultima_ref = time_aux;
 
-				log_info(logBrokerInterno, "Descacheado nombre %s", descacheado.nombre_pokemon);
-				log_info(logBrokerInterno, "Decacsheado cant %d", descacheado.cant_pos);
-
-				uint32_t pos_x, pos_y;
-				char** pos_list = string_get_string_as_array(descacheado.posiciones);
-
-				for(int i = 1; i <= descacheado.cant_pos; i++){
-					char** pos_pair = string_split(pos_list[i],"|");
-					pos_x = atoi(pos_pair[0]);
-					pos_y = atoi(pos_pair[1]);
-
-					log_info(logBrokerInterno, "Descacheado pos x %d", pos_x);
-					log_info(logBrokerInterno, "Descacheado pos y %d", pos_y);
-
-					char* cola = colaParaLogs(particion_buscada->tipo_mensaje);
-
-					// 4. Envío de un mensaje a un suscriptor específico.
-					log_info(logBroker, "Se envió el Mensaje: %s %s %d %d %d con ID de Mensaje Correlativo %d.", cola, descacheado.nombre_pokemon, descacheado.cant_pos, pos_x, pos_y, descacheado.id_mensaje_correlativo);
-					log_info(logBrokerInterno, "Se envió el Mensaje: %s %s %d %d %d con ID de Mensaje Correlativo %d.", cola, descacheado.nombre_pokemon, descacheado.cant_pos, pos_x, pos_y, descacheado.id_mensaje_correlativo);
-				}
-
-				log_info(logBrokerInterno, "Descacheado id correlativo %d", descacheado.id_mensaje_correlativo);
+				char* cola = colaParaLogs(particion_buscada->tipo_mensaje);
 
 				int error_code;
 				int error_code_size = sizeof(error_code);
 				getsockopt(socket, SOL_SOCKET, SO_ERROR, &error_code, &error_code_size);
 				log_debug(logBrokerInterno,"El CÓDIGO DE ERROR DEL SOCKET es %d",error_code);
 
+				int enviado;
 				if(error_code == 0){
-					int enviado = enviarLocalizedPokemon(socket, descacheado,P_BROKER,0);
+					 enviado = enviarLocalizedPokemon(socket, descacheado,P_BROKER,0);
 
 					int ack = recibirACK(socket);
 					log_info(logBrokerInterno, "ACK %d", ack);
 				}
+				// 4. Envío de un mensaje a un suscriptor específico.
+				if (enviado>0){			
+				log_info(logBroker, "Se envió el Mensaje: %s %s %d %s con ID de Mensaje Correlativo %d.", cola, descacheado.nombre_pokemon, descacheado.cant_pos, descacheado.posiciones, descacheado.id_mensaje_correlativo);
+				log_info(logBrokerInterno, "Se envió el Mensaje: %s %s %d %s con ID de Mensaje Correlativo %d.", cola, descacheado.nombre_pokemon, descacheado.cant_pos, descacheado.posiciones, descacheado.id_mensaje_correlativo);
+
+				log_info(logBrokerInterno, "Descacheado id correlativo %d", descacheado.id_mensaje_correlativo);
+				} else log_info(logBrokerInterno, "No se pudo enviar el Mensaje: %s %s %d %s con ID de Mensaje Correlativo %d.", cola, descacheado.nombre_pokemon, descacheado.cant_pos, descacheado.posiciones, descacheado.id_mensaje_correlativo);	
 			}
 		}
 	}
