@@ -1011,19 +1011,19 @@ void atenderMensajeAppearedPokemon(int socket_cliente){
 
 	cachearAppearedPokemon(appeared_pokemon);
 
-	/*Acá habría que enviar sólo si NO es Game Boy, vamos a consultar porque también
-	hay un log del Game Boy como que recibe mensaje, en este caso si se lo enviamos también*/
 	int tam_lista_suscriptores = list_size(cola_appeared->suscriptores);
 	
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_appeared->suscriptores, j);
-		printf("Se envia al socket %d",suscriptor->socket_suscriptor);
+
 		int error_code;
 		int error_code_size = sizeof(error_code);
 		getsockopt(suscriptor->socket_suscriptor, SOL_SOCKET, SO_ERROR, &error_code, &error_code_size);
 		log_debug(logBrokerInterno,"El CÓDIGO DE ERROR DEL SOCKET es %d",error_code);
+
 		if(error_code == 0){
 			int enviado = enviarAppearedPokemon(suscriptor->socket_suscriptor, *appeared_pokemon,P_BROKER,0);
+
 			if(enviado > 0){
 				uint32_t ack = recibirACK(suscriptor->socket_suscriptor);
 				if(ack == 1){
@@ -1031,28 +1031,11 @@ void atenderMensajeAppearedPokemon(int socket_cliente){
 					log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
 					agregarSuscriptor(id_mensaje, suscriptor);
 				}
-				// buscar el id de mensaje en la cache en las particiones (con un get traigo la partición) y si está
-				// agregar el suscriptor a la lista de suscriptores enviados
-				// agregar si ack = 1
 			}else{
-				log_info(logBrokerInterno,"No se pudo enviar el APPEARED_POKEMON %s %d %d [%d] al socket %d", appeared_pokemon->nombre_pokemon, appeared_pokemon->pos_x, appeared_pokemon->pos_y, appeared_pokemon->id_mensaje_correlativo,suscriptor->socket_suscriptor);
+				// 4. Envío de un mensaje a un suscriptor específico.
+				log_warning(logBroker, "NO se envió el Mensaje.");
+				log_warning(logBrokerInterno, "NO se envió el Mensaje.");
 			}
-		}
-	}
-}
-
-void agregarSuscriptor(uint32_t id_mensaje, t_suscriptor* suscriptor){
-	int tam = list_size(particiones);
-	bool encontrado = 0;
-
-	for(int i = 0; i < tam && encontrado == 0; i++){
-		t_particion* particion = list_get(particiones, i);
-
-		if(particion->id == id_mensaje){
-			sem_wait(&mx_particiones);
-			list_add(particion->susc_enviados, suscriptor->id_suscriptor);
-			sem_post(&mx_particiones);
-			encontrado = 1;
 		}
 	}
 }
@@ -1468,6 +1451,22 @@ void desuscribir(int index,op_code cola, uint32_t id_proceso){
 		}
 		default:
 			break;
+	}
+}
+
+void agregarSuscriptor(uint32_t id_mensaje, t_suscriptor* suscriptor){
+	int tam = list_size(particiones);
+	bool encontrado = 0;
+
+	for(int i = 0; i < tam && encontrado == 0; i++){
+		t_particion* particion = list_get(particiones, i);
+
+		if(particion->id == id_mensaje){
+			sem_wait(&mx_particiones);
+			list_add(particion->susc_enviados, suscriptor->id_suscriptor);
+			sem_post(&mx_particiones);
+			encontrado = 1;
+		}
 	}
 }
 
@@ -2137,8 +2136,8 @@ int main(void){
 	logBroker = log_create("broker.log", "Broker", 0, LOG_LEVEL_TRACE);
 	logBrokerInterno = log_create("brokerInterno.log", "Broker Interno", 1, LOG_LEVEL_TRACE);
 
-	log_info(logBroker, "****************************************** PROCESO BROKER ******************************************");
-
+	log_trace(logBroker, "****************************************** PROCESO BROKER ******************************************");
+	
 	inicializarColas();
 	inicializarSemaforos();
 	inicializarMemoria();
@@ -2164,7 +2163,7 @@ int main(void){
 
 		log_info(logBrokerInterno, "Se cerró el Socket Servidor %d.", socketServidorBroker);
 	}else{
-		log_info(logBrokerInterno, "No se pudo crear el Servidor Broker.");
+		log_warning(logBrokerInterno, "No se pudo crear el Servidor Broker.");
 	}
 
 	sem_destroy(&mx_particiones);

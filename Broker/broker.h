@@ -216,6 +216,7 @@ void atenderSuscripcionGameBoy(int socket);
 /// PROCESAMIENTO
 int suscribir(t_suscriptor* suscriptor, op_code cola);
 void desuscribir(int index, op_code cola, uint32_t id_proceso);
+void agregarSuscriptor(uint32_t id_mensaje, t_suscriptor* suscriptor);
 
 void encolarNewPokemon(t_new_pokemon* msg);
 void encolarAppearedPokemon(t_appeared_pokemon* msg);
@@ -244,7 +245,7 @@ void cachearLocalizedPokemon(t_localized_pokemon* msg);
 
 int victimaSegunFIFO();
 int victimaSegunLRU();
-// BUDDY
+
 void partirBuddy(int indice);
 int obtenerHuecoBuddy(uint32_t i);
 int buscarHuecoBuddy(uint32_t i);
@@ -276,6 +277,4 @@ void confirmacionDeRecepcionTeam(int socket, t_suscribe* suscribe_team, uint32_t
 void confirmacionDeRecepcionGameCard(int socket, t_suscribe* suscribe_gamecard, uint32_t id_mensaje);
 void confirmacionDeRecepcionGameBoy(int ack, t_suscribe* suscribe_gameboy, uint32_t id_mensaje);
 
-
-void agregarSuscriptor(uint32_t id_mensaje, t_suscriptor* suscriptor);
 #endif /* BROKER_H_ */
