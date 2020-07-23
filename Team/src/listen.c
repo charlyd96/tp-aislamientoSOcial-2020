@@ -298,18 +298,18 @@ void procesar_localized(t_localized_pokemon *mensaje_localized)
 		}
 		else return false;
 	}
-	pthread_mutex_lock (&ID_localized_sem); 
+	/*pthread_mutex_lock (&ID_localized_sem); 
 	void * elemento = list_remove_by_condition(ID_localized, buscar_id_corr);
-	pthread_mutex_unlock (&ID_localized_sem); 
-	if (elemento != NULL)
-	free(elemento);
+	pthread_mutex_unlock (&ID_localized_sem); */
+	//if (elemento != NULL)
+	//free(elemento);
 
 
 	if (mensaje_localized->cant_pos == 0 || agregar==false)
 	{
 		//liberar_localized(mensaje_localized);
 	}
-	else if (especie_necesaria(mensaje_localized->nombre_pokemon))
+
 	{
 		printf ("Cantidad posiciones: %d\n", mensaje_localized->cant_pos);
 		char **coordenadas;
