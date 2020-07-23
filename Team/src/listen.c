@@ -13,20 +13,27 @@ void  listen_routine_gameboy ()
 {
 	
     socketGameboy= crearSocketServidor (config->team_IP, config->team_port);
-    while (1) //Este while en realidad debería llevar como condición, que el proceso Team no haya ganado.
-		{
-		//pthread_t thread;
-		socketGameboyCliente = aceptarCliente (socketGameboy);
-		if (win)
-		{
-			puts ("fin escucha");
-			break;
-		} 
-		printf ("Socket cliente: %d\n", socketGameboyCliente);
-		get_opcode(socketGameboyCliente);
-		//pthread_create (&thread, NULL, (void *) get_opcode, (int*)socket_cliente);
-		//pthread_detach (thread);
-		} 
+	if (socketGameboy == -1)
+	{
+		log_error(internalLogTeam, "No se pudo crear el servidor de escucha del Gameboy");
+	}
+	else
+	{
+		while (1) //Este while en realidad debería llevar como condición, que el proceso Team no haya ganado.
+			{
+			//pthread_t thread;
+			socketGameboyCliente = aceptarCliente (socketGameboy);
+			if (win)
+			{
+				puts ("fin escucha");
+				break;
+			} 
+			printf ("Socket cliente: %d\n", socketGameboyCliente);
+			get_opcode(socketGameboyCliente);
+			//pthread_create (&thread, NULL, (void *) get_opcode, (int*)socket_cliente);
+			//pthread_detach (thread);
+			} 
+	}
 }
 
 
@@ -150,7 +157,6 @@ void listen_routine_colas (void *colaSuscripcion)
 			while(!win)
 			{
 				op_code cod_op = recibirOperacion(socketLocalized);
-				puts ("\n\n\nreintantar localized\n\n\n\n");
 				if (cod_op==OP_UNKNOWN)
 				{
 					sem_wait(&terminar_localized);
@@ -231,11 +237,13 @@ int reintentar_conexion(op_code colaSuscripcion)
 void procesar_appeared(t_appeared_pokemon *mensaje_appeared)
 {
 	nuevo_pokemon operacion = tratar_nuevo_pokemon (mensaje_appeared->nombre_pokemon);
-	printf ("Operacio: %d\n",operacion);
+	printf ("\n\nOperacion: %d\nPokemon:%s\n\n",operacion,mensaje_appeared->nombre_pokemon);
+
 	switch (operacion)
 	{
 		case GUARDAR:
 		{
+			agregar_nueva_especie(mensaje_appeared->nombre_pokemon);
 			mapPokemons *pokemon_to_add = malloc (sizeof(mapPokemons));
 			pokemon_to_add-> name = string_duplicate (mensaje_appeared->nombre_pokemon);
 			pokemon_to_add-> posx = mensaje_appeared->pos_x;
@@ -250,6 +258,7 @@ void procesar_appeared(t_appeared_pokemon *mensaje_appeared)
 
 		case GUARDAR_AUX:
 		{
+			agregar_nueva_especie(mensaje_appeared->nombre_pokemon);
 			mapPokemons *pokemon_to_add = malloc (sizeof(mapPokemons));
 			pokemon_to_add-> name = string_duplicate (mensaje_appeared->nombre_pokemon);
 			pokemon_to_add-> posx = mensaje_appeared->pos_x;
@@ -278,11 +287,29 @@ void procesar_appeared(t_appeared_pokemon *mensaje_appeared)
 
 void procesar_localized(t_localized_pokemon *mensaje_localized)
 {
-	if (mensaje_localized->cant_pos == 0)
+	bool agregar=false;
+	bool buscar_id_corr (void *id_corr)
+	{
+		uint32_t id= *(uint32_t*)id_corr;
+		if (id == mensaje_localized->id_mensaje_correlativo)
+		{
+		agregar=true;
+		return true;
+		}
+		else return false;
+	}
+	pthread_mutex_lock (&ID_localized_sem); 
+	void * elemento = list_remove_by_condition(ID_localized, buscar_id_corr);
+	pthread_mutex_unlock (&ID_localized_sem); 
+	if (elemento != NULL)
+	free(elemento);
+
+
+	if (mensaje_localized->cant_pos == 0 || agregar==false)
 	{
 		//liberar_localized(mensaje_localized);
 	}
-	else
+	else if (especie_necesaria(mensaje_localized->nombre_pokemon))
 	{
 		printf ("Cantidad posiciones: %d\n", mensaje_localized->cant_pos);
 		char **coordenadas;
@@ -301,6 +328,7 @@ void procesar_localized(t_localized_pokemon *mensaje_localized)
 		free_split(posiciones);
 		free_split(coordenadas);
 	}
+	//else liberar_localized(mensaje_localized);
 }
 
 void procesar_caught (t_caught_pokemon *mensaje_caught)
@@ -308,7 +336,7 @@ void procesar_caught (t_caught_pokemon *mensaje_caught)
 	uint32_t id_corr = mensaje_caught->id_mensaje_correlativo;
 	uint32_t resultado = mensaje_caught->atrapo_pokemon;
 
-	bool compare_id_corr (void *element)
+	bool buscar_id_corr (void *element)
 	{
 		internal_caught *nodoCaught = element;
 		if (id_corr  ==  nodoCaught->id)
@@ -322,7 +350,7 @@ void procesar_caught (t_caught_pokemon *mensaje_caught)
 		else return (false);
 	}
 	pthread_mutex_lock (&ID_caught_sem); 
-	void *nodo= list_remove_by_condition(ID_caught, compare_id_corr);
+	void *nodo= list_remove_by_condition(ID_caught, buscar_id_corr);
 	pthread_mutex_unlock (&ID_caught_sem);
 	if (nodo !=NULL)
 	free(nodo);
@@ -354,6 +382,34 @@ void informarIDlocalized(uint32_t id)
 	pthread_mutex_unlock (&ID_localized_sem);
 }
 
+void agregar_nueva_especie (char *nueva_especie)
+{
+	bool comparar_especie (void *especie_atrapada)
+	{
+		if (!strcmp(especie_atrapada,nueva_especie))
+		return true; else return false;
+	}
+	pthread_mutex_lock(&especies_sem);
+	if (!list_any_satisfy(especies,comparar_especie))
+	list_add(especies,nueva_especie);
+
+	pthread_mutex_unlock(&especies_sem);
+}
+
+bool especie_necesaria (char *nueva_especie)
+{
+	bool retorno;
+	bool comparar_especie (void *especie_atrapada)
+	{
+		if (!strcmp(especie_atrapada,nueva_especie))
+		return true; else return false;
+	}
+	pthread_mutex_lock(&especies_sem);
+	retorno = !list_any_satisfy(especies,comparar_especie);
+	pthread_mutex_unlock(&especies_sem);
+	return (retorno);
+}
+
 nuevo_pokemon tratar_nuevo_pokemon (char *nombre_pokemon)
 {
 	char *a_lista_auxiliar=NULL;
@@ -367,7 +423,7 @@ nuevo_pokemon tratar_nuevo_pokemon (char *nombre_pokemon)
 	pthread_mutex_lock(&new_global_sem);
 	a_lista_auxiliar= list_remove_by_condition(new_global_objective, buscar); //Busco si el pokemon recibido está en la lista de objetivos globales
 	pthread_mutex_unlock(&new_global_sem);
-	printf ("\n\n\nPuntero=%p\n\n\n",a_lista_auxiliar);
+
 	if (a_lista_auxiliar!=NULL) //Si está en la lista global, lo muevo a la auxiliar
 	{
 		pthread_mutex_lock(&aux_new_global_sem);
@@ -394,8 +450,8 @@ nuevo_pokemon tratar_nuevo_pokemon (char *nombre_pokemon)
 void liberar_appeared (t_appeared_pokemon *mensaje)
 
 {
-	free (mensaje->nombre_pokemon);
-	free (mensaje);
+	//free (mensaje->nombre_pokemon);
+	//free (mensaje);
 }
 
 char* colaParaLogs(op_code cola){

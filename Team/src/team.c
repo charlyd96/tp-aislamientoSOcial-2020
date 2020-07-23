@@ -64,19 +64,18 @@ void enviar_mensajes_get (t_list* GET_list)
         int socket = crearSocketCliente (config->broker_IP,config->broker_port);
         if (socket != -1)
         {
-        int enviado= enviarGetPokemon (socket, mensaje_get, P_TEAM, ID_proceso);
-        log_info(internalLogTeam, "Se envió GET %s al broker. Enviado=%d. Socket= %d",mensaje_get.nombre_pokemon,enviado,socket);
-        recv (socket,&(mensaje_get.id_mensaje),sizeof(uint32_t),MSG_WAITALL); //Recibir ID
-		printf ("\t\t\t\t\t\t\tEl Id devuelto fue: %d. Pertenece al pokemon %s\t\t\t\t\t\t\n", mensaje_get.id_mensaje, mensaje_get.nombre_pokemon);
-        informarIDlocalized(mensaje_get.id_mensaje);
-        close (socket); 
+            int enviado= enviarGetPokemon (socket, mensaje_get, P_TEAM, ID_proceso);
+            log_info(internalLogTeam, "Se envió GET %s al broker. Enviado=%d. Socket= %d",mensaje_get.nombre_pokemon,enviado,socket);
+            recv (socket,&(mensaje_get.id_mensaje),sizeof(uint32_t),MSG_WAITALL); //Recibir ID
+            printf ("\t\t\t\t\t\t\tEl Id devuelto fue: %d. Pertenece al pokemon %s\t\t\t\t\t\t\n", mensaje_get.id_mensaje, mensaje_get.nombre_pokemon);
+            informarIDlocalized(mensaje_get.id_mensaje);
+            close (socket); 
         }
         else log_info(internalLogTeam, "No se pudo enviar GET %s al broker.\n",mensaje_get.nombre_pokemon);
     }
 	list_iterate(GET_list,send_get );
     list_destroy(GET_list);
 }
-
 
 
 // ============================================================================================================
@@ -337,6 +336,7 @@ void inicializar_listas (void)
     global_for_free = list_create();
     ID_caught= list_create();
     ID_localized = list_create();
+    especies = list_create();
 }
 
 
@@ -370,7 +370,7 @@ void inicializar_semaforos (void)
     sem_init (&using_cpu, 0,0);
     sem_init (&terminar_ejecucion, 0, 0);
     sem_init (&terminar_localized, 0, 1);
-
+    pthread_mutex_init (&especies_sem, NULL);
 }
 
 void cerar_semaforos (void)

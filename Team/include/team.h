@@ -33,6 +33,9 @@ extern sem_t qcaught2_sem;
 uint32_t ID_proceso;
 
 extern t_list *ID_localized;
+extern t_list *especies;
+
+pthread_mutex_t especies_sem;
 
 bool win;
 
