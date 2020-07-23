@@ -124,7 +124,6 @@ void inicializarMemoria(){
 	particionInicial->susc_enviados = list_create();
 	list_add(particiones,particionInicial);
 
-	procesos = list_create();
 	//free(particionInicial);
 }
 
@@ -1810,42 +1809,30 @@ void tipoYIDProceso(int socket_cliente){
 	process_code tipo_proceso = recibirTipoProceso(socket_cliente);
 //	log_info(logBrokerInterno, "Tipo de Proceso %d", tipo_proceso);
 	uint32_t id_proceso = recibirIDProceso(socket_cliente);
-	
-	bool comparar_id_proceso(void *element){
-		uint32_t id_nodo = element;
+//	log_info(logBrokerInterno, "ID de Proceso %d", id_proceso);
 
-		if(id_proceso == id_nodo){
-			log_warning(logBrokerInterno, "Ya se conectó el Proceso %d antes.", id_proceso);
-			return (true);
-		}else return (false);
-	}
-
-	if(!list_any_satisfy(procesos, comparar_id_proceso)){
-	//	log_info(logBrokerInterno, "ID de Proceso %d", id_proceso);
-		list_add(procesos, id_proceso);
-		switch(tipo_proceso){
-			case P_TEAM:{
-				// 1. Conexión de un proceso al broker.
-				log_info(logBroker, "Se conectó el Team %d.", id_proceso);
-				log_info(logBrokerInterno, "Se conectó el Team %d.", id_proceso);
-				break;	
-			}
-			case P_GAMECARD:{
-				// 1. Conexión de un proceso al broker.
-				log_info(logBroker, "Se conectó el Game Card %d.", id_proceso);
-				log_info(logBrokerInterno, "Se conectó el Game Card %d.", id_proceso);
-				break;
-			}
-			case P_GAMEBOY:{
-				// 1. Conexión de un proceso al broker.
-				log_info(logBroker, "Se conectó el Game Boy %d.", id_proceso);
-				log_info(logBrokerInterno, "Se conectó el Game Boy %d.", id_proceso);
-				break;
-			}
-			default:{
-				log_info(logBrokerInterno, "Verificar el Tipo de Proceso y/o ID de Proceso enviado.");
-				break;
-			}
+	switch(tipo_proceso){
+		case P_TEAM:{
+			// 1. Conexión de un proceso al broker.
+			log_info(logBroker, "Se conectó el Team %d.", id_proceso);
+			log_info(logBrokerInterno, "Se conectó el Team %d.", id_proceso);
+			break;	
+		}
+		case P_GAMECARD:{
+			// 1. Conexión de un proceso al broker.
+			log_info(logBroker, "Se conectó el Game Card %d.", id_proceso);
+			log_info(logBrokerInterno, "Se conectó el Game Card %d.", id_proceso);
+			break;
+		}
+		case P_GAMEBOY:{
+			// 1. Conexión de un proceso al broker.
+			log_info(logBroker, "Se conectó el Game Boy %d.", id_proceso);
+			log_info(logBrokerInterno, "Se conectó el Game Boy %d.", id_proceso);
+			break;
+		}
+		default:{
+			log_info(logBrokerInterno, "Verificar el Tipo de Proceso y/o ID de Proceso enviado.");
+			break;
 		}
 	}
 }

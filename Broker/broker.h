@@ -171,8 +171,6 @@ t_nodo_cola_caught* nodo_caught;
 t_list* particiones;
 uint32_t buddy_U; //U es el exponente máximo de partición (la memoria completa)
 
-t_list* procesos;
-
 pthread_mutex_t sem_cola_new;
 pthread_mutex_t sem_cola_appeared;
 pthread_mutex_t sem_cola_catch;
