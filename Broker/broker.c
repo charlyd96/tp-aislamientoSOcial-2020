@@ -924,33 +924,27 @@ void atenderCliente(int socket){
 	op_code cod_op = recibirOperacion(socket_cliente);
 	switch(cod_op){
 		case NEW_POKEMON:{
-			tipoYIDProceso(socket_cliente);
 			atenderMensajeNewPokemon(socket_cliente);
 			break;
 		}
 		case APPEARED_POKEMON:{
-			tipoYIDProceso(socket_cliente);
 			atenderMensajeAppearedPokemon(socket_cliente);
 			break;
 		}
 		case CATCH_POKEMON:{
-			tipoYIDProceso(socket_cliente);
 			atenderMensajeCatchPokemon(socket_cliente);
 			break;
 		}
 		case CAUGHT_POKEMON:{
-			tipoYIDProceso(socket_cliente);
 			atenderMensajeCaughtPokemon(socket_cliente);
 			break;
 		}
 		case GET_POKEMON:{
-			tipoYIDProceso(socket_cliente);
 			atenderMensajeGetPokemon(socket_cliente);
 			break;
 		}
 		case LOCALIZED_POKEMON:{
 			printf("Es localized");
-			tipoYIDProceso(socket_cliente);
 			atenderMensajeLocalizedPokemon(socket_cliente);
 			break;
 		}
@@ -974,11 +968,47 @@ void atenderCliente(int socket){
 }
 
 void atenderMensajeNewPokemon(int socket_cliente){
+	process_code tipo_proceso = recibirTipoProceso(socket_cliente);
+//	log_info(logBrokerInterno, "Tipo de Proceso %d", tipo_proceso);
+	uint32_t id_proceso = recibirIDProceso(socket_cliente);
+//	log_info(logBrokerInterno, "ID de Proceso %d", id_proceso);
+	
 	t_new_pokemon* new_pokemon = recibirNewPokemon(socket_cliente);
 
-	// 3. Llegada de un nuevo mensaje a una cola de mensajes.
-	log_info(logBroker, "Llegó un Mensaje NEW_POKEMON %s %d %d %d.",new_pokemon->nombre_pokemon,new_pokemon->pos_x,new_pokemon->pos_y,new_pokemon->cantidad);
-	log_info(logBrokerInterno, "Llegó un Mensaje NEW_POKEMON %s %d %d %d.",new_pokemon->nombre_pokemon,new_pokemon->pos_x,new_pokemon->pos_y,new_pokemon->cantidad);
+	switch(tipo_proceso){
+		case P_TEAM:{
+			// 1. Conexión de un proceso al broker.
+			log_info(logBroker, "Se conectó el Team %d.", id_proceso);
+			log_info(logBrokerInterno, "Se conectó el Team %d.", id_proceso);
+		
+			// 3. Llegada de un nuevo mensaje a una cola de mensajes.
+			log_info(logBroker, "Llegó un Mensaje NEW_POKEMON %s %d %d %d del Team %d.",new_pokemon->nombre_pokemon,new_pokemon->pos_x,new_pokemon->pos_y,new_pokemon->cantidad, id_proceso);
+			log_info(logBrokerInterno, "Llegó un Mensaje NEW_POKEMON %s %d %d %d del Team %d.",new_pokemon->nombre_pokemon,new_pokemon->pos_x,new_pokemon->pos_y,new_pokemon->cantidad, id_proceso);
+
+			break;	
+		}
+		case P_GAMECARD:{
+			// 1. Conexión de un proceso al broker.
+			log_info(logBroker, "Se conectó el Game Card %d.", id_proceso);
+			log_info(logBrokerInterno, "Se conectó el Game Card %d.", id_proceso);
+			break;
+		}
+		case P_GAMEBOY:{
+			// 1. Conexión de un proceso al broker.
+			log_info(logBroker, "Se conectó el Game Boy %d.", id_proceso);
+			log_info(logBrokerInterno, "Se conectó el Game Boy %d.", id_proceso);
+
+			// 3. Llegada de un nuevo mensaje a una cola de mensajes.
+			log_info(logBroker, "Llegó un Mensaje NEW_POKEMON %s %d %d %d del Game Boy %d.",new_pokemon->nombre_pokemon,new_pokemon->pos_x,new_pokemon->pos_y,new_pokemon->cantidad, id_proceso);
+			log_info(logBrokerInterno, "Llegó un Mensaje NEW_POKEMON %s %d %d %d del Game Boy %d.",new_pokemon->nombre_pokemon,new_pokemon->pos_x,new_pokemon->pos_y,new_pokemon->cantidad, id_proceso);
+
+			break;
+		}
+		default:{
+			log_info(logBrokerInterno, "Verificar el Tipo de Proceso y/o ID de Proceso enviado.");
+			break;
+		}
+	}
 
 	uint32_t id_mensaje = 0;
 
@@ -1020,17 +1050,59 @@ void atenderMensajeNewPokemon(int socket_cliente){
 }
 
 void atenderMensajeAppearedPokemon(int socket_cliente){
+	process_code tipo_proceso = recibirTipoProceso(socket_cliente);
+//	log_info(logBrokerInterno, "Tipo de Proceso %d", tipo_proceso);
+	uint32_t id_proceso = recibirIDProceso(socket_cliente);
+//	log_info(logBrokerInterno, "ID de Proceso %d", id_proceso);
+	
 	t_appeared_pokemon* appeared_pokemon = recibirAppearedPokemon(socket_cliente);
 
-	if(appeared_pokemon->id_mensaje_correlativo > 0){
-		// 3. Llegada de un nuevo mensaje a una cola de mensajes.
-		log_info(logBroker, "Llegó un Mensaje APPEARED_POKEMON %s %d %d %d.",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y, appeared_pokemon->id_mensaje_correlativo);
-		log_info(logBrokerInterno, "Llegó un Mensaje APPEARED_POKEMON %s %d %d %d.",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y, appeared_pokemon->id_mensaje_correlativo);
+	switch(tipo_proceso){
+		case P_TEAM:{
+			// 1. Conexión de un proceso al broker.
+			log_info(logBroker, "Se conectó el Team %d.", id_proceso);
+			log_info(logBrokerInterno, "Se conectó el Team %d.", id_proceso);
+			break;	
+		}
+		case P_GAMECARD:{
+			// 1. Conexión de un proceso al broker.
+			log_info(logBroker, "Se conectó el Game Card %d.", id_proceso);
+			log_info(logBrokerInterno, "Se conectó el Game Card %d.", id_proceso);
+			
+			if(appeared_pokemon->id_mensaje_correlativo > 0){
+				// 3. Llegada de un nuevo mensaje a una cola de mensajes.
+				log_info(logBroker, "Llegó un Mensaje APPEARED_POKEMON %s %d %d %d.",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y, appeared_pokemon->id_mensaje_correlativo);
+				log_info(logBrokerInterno, "Llegó un Mensaje APPEARED_POKEMON %s %d %d %d.",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y, appeared_pokemon->id_mensaje_correlativo);
 
-	}else{
-		// 3. Llegada de un nuevo mensaje a una cola de mensajes.
-		log_info(logBroker, "Llegó un Mensaje APPEARED_POKEMON %s %d %d.",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y);
-		log_info(logBrokerInterno, "Llegó un Mensaje APPEARED_POKEMON %s %d %d.",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y);
+			}else{
+				// 3. Llegada de un nuevo mensaje a una cola de mensajes.
+				log_info(logBroker, "Llegó un Mensaje APPEARED_POKEMON %s %d %d.",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y);
+				log_info(logBrokerInterno, "Llegó un Mensaje APPEARED_POKEMON %s %d %d.",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y);
+			}
+
+			break;
+		}
+		case P_GAMEBOY:{
+			// 1. Conexión de un proceso al broker.
+			log_info(logBroker, "Se conectó el Game Boy %d.", id_proceso);
+			log_info(logBrokerInterno, "Se conectó el Game Boy %d.", id_proceso);
+
+			if(appeared_pokemon->id_mensaje_correlativo > 0){
+				// 3. Llegada de un nuevo mensaje a una cola de mensajes.
+				log_info(logBroker, "Llegó un Mensaje APPEARED_POKEMON %s %d %d %d del Game Boy %d.",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y, appeared_pokemon->id_mensaje_correlativo, id_proceso);
+				log_info(logBrokerInterno, "Llegó un Mensaje APPEARED_POKEMON %s %d %d %d del Game Boy %d.",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y, appeared_pokemon->id_mensaje_correlativo, id_proceso);
+			}else{
+				// 3. Llegada de un nuevo mensaje a una cola de mensajes.
+				log_info(logBroker, "Llegó un Mensaje APPEARED_POKEMON %s %d %d del Game Boy %d.",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y, id_proceso);
+				log_info(logBrokerInterno, "Llegó un Mensaje APPEARED_POKEMON %s %d %d del Game Boy %d.",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y, id_proceso);
+			}
+			
+			break;
+		}
+		default:{
+			log_info(logBrokerInterno, "Verificar el Tipo de Proceso y/o ID de Proceso enviado.");
+			break;
+		}
 	}
 
 	uint32_t id_mensaje = 0;
@@ -1072,11 +1144,47 @@ void atenderMensajeAppearedPokemon(int socket_cliente){
 }
 
 void atenderMensajeCatchPokemon(int socket_cliente){
+	process_code tipo_proceso = recibirTipoProceso(socket_cliente);
+//	log_info(logBrokerInterno, "Tipo de Proceso %d", tipo_proceso);
+	uint32_t id_proceso = recibirIDProceso(socket_cliente);
+//	log_info(logBrokerInterno, "ID de Proceso %d", id_proceso);
+
 	t_catch_pokemon* catch_pokemon = recibirCatchPokemon(socket_cliente);
 
-	// 3. Llegada de un nuevo mensaje a una cola de mensajes.
-	log_info(logBroker, "Llegó un Mensaje CATCH_POKEMON %s %d %d.",catch_pokemon->nombre_pokemon,catch_pokemon->pos_x,catch_pokemon->pos_y);
-	log_info(logBrokerInterno, "Llegó un Mensaje CATCH_POKEMON %s %d %d.",catch_pokemon->nombre_pokemon,catch_pokemon->pos_x,catch_pokemon->pos_y);
+	switch(tipo_proceso){
+		case P_TEAM:{
+			// 1. Conexión de un proceso al broker.
+			log_info(logBroker, "Se conectó el Team %d.", id_proceso);
+			log_info(logBrokerInterno, "Se conectó el Team %d.", id_proceso);
+		
+			// 3. Llegada de un nuevo mensaje a una cola de mensajes.
+			log_info(logBroker, "Llegó un Mensaje CATCH_POKEMON %s %d %d del Team %d.",catch_pokemon->nombre_pokemon,catch_pokemon->pos_x,catch_pokemon->pos_y, id_proceso);
+			log_info(logBrokerInterno, "Llegó un Mensaje CATCH_POKEMON %s %d %d del Team %d.",catch_pokemon->nombre_pokemon,catch_pokemon->pos_x,catch_pokemon->pos_y, id_proceso);
+
+			break;	
+		}
+		case P_GAMECARD:{
+			// 1. Conexión de un proceso al broker.
+			log_info(logBroker, "Se conectó el Game Card %d.", id_proceso);
+			log_info(logBrokerInterno, "Se conectó el Game Card %d.", id_proceso);
+			break;
+		}
+		case P_GAMEBOY:{
+			// 1. Conexión de un proceso al broker.
+			log_info(logBroker, "Se conectó el Game Boy %d.", id_proceso);
+			log_info(logBrokerInterno, "Se conectó el Game Boy %d.", id_proceso);
+
+			// 3. Llegada de un nuevo mensaje a una cola de mensajes.
+			log_info(logBroker, "Llegó un Mensaje CATCH_POKEMON %s %d %d del Game Boy %d.",catch_pokemon->nombre_pokemon,catch_pokemon->pos_x,catch_pokemon->pos_y, id_proceso);
+			log_info(logBrokerInterno, "Llegó un Mensaje CATCH_POKEMON %s %d %d del Game Boy %d.",catch_pokemon->nombre_pokemon,catch_pokemon->pos_x,catch_pokemon->pos_y, id_proceso);
+			
+			break;
+		}
+		default:{
+			log_info(logBrokerInterno, "Verificar el Tipo de Proceso y/o ID de Proceso enviado.");
+			break;
+		}
+	}
 
 	uint32_t id_mensaje = 0;
 
@@ -1117,16 +1225,59 @@ void atenderMensajeCatchPokemon(int socket_cliente){
 }
 
 void atenderMensajeCaughtPokemon(int socket_cliente){
+	process_code tipo_proceso = recibirTipoProceso(socket_cliente);
+//	log_info(logBrokerInterno, "Tipo de Proceso %d", tipo_proceso);
+	uint32_t id_proceso = recibirIDProceso(socket_cliente);
+//	log_info(logBrokerInterno, "ID de Proceso %d", id_proceso);
+
 	t_caught_pokemon* caught_pokemon = recibirCaughtPokemon(socket_cliente);
 
-	if(caught_pokemon->id_mensaje_correlativo >= 0){
-		// 3. Llegada de un nuevo mensaje a una cola de mensajes.
-		log_info(logBroker, "Llegó un Mensaje CAUGHT_POKEMON %d [%d].",caught_pokemon->atrapo_pokemon,caught_pokemon->id_mensaje_correlativo);
-		log_info(logBrokerInterno, "Llegó un Mensaje CAUGHT_POKEMON %d [%d].",caught_pokemon->atrapo_pokemon,caught_pokemon->id_mensaje_correlativo);
-	}else{
-		// 3. Llegada de un nuevo mensaje a una cola de mensajes.
-		log_info(logBroker, "Llegó un Mensaje CAUGHT_POKEMON %d.",caught_pokemon->atrapo_pokemon);
-		log_info(logBrokerInterno, "Llegó un Mensaje CAUGHT_POKEMON %d.",caught_pokemon->atrapo_pokemon);
+	switch(tipo_proceso){
+		case P_TEAM:{
+			// 1. Conexión de un proceso al broker.
+			log_info(logBroker, "Se conectó el Team %d.", id_proceso);
+			log_info(logBrokerInterno, "Se conectó el Team %d.", id_proceso);
+		
+			break;	
+		}
+		case P_GAMECARD:{
+			// 1. Conexión de un proceso al broker.
+			log_info(logBroker, "Se conectó el Game Card %d.", id_proceso);
+			log_info(logBrokerInterno, "Se conectó el Game Card %d.", id_proceso);
+			
+			if(caught_pokemon->id_mensaje_correlativo >= 0){
+				// 3. Llegada de un nuevo mensaje a una cola de mensajes.
+				log_info(logBroker, "Llegó un Mensaje CAUGHT_POKEMON %d [%d] del Game Card %d.",caught_pokemon->atrapo_pokemon,caught_pokemon->id_mensaje_correlativo, id_proceso);
+				log_info(logBrokerInterno, "Llegó un Mensaje CAUGHT_POKEMON %d [%d] del Game Card %d.",caught_pokemon->atrapo_pokemon,caught_pokemon->id_mensaje_correlativo, id_proceso);
+			}else{
+				// 3. Llegada de un nuevo mensaje a una cola de mensajes.
+				log_info(logBroker, "Llegó un Mensaje CAUGHT_POKEMON %d del Game Card %d.",caught_pokemon->atrapo_pokemon, id_proceso);
+				log_info(logBrokerInterno, "Llegó un Mensaje CAUGHT_POKEMON %d del Game Card %d.",caught_pokemon->atrapo_pokemon, id_proceso);
+			}
+
+			break;
+		}
+		case P_GAMEBOY:{
+			// 1. Conexión de un proceso al broker.
+			log_info(logBroker, "Se conectó el Game Boy %d.", id_proceso);
+			log_info(logBrokerInterno, "Se conectó el Game Boy %d.", id_proceso);
+
+			if(caught_pokemon->id_mensaje_correlativo >= 0){
+				// 3. Llegada de un nuevo mensaje a una cola de mensajes.
+				log_info(logBroker, "Llegó un Mensaje CAUGHT_POKEMON %d [%d] del Game Boy %d.",caught_pokemon->atrapo_pokemon,caught_pokemon->id_mensaje_correlativo, id_proceso);
+				log_info(logBrokerInterno, "Llegó un Mensaje CAUGHT_POKEMON %d [%d] del Game Boy %d.",caught_pokemon->atrapo_pokemon,caught_pokemon->id_mensaje_correlativo, id_proceso);
+			}else{
+				// 3. Llegada de un nuevo mensaje a una cola de mensajes.
+				log_info(logBroker, "Llegó un Mensaje CAUGHT_POKEMON %d del Game Boy %d.",caught_pokemon->atrapo_pokemon, id_proceso);
+				log_info(logBrokerInterno, "Llegó un Mensaje CAUGHT_POKEMON %d del Game Boy %d.",caught_pokemon->atrapo_pokemon, id_proceso);
+			}
+
+			break;
+		}
+		default:{
+			log_info(logBrokerInterno, "Verificar el Tipo de Proceso y/o ID de Proceso enviado.");
+			break;
+		}
 	}
 
 	uint32_t id_mensaje = 0;
@@ -1168,11 +1319,47 @@ void atenderMensajeCaughtPokemon(int socket_cliente){
 }
 
 void atenderMensajeGetPokemon(int socket_cliente){
+	process_code tipo_proceso = recibirTipoProceso(socket_cliente);
+//	log_info(logBrokerInterno, "Tipo de Proceso %d", tipo_proceso);
+	uint32_t id_proceso = recibirIDProceso(socket_cliente);
+//	log_info(logBrokerInterno, "ID de Proceso %d", id_proceso);
+
 	t_get_pokemon* get_pokemon = recibirGetPokemon(socket_cliente);
 
-	// 3. Llegada de un nuevo mensaje a una cola de mensajes.
-	log_info(logBroker, "Llegó un Mensaje GET_POKEMON %s.",get_pokemon->nombre_pokemon);
-	log_info(logBrokerInterno, "Llegó un Mensaje GET_POKEMON %s.",get_pokemon->nombre_pokemon);
+	switch(tipo_proceso){
+		case P_TEAM:{
+			// 1. Conexión de un proceso al broker.
+			log_info(logBroker, "Se conectó el Team %d.", id_proceso);
+			log_info(logBrokerInterno, "Se conectó el Team %d.", id_proceso);
+		
+			// 3. Llegada de un nuevo mensaje a una cola de mensajes.
+			log_info(logBroker, "Llegó un Mensaje GET_POKEMON %s del Team %d.",get_pokemon->nombre_pokemon, id_proceso);
+			log_info(logBrokerInterno, "Llegó un Mensaje GET_POKEMON %s del Team %d.",get_pokemon->nombre_pokemon, id_proceso);
+
+			break;	
+		}
+		case P_GAMECARD:{
+			// 1. Conexión de un proceso al broker.
+			log_info(logBroker, "Se conectó el Game Card %d.", id_proceso);
+			log_info(logBrokerInterno, "Se conectó el Game Card %d.", id_proceso);
+			break;
+		}
+		case P_GAMEBOY:{
+			// 1. Conexión de un proceso al broker.
+			log_info(logBroker, "Se conectó el Game Boy %d.", id_proceso);
+			log_info(logBrokerInterno, "Se conectó el Game Boy %d.", id_proceso);
+
+			// 3. Llegada de un nuevo mensaje a una cola de mensajes.
+			log_info(logBroker, "Llegó un Mensaje GET_POKEMON %s del Game Boy %d.",get_pokemon->nombre_pokemon, id_proceso);
+			log_info(logBrokerInterno, "Llegó un Mensaje GET_POKEMON %s del Game Boy %d.",get_pokemon->nombre_pokemon, id_proceso);
+			break;
+		}
+		default:{
+			log_info(logBrokerInterno, "Verificar el Tipo de Proceso y/o ID de Proceso enviado.");
+			break;
+		}
+	}
+
 	uint32_t id_mensaje = 0;
 
 	encolarGetPokemon(get_pokemon);
@@ -1212,12 +1399,43 @@ void atenderMensajeGetPokemon(int socket_cliente){
 }
 
 void atenderMensajeLocalizedPokemon(int socket_cliente){
+	process_code tipo_proceso = recibirTipoProceso(socket_cliente);
+//	log_info(logBrokerInterno, "Tipo de Proceso %d", tipo_proceso);
+	uint32_t id_proceso = recibirIDProceso(socket_cliente);
+//	log_info(logBrokerInterno, "ID de Proceso %d", id_proceso);
+
 	t_localized_pokemon* localized_pokemon = recibirLocalizedPokemon(socket_cliente);
 
-	// 3. Llegada de un nuevo mensaje a una cola de mensajes.
-	log_info(logBroker, "Llegó un Mensaje LOCALIZED_POKEMON %s %d %s [%d]\n",localized_pokemon->nombre_pokemon,localized_pokemon->cant_pos,localized_pokemon->posiciones,localized_pokemon->id_mensaje_correlativo);
-	log_info(logBrokerInterno, "Llegó un Mensaje LOCALIZED_POKEMON %s %d %s [%d]\n",localized_pokemon->nombre_pokemon,localized_pokemon->cant_pos,localized_pokemon->posiciones,localized_pokemon->id_mensaje_correlativo);
+	switch(tipo_proceso){
+		case P_TEAM:{
+			// 1. Conexión de un proceso al broker.
+			log_info(logBroker, "Se conectó el Team %d.", id_proceso);
+			log_info(logBrokerInterno, "Se conectó el Team %d.", id_proceso);
+			break;	
+		}
+		case P_GAMECARD:{
+			// 1. Conexión de un proceso al broker.
+			log_info(logBroker, "Se conectó el Game Card %d.", id_proceso);
+			log_info(logBrokerInterno, "Se conectó el Game Card %d.", id_proceso);
 
+			// 3. Llegada de un nuevo mensaje a una cola de mensajes.
+			log_info(logBroker, "Llegó un Mensaje LOCALIZED_POKEMON %s %d %s [%d]\n",localized_pokemon->nombre_pokemon,localized_pokemon->cant_pos,localized_pokemon->posiciones,localized_pokemon->id_mensaje_correlativo, id_proceso);
+			log_info(logBrokerInterno, "Llegó un Mensaje LOCALIZED_POKEMON %s %d %s [%d]\n",localized_pokemon->nombre_pokemon,localized_pokemon->cant_pos,localized_pokemon->posiciones,localized_pokemon->id_mensaje_correlativo, id_proceso);
+
+			break;
+		}
+		case P_GAMEBOY:{
+			// 1. Conexión de un proceso al broker.
+			log_info(logBroker, "Se conectó el Game Boy %d.", id_proceso);
+			log_info(logBrokerInterno, "Se conectó el Game Boy %d.", id_proceso);
+			break;
+		}
+		default:{
+			log_info(logBrokerInterno, "Verificar el Tipo de Proceso y/o ID de Proceso enviado.");
+			break;
+		}
+	}
+	
 	uint32_t id_mensaje = 0;
 
 	encolarLocalizedPokemon(localized_pokemon);
@@ -1604,7 +1822,6 @@ void tipoYIDProceso(int socket_cliente){
 	if(!list_any_satisfy(procesos, comparar_id_proceso)){
 	//	log_info(logBrokerInterno, "ID de Proceso %d", id_proceso);
 		list_add(procesos, id_proceso);
-
 		switch(tipo_proceso){
 			case P_TEAM:{
 				// 1. Conexión de un proceso al broker.
