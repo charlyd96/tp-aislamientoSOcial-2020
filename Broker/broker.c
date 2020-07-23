@@ -121,7 +121,7 @@ void inicializarMemoria(){
 	particionInicial->libre = true;
 	particionInicial->base = 0;
 	particionInicial->tamanio = config_broker->tam_memoria;
-
+	particionInicial->susc_enviados = list_create();
 	list_add(particiones,particionInicial);
 	//free(particionInicial);
 }
@@ -191,6 +191,8 @@ int buscarHuecoBuddy(uint32_t i){
 void partirBuddy(int indice){
 	int i = 0;
 	t_particion* buddy_izq = list_get(particiones,indice);
+	//limpio lista de enviados
+	list_clean(buddy_izq->susc_enviados);
 	t_particion* buddy_der = malloc(sizeof(t_particion));
 	*buddy_der = *buddy_izq;
 	//El orden (exponente en base 2) actual del buddy
@@ -297,7 +299,7 @@ void buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint3
 		gettimeofday(&current_time, NULL);
 		part_nueva->time_creacion = current_time; //Hora actual del sistema
 		part_nueva->time_ultima_ref = current_time; //Hora actual del sistema
-		part_nueva->susc_enviados = list_create();
+		list_clean(part_nueva->susc_enviados);
 
 		part_libre->base = part_libre->base + largo_stream;
 		part_libre->tamanio = part_libre->tamanio - largo_stream;
@@ -329,7 +331,7 @@ void buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint3
 		gettimeofday(&current_time, NULL);
 		part_libre->time_creacion = current_time; //Hora actual del sistema
 		part_libre->time_ultima_ref = current_time; //Hora actual del sistema
-		part_libre->susc_enviados = list_create();
+		list_clean(part_libre->susc_enviados);
 
 		list_replace(particiones,indice,part_libre);
 		log_info(logBrokerInterno, "ID_MENSAJE %d, asigno partición base %d y i %d",id, part_libre->base,part_libre->buddy_i);
@@ -347,6 +349,8 @@ void buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint3
 void liberarParticion(int indice_victima){
 	t_particion* part_liberar = list_get(particiones,indice_victima);
 	part_liberar->libre = true;
+	list_clean(part_liberar->susc_enviados);
+
 	list_replace(particiones, indice_victima, part_liberar);
 
 	// 7. Eliminado de una partición de memoria (indicado la posición de inicio de la misma).
@@ -360,7 +364,7 @@ void liberarParticion(int indice_victima){
 		if(part_der->libre == true){
 			//Fusionar
 			part_liberar->tamanio = part_liberar->tamanio + part_der->tamanio;
-			list_clean(part_liberar->susc_enviados);
+			list_clean(part_der->susc_enviados);
 			list_remove(particiones,indice_victima + 1);
 			log_info(logBrokerInterno,"Se consolida con particion indice %d",indice_victima+1);
 		}
@@ -372,7 +376,7 @@ void liberarParticion(int indice_victima){
 			//Fusionar
 			part_liberar->base = part_izq->base;
 			part_liberar->tamanio = part_liberar->tamanio + part_izq->tamanio;
-			list_clean(part_liberar->susc_enviados);
+			list_clean(part_izq->susc_enviados);
 			list_remove(particiones,indice_victima -1);
 			log_info(logBrokerInterno,"Se consolida con particion indice %d",indice_victima-1);
 		}
@@ -401,6 +405,7 @@ void eliminarParticionBuddy(){
 	//Eliminar partición. Si tiene un compañero (buddy) del mismo tamaño y vacío, consolidar
 	t_particion* part_liberar = list_get(particiones,indice_victima);
 	part_liberar->libre = true;
+	list_clean(part_liberar->susc_enviados);
 	uint32_t i = part_liberar->buddy_i;
 	list_replace(particiones, indice_victima, part_liberar);
 
@@ -419,7 +424,7 @@ void eliminarParticionBuddy(){
 			if(part_der->libre == true && part_der->buddy_i == i_aux){
 				//Fusionar
 				part_liberar->buddy_i = part_liberar->buddy_i + 1;
-				list_clean(part_liberar->susc_enviados);
+				list_clean(part_der->susc_enviados);
 				list_remove(particiones,indice_victima + 1);
 				// 8. Asociación de bloques (para buddy system), indicar que particiones se asociaron (indicar posición inicio de ambas particiones).
 				log_info(logBroker, "Asociación de Particiones: Partición %d con Partición %d.", part_liberar->base, part_der->base);
@@ -435,7 +440,7 @@ void eliminarParticionBuddy(){
 				//Fusionar
 				part_liberar->base = part_izq->base;
 				part_liberar->buddy_i = part_liberar->buddy_i + 1;
-				list_clean(part_liberar->susc_enviados);
+				list_clean(part_izq->susc_enviados);
 				list_remove(particiones,indice_victima -1);
 				// 8. Asociación de bloques (para buddy system), indicar que particiones se asociaron (indicar posición inicio de ambas particiones).
 				log_info(logBroker, "Asociación de Particiones: Partición %d con Partición %d.", part_liberar->base, part_izq->base);
@@ -985,7 +990,7 @@ void atenderMensajeNewPokemon(int socket_cliente){
 		int error_code;
 		int error_code_size = sizeof(error_code);
 		getsockopt(suscriptor->socket_suscriptor, SOL_SOCKET, SO_ERROR, &error_code, &error_code_size);
-		log_debug(logBrokerInterno,"El CÓDIGO DE ERROR DEL SOCKET es %d",error_code);
+		log_debug(logBrokerInterno,"El CÓDIGO DE ERROR DEL SOCKET %d es %d",suscriptor->socket_suscriptor,error_code);
 		
 		if(error_code == 0){
 			int enviado = enviarNewPokemon(suscriptor->socket_suscriptor, *new_pokemon,P_BROKER,0);
@@ -1037,7 +1042,7 @@ void atenderMensajeAppearedPokemon(int socket_cliente){
 		int error_code;
 		int error_code_size = sizeof(error_code);
 		getsockopt(suscriptor->socket_suscriptor, SOL_SOCKET, SO_ERROR, &error_code, &error_code_size);
-		log_debug(logBrokerInterno,"El CÓDIGO DE ERROR DEL SOCKET es %d",error_code);
+		log_debug(logBrokerInterno,"El CÓDIGO DE ERROR DEL SOCKET %d es %d",suscriptor->socket_suscriptor,error_code);
 
 		if(error_code == 0){
 			int enviado = enviarAppearedPokemon(suscriptor->socket_suscriptor, *appeared_pokemon,P_BROKER,0);
@@ -1082,7 +1087,7 @@ void atenderMensajeCatchPokemon(int socket_cliente){
 		int error_code;
 		int error_code_size = sizeof(error_code);
 		getsockopt(suscriptor->socket_suscriptor, SOL_SOCKET, SO_ERROR, &error_code, &error_code_size);
-		log_debug(logBrokerInterno,"El CÓDIGO DE ERROR DEL SOCKET es %d",error_code);
+		log_debug(logBrokerInterno,"El CÓDIGO DE ERROR DEL SOCKET %d es %d",suscriptor->socket_suscriptor,error_code);
 		
 		if(error_code == 0){
 			int enviado = enviarCatchPokemon(suscriptor->socket_suscriptor, *catch_pokemon,P_BROKER,0);
@@ -1116,7 +1121,7 @@ void atenderMensajeCaughtPokemon(int socket_cliente){
 		log_info(logBrokerInterno, "Llegó un Mensaje CAUGHT_POKEMON %d.",caught_pokemon->atrapo_pokemon);
 	}
 
-	uint32_t id_mensaje;
+	uint32_t id_mensaje = 0;
 
 	encolarCaughtPokemon(caught_pokemon);
 
@@ -1133,7 +1138,7 @@ void atenderMensajeCaughtPokemon(int socket_cliente){
 		int error_code;
 		int error_code_size = sizeof(error_code);
 		getsockopt(suscriptor->socket_suscriptor, SOL_SOCKET, SO_ERROR, &error_code, &error_code_size);
-		log_debug(logBrokerInterno,"El CÓDIGO DE ERROR DEL SOCKET es %d",error_code);
+		log_debug(logBrokerInterno,"El CÓDIGO DE ERROR DEL SOCKET %d es %d",suscriptor->socket_suscriptor,error_code);
 		
 		if(error_code == 0){
 			int enviado = enviarCaughtPokemon(suscriptor->socket_suscriptor, *caught_pokemon,P_BROKER,0);
@@ -1177,7 +1182,7 @@ void atenderMensajeGetPokemon(int socket_cliente){
 		int error_code;
 		int error_code_size = sizeof(error_code);
 		getsockopt(suscriptor->socket_suscriptor, SOL_SOCKET, SO_ERROR, &error_code, &error_code_size);
-		log_debug(logBrokerInterno,"El CÓDIGO DE ERROR DEL SOCKET es %d",error_code);
+		log_debug(logBrokerInterno,"El CÓDIGO DE ERROR DEL SOCKET %d es %d",suscriptor->socket_suscriptor,error_code);
 		
 		if(error_code == 0){
 			int enviado = enviarGetPokemon(suscriptor->socket_suscriptor, *get_pokemon,P_BROKER,0);
@@ -1222,7 +1227,7 @@ void atenderMensajeLocalizedPokemon(int socket_cliente){
 		int error_code;
 		int error_code_size = sizeof(error_code);
 		getsockopt(suscriptor->socket_suscriptor, SOL_SOCKET, SO_ERROR, &error_code, &error_code_size);
-		log_debug(logBrokerInterno,"El CÓDIGO DE ERROR DEL SOCKET es %d",error_code);
+		log_debug(logBrokerInterno,"El CÓDIGO DE ERROR DEL SOCKET %d es %d",suscriptor->socket_suscriptor,error_code);
 		
 		if(error_code == 0){
 			int enviado = enviarLocalizedPokemon(suscriptor->socket_suscriptor, *localized_pokemon,P_BROKER,0);
@@ -1666,7 +1671,7 @@ void enviarNewPokemonCacheados(int socket, t_suscribe* suscriptor){
 				int error_code;
 				int error_code_size = sizeof(error_code);
 				getsockopt(socket, SOL_SOCKET, SO_ERROR, &error_code, &error_code_size);
-				log_debug(logBrokerInterno,"El CÓDIGO DE ERROR DEL SOCKET es %d",error_code);
+				log_debug(logBrokerInterno,"El CÓDIGO DE ERROR DEL SOCKET %d es %d",socket,error_code);
 
 				if(error_code == 0){
 					int enviado = enviarNewPokemon(socket, *descacheado,P_BROKER,0);
@@ -1708,6 +1713,7 @@ void enviarNewPokemonCacheados(int socket, t_suscribe* suscriptor){
 					}
 					
 				}
+				free(descacheado->nombre_pokemon);
 				free(descacheado);
 				free(stream);
 			}
@@ -1751,7 +1757,7 @@ void enviarAppearedPokemonCacheados(int socket, t_suscribe* suscriptor){
 				int error_code;
 				int error_code_size = sizeof(error_code);
 				getsockopt(socket, SOL_SOCKET, SO_ERROR, &error_code, &error_code_size);
-				log_debug(logBrokerInterno,"El CÓDIGO DE ERROR DEL SOCKET es %d",error_code);
+				log_debug(logBrokerInterno,"El CÓDIGO DE ERROR DEL SOCKET %d es %d",socket,error_code);
 
 				if(error_code == 0){
 					int enviado = enviarAppearedPokemon(socket, descacheado,P_BROKER,0);
@@ -1834,7 +1840,7 @@ void enviarCatchPokemonCacheados(int socket, t_suscribe* suscriptor){
 				int error_code;
 				int error_code_size = sizeof(error_code);
 				getsockopt(socket, SOL_SOCKET, SO_ERROR, &error_code, &error_code_size);
-				log_debug(logBrokerInterno,"El CÓDIGO DE ERROR DEL SOCKET es %d",error_code);
+				log_debug(logBrokerInterno,"El CÓDIGO DE ERROR DEL SOCKET %d es %d",socket,error_code);
 
 				if(error_code == 0){
 					int enviado = enviarCatchPokemon(socket, descacheado,P_BROKER,0);
@@ -1874,6 +1880,7 @@ void enviarCatchPokemonCacheados(int socket, t_suscribe* suscriptor){
 						}
 					}
 				}
+				free(descacheado.nombre_pokemon);
 				free(stream);
 			}
 			free(descacheado.nombre_pokemon);
@@ -1916,20 +1923,19 @@ void enviarCaughtPokemonCacheados(int socket, t_suscribe* suscriptor){
 				int error_code;
 				int error_code_size = sizeof(error_code);
 				getsockopt(socket, SOL_SOCKET, SO_ERROR, &error_code, &error_code_size);
-				log_debug(logBrokerInterno,"El CÓDIGO DE ERROR DEL SOCKET es %d",error_code);
+				log_debug(logBrokerInterno,"El CÓDIGO DE ERROR DEL SOCKET %d es %d",socket,error_code);
 
 				if(error_code == 0){
 					int enviado = enviarCaughtPokemon(socket, descacheado,P_BROKER,0);
-
-					int ack = recibirACK(socket);
-					log_info(logBrokerInterno, "ACK %d", ack);
-
-					char* cola = colaParaLogs(particion_buscada->tipo_mensaje);
 
 					if(enviado == -1){
 						log_warning(logBroker, "NO se envió el Mensaje.");
 						log_warning(logBrokerInterno, "NO se envió el Mensaje.");
 					}else{
+						int ack = recibirACK(socket);
+						log_info(logBrokerInterno, "ACK %d", ack);
+
+						char* cola = colaParaLogs(particion_buscada->tipo_mensaje);
 						list_add(particion_buscada->susc_enviados, suscriptor->id_proceso);
 						switch(suscriptor->tipo_suscripcion){
 							case SUSCRIBE_TEAM:{
@@ -1992,7 +1998,7 @@ void enviarGetPokemonCacheados(int socket, t_suscribe* suscriptor){
 				int error_code;
 				int error_code_size = sizeof(error_code);
 				getsockopt(socket, SOL_SOCKET, SO_ERROR, &error_code, &error_code_size);
-				log_debug(logBrokerInterno,"El CÓDIGO DE ERROR DEL SOCKET es %d",error_code);
+				log_debug(logBrokerInterno,"El CÓDIGO DE ERROR DEL SOCKET %d es %d",socket,error_code);
 
 				if(error_code == 0){
 
@@ -2033,6 +2039,8 @@ void enviarGetPokemonCacheados(int socket, t_suscribe* suscriptor){
 						}
 					}
 				}
+				free(descacheado->nombre_pokemon);
+				free(descacheado);
 				free(stream);
 			}
 			free(descacheado->nombre_pokemon);
@@ -2075,7 +2083,7 @@ void enviarLocalizedPokemonCacheados(int socket, t_suscribe* suscriptor){
 				int error_code;
 				int error_code_size = sizeof(error_code);
 				getsockopt(socket, SOL_SOCKET, SO_ERROR, &error_code, &error_code_size);
-				log_debug(logBrokerInterno,"El CÓDIGO DE ERROR DEL SOCKET es %d",error_code);
+				log_debug(logBrokerInterno,"El CÓDIGO DE ERROR DEL SOCKET %d es %d",socket,error_code);
 
 				int enviado;
 				if(error_code == 0){
@@ -2204,6 +2212,6 @@ int main(void){
 
 	log_destroy(logBrokerInterno);
 	log_destroy(logBroker);
-	list_clean_and_destroy_elements(particiones,free);
+	list_destroy_and_destroy_elements(particiones,free);
 	return 0;
 } 
