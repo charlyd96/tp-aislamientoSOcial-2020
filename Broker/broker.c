@@ -320,8 +320,8 @@ void buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint3
 		char* cola = colaParaLogs(part_nueva->tipo_mensaje);
 
 		// 6. Almacenado de un mensaje dentro de la memoria (indicando posición de inicio de su partición).
-		log_info(logBroker, "Se almacena el Mensaje %s en la Partición con posición de inicio %d (%p).", cola, part_nueva->base, cache + part_nueva->base);
-		//log_info(logBrokerInterno, "Se almacena el Mensaje %s en la Partición con posición de inicio %d (%p).", cola, part_nueva->base, part_nueva->base);
+		log_info(logBroker, "Se almacena el Mensaje %s en la Partición con posición de inicio %d.", cola, part_nueva->base, cache + part_nueva->base);
+		//log_info(logBrokerInterno, "Se almacena el Mensaje %s en la Partición con posición de inicio %d.", cola, part_nueva->base, part_nueva->base);
 
 		log_info(logBrokerInterno, "ID_MENSAJE %d, asigno partición base %d y tamanio %d",id, part_nueva->base,part_nueva->tamanio);
 	}
@@ -343,8 +343,8 @@ void buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint3
 		char* cola = colaParaLogs(part_libre->tipo_mensaje);
 
 		// 6. Almacenado de un mensaje dentro de la memoria (indicando posición de inicio de su partición).
-		log_info(logBroker, "Se almacena el Mensaje %s en la Partición con posición de inicio %d (%p).", cola, part_libre->base, cache + part_libre->base);
-		//log_info(logBrokerInterno, "Se almacena el Mensaje %s en la Partición con posición de inicio %d (%p).", cola, part_libre->base, part_libre->base);
+		log_info(logBroker, "Se almacena el Mensaje %s en la Partición con posición de inicio %d.", cola, part_libre->base, cache + part_libre->base);
+		//log_info(logBrokerInterno, "Se almacena el Mensaje %s en la Partición con posición de inicio %d.", cola, part_libre->base, part_libre->base);
 	}
 	//-> DESMUTEAR LISTA DE PARTICIONES
 	sem_post(&mx_particiones);
@@ -358,8 +358,8 @@ void liberarParticion(int indice_victima){
 	list_replace(particiones, indice_victima, part_liberar);
 
 	// 7. Eliminado de una partición de memoria (indicado la posición de inicio de la misma).
-	log_info(logBroker, "Se elimina la Partición con posición de inicio %d (%p).", part_liberar->base, cache+part_liberar->base);
-	log_info(logBrokerInterno, "Se elimina la Partición con posición de inicio %d (%p).", part_liberar->base, cache+part_liberar->base);
+	log_info(logBroker, "Se elimina la Partición con posición de inicio %d.", part_liberar->base, cache+part_liberar->base);
+	log_info(logBrokerInterno, "Se elimina la Partición con posición de inicio %d.", part_liberar->base, cache+part_liberar->base);
 	//Consolidar
 
 	//Si no es la última partición
@@ -414,8 +414,8 @@ void eliminarParticionBuddy(){
 	list_replace(particiones, indice_victima, part_liberar);
 
 	// 7. Eliminado de una partición de memoria (indicado la posición de inicio de la misma).
-	log_info(logBroker, "Se elimina la Partición con posición de inicio %d (%p).", part_liberar->base, cache+part_liberar->base);
-	log_info(logBrokerInterno, "Se elimina la Partición con posición de inicio %d (%p).", part_liberar->base, cache+part_liberar->base);
+	log_info(logBroker, "Se elimina la Partición con posición de inicio %d.", part_liberar->base, cache+part_liberar->base);
+	log_info(logBrokerInterno, "Se elimina la Partición con posición de inicio %d.", part_liberar->base, cache+part_liberar->base);
 
 	//Consolidar buddys
 	bool huboConsolidacion;
