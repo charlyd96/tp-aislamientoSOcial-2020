@@ -243,7 +243,7 @@ void procesar_appeared(t_appeared_pokemon *mensaje_appeared)
 	{
 		case GUARDAR:
 		{
-			agregar_nueva_especie(mensaje_appeared->nombre_pokemon);
+			//agregar_nueva_especie(mensaje_appeared->nombre_pokemon);
 			mapPokemons *pokemon_to_add = malloc (sizeof(mapPokemons));
 			pokemon_to_add-> name = string_duplicate (mensaje_appeared->nombre_pokemon);
 			pokemon_to_add-> posx = mensaje_appeared->pos_x;
@@ -258,7 +258,7 @@ void procesar_appeared(t_appeared_pokemon *mensaje_appeared)
 
 		case GUARDAR_AUX:
 		{
-			agregar_nueva_especie(mensaje_appeared->nombre_pokemon);
+			//agregar_nueva_especie(mensaje_appeared->nombre_pokemon);
 			mapPokemons *pokemon_to_add = malloc (sizeof(mapPokemons));
 			pokemon_to_add-> name = string_duplicate (mensaje_appeared->nombre_pokemon);
 			pokemon_to_add-> posx = mensaje_appeared->pos_x;
