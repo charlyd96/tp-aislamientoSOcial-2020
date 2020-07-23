@@ -972,25 +972,32 @@ void atenderMensajeNewPokemon(int socket_cliente){
 	new_pokemon->id_mensaje = id_mensaje;
 
 	cachearNewPokemon(new_pokemon);
-	/*Acá habría que enviar sólo si NO es Game Boy, vamos a consultar porque también
-	hay un log del Game Boy como que recibe mensaje, en este caso si se lo enviamos también*/
+	
 	int tam_lista_suscriptores = list_size(cola_new->suscriptores);
+	
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_new->suscriptores, j);
+		
 		int error_code;
 		int error_code_size = sizeof(error_code);
 		getsockopt(suscriptor->socket_suscriptor, SOL_SOCKET, SO_ERROR, &error_code, &error_code_size);
 		log_debug(logBrokerInterno,"El CÓDIGO DE ERROR DEL SOCKET es %d",error_code);
+		
 		if(error_code == 0){
 			int enviado = enviarNewPokemon(suscriptor->socket_suscriptor, *new_pokemon,P_BROKER,0);
+			
 			if(enviado > 0){
-				log_info(logBrokerInterno, "Se reenvió NEW_POKEMON %s %d %d %d [%d] al socket %d", new_pokemon->nombre_pokemon, new_pokemon->pos_x, new_pokemon->pos_y, new_pokemon->cantidad, new_pokemon->id_mensaje,suscriptor->socket_suscriptor);
 				uint32_t ack = recibirACK(suscriptor->socket_suscriptor);
-				log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
+				if(ack == 1){
+					log_info(logBrokerInterno, "Se reenvió NEW_POKEMON %s %d %d %d [%d] al socket %d", new_pokemon->nombre_pokemon, new_pokemon->pos_x, new_pokemon->pos_y, new_pokemon->cantidad, new_pokemon->id_mensaje,suscriptor->socket_suscriptor);
+					log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
+					agregarSuscriptor(id_mensaje, suscriptor);
+				}
 			}else{
-				log_info(logBrokerInterno,"No se pudo enviar el NEW_POKEMON [%d] al suscriptor con socket %d",new_pokemon->id_mensaje,suscriptor->socket_suscriptor);
+				// 4. Envío de un mensaje a un suscriptor específico.
+				log_warning(logBroker, "NO se envió el Mensaje.");
+				log_warning(logBrokerInterno, "NO se envió el Mensaje.");
 			}
-
 		}
 	}
 }
@@ -1063,24 +1070,30 @@ void atenderMensajeCatchPokemon(int socket_cliente){
 
 	cachearCatchPokemon(catch_pokemon);
 
-	/*Acá habría que enviar sólo si NO es Game Boy, vamos a consultar porque también
-	hay un log del Game Boy como que recibe mensaje, en este caso si se lo enviamos también*/
 	int tam_lista_suscriptores = list_size(cola_catch->suscriptores);
 	
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_catch->suscriptores, j);
+		
 		int error_code;
 		int error_code_size = sizeof(error_code);
 		getsockopt(suscriptor->socket_suscriptor, SOL_SOCKET, SO_ERROR, &error_code, &error_code_size);
 		log_debug(logBrokerInterno,"El CÓDIGO DE ERROR DEL SOCKET es %d",error_code);
+		
 		if(error_code == 0){
 			int enviado = enviarCatchPokemon(suscriptor->socket_suscriptor, *catch_pokemon,P_BROKER,0);
+			
 			if(enviado > 0){
-				log_info(logBrokerInterno, "Se reenvió CATCH_POKEMON %s %d %d [%d] al socket %d", catch_pokemon->nombre_pokemon, catch_pokemon->pos_x, catch_pokemon->pos_y, catch_pokemon->id_mensaje,suscriptor->socket_suscriptor);
 				uint32_t ack = recibirACK(suscriptor->socket_suscriptor);
-				log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
+				if(ack == 1){
+					log_info(logBrokerInterno, "Se reenvió CATCH_POKEMON %s %d %d [%d] al socket %d", catch_pokemon->nombre_pokemon, catch_pokemon->pos_x, catch_pokemon->pos_y, catch_pokemon->id_mensaje,suscriptor->socket_suscriptor);
+					log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
+					agregarSuscriptor(id_mensaje, suscriptor);
+				}
 			}else{
-				log_info(logBrokerInterno,"No se pudo enviar el CATCH_POKEMON %s %d %d [%d] al socket %d", catch_pokemon->nombre_pokemon, catch_pokemon->pos_x, catch_pokemon->pos_y, catch_pokemon->id_mensaje,suscriptor->socket_suscriptor);
+				// 4. Envío de un mensaje a un suscriptor específico.
+				log_warning(logBroker, "NO se envió el Mensaje.");
+				log_warning(logBrokerInterno, "NO se envió el Mensaje.");
 			}
 		}
 	}
@@ -1108,28 +1121,32 @@ void atenderMensajeCaughtPokemon(int socket_cliente){
 
 	cachearCaughtPokemon(caught_pokemon);
 
-	/*Acá habría que enviar sólo si NO es Game Boy, vamos a consultar porque también
-	hay un log del Game Boy como que recibe mensaje, en este caso si se lo enviamos también*/
 	int tam_lista_suscriptores = list_size(cola_caught->suscriptores);
 	
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_caught->suscriptores, j);
+		
 		int error_code;
 		int error_code_size = sizeof(error_code);
 		getsockopt(suscriptor->socket_suscriptor, SOL_SOCKET, SO_ERROR, &error_code, &error_code_size);
 		log_debug(logBrokerInterno,"El CÓDIGO DE ERROR DEL SOCKET es %d",error_code);
+		
 		if(error_code == 0){
 			int enviado = enviarCaughtPokemon(suscriptor->socket_suscriptor, *caught_pokemon,P_BROKER,0);
+		
 			if(enviado > 0){
-				log_info(logBrokerInterno, "Se reenvió CAUGHT %u [%u] al socket %d", caught_pokemon->atrapo_pokemon,caught_pokemon->id_mensaje_correlativo,suscriptor->socket_suscriptor);
 				uint32_t ack = recibirACK(suscriptor->socket_suscriptor);
-				log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
+				if(ack == 1){
+					log_info(logBrokerInterno, "Se reenvió CAUGHT %u [%u] al socket %d", caught_pokemon->atrapo_pokemon,caught_pokemon->id_mensaje_correlativo,suscriptor->socket_suscriptor);
+					log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
+					agregarSuscriptor(id_mensaje, suscriptor);
+				}
 			}else{
-				log_info(logBrokerInterno,"No se pudo enviar el CAUGHT %u [%u] al socket %d", caught_pokemon->atrapo_pokemon, caught_pokemon->id_mensaje_correlativo,suscriptor->socket_suscriptor);
+				// 4. Envío de un mensaje a un suscriptor específico.
+				log_warning(logBroker, "NO se envió el Mensaje.");
+				log_warning(logBrokerInterno, "NO se envió el Mensaje.");
 			}
 		}
-		/*int ack = recibirACK(socket);
-		log_info(logBrokerInterno, "ACK Nuevo Mensaje %d", ack);*/
 	}
 }
 
@@ -1148,24 +1165,30 @@ void atenderMensajeGetPokemon(int socket_cliente){
 
 	cachearGetPokemon(get_pokemon);
 
-	/*Acá habría que enviar sólo si NO es Game Boy, vamos a consultar porque también
-	hay un log del Game Boy como que recibe mensaje, en este caso si se lo enviamos también*/
 	int tam_lista_suscriptores = list_size(cola_get->suscriptores);
 	
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_get->suscriptores, j);
+		
 		int error_code;
 		int error_code_size = sizeof(error_code);
 		getsockopt(suscriptor->socket_suscriptor, SOL_SOCKET, SO_ERROR, &error_code, &error_code_size);
 		log_debug(logBrokerInterno,"El CÓDIGO DE ERROR DEL SOCKET es %d",error_code);
+		
 		if(error_code == 0){
 			int enviado = enviarGetPokemon(suscriptor->socket_suscriptor, *get_pokemon,P_BROKER,0);
+			
 			if(enviado > 0){
-				log_info(logBrokerInterno, "Se reenvió GET_POKEMON %s [%d] al socket %d", get_pokemon->nombre_pokemon, get_pokemon->id_mensaje,suscriptor->socket_suscriptor);
 				uint32_t ack = recibirACK(suscriptor->socket_suscriptor);
-				log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
+				if(ack == 1){
+					log_info(logBrokerInterno, "Se reenvió GET_POKEMON %s [%d] al socket %d", get_pokemon->nombre_pokemon, get_pokemon->id_mensaje,suscriptor->socket_suscriptor);
+					log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
+					agregarSuscriptor(id_mensaje, suscriptor);
+				}
 			}else{
-				log_info(logBrokerInterno,"No se pudo enviar el GET_POKEMON %s [%d] al socket %d", get_pokemon->nombre_pokemon, get_pokemon->id_mensaje,suscriptor->socket_suscriptor);
+				// 4. Envío de un mensaje a un suscriptor específico.
+				log_warning(logBroker, "NO se envió el Mensaje.");
+				log_warning(logBrokerInterno, "NO se envió el Mensaje.");
 			}
 		}
 	}
@@ -1187,24 +1210,30 @@ void atenderMensajeLocalizedPokemon(int socket_cliente){
 
 	cachearLocalizedPokemon(localized_pokemon);
 
-	/*Acá habría que enviar sólo si NO es Game Boy, vamos a consultar porque también
-	hay un log del Game Boy como que recibe mensaje, en este caso si se lo enviamos también*/
 	int tam_lista_suscriptores = list_size(cola_localized->suscriptores);
 	
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_localized->suscriptores, j);
+		
 		int error_code;
 		int error_code_size = sizeof(error_code);
 		getsockopt(suscriptor->socket_suscriptor, SOL_SOCKET, SO_ERROR, &error_code, &error_code_size);
 		log_debug(logBrokerInterno,"El CÓDIGO DE ERROR DEL SOCKET es %d",error_code);
+		
 		if(error_code == 0){
 			int enviado = enviarLocalizedPokemon(suscriptor->socket_suscriptor, *localized_pokemon,P_BROKER,0);
+		
 			if(enviado > 0){
-				log_info(logBrokerInterno, "Se reenvió LOCALIZED_POKEMON %s %d %s [%d] al socket %d", localized_pokemon->nombre_pokemon,localized_pokemon->cant_pos,localized_pokemon->posiciones,localized_pokemon->id_mensaje_correlativo,suscriptor->socket_suscriptor);
 				uint32_t ack = recibirACK(suscriptor->socket_suscriptor);
-				log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
+				if(ack == 1){
+					log_info(logBrokerInterno, "Se reenvió LOCALIZED_POKEMON %s %d %s [%d] al socket %d", localized_pokemon->nombre_pokemon,localized_pokemon->cant_pos,localized_pokemon->posiciones,localized_pokemon->id_mensaje_correlativo,suscriptor->socket_suscriptor);log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
+					log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
+					agregarSuscriptor(id_mensaje, suscriptor);
+				}
 			}else{
-				log_info(logBrokerInterno,"No se pudo enviar el LOCALIZED_POKEMON %s %d %s [%d] al socket %d", localized_pokemon->nombre_pokemon,localized_pokemon->cant_pos,localized_pokemon->posiciones,localized_pokemon->id_mensaje_correlativo,suscriptor->socket_suscriptor);
+				// 4. Envío de un mensaje a un suscriptor específico.
+				log_warning(logBroker, "NO se envió el Mensaje.");
+				log_warning(logBrokerInterno, "NO se envió el Mensaje.");
 			}
 
 		}
