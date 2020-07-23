@@ -863,18 +863,19 @@ void dump_cache(){
 	FILE* archivo_dump;
 	archivo_dump = fopen("archivo_dump.txt", "w+");
 
-	fprintf(archivo_dump, "-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n");
+	fprintf(archivo_dump, "---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n");
 	fprintf(archivo_dump, "Dump: %s\n", fecha_y_hora);
 
 	for (int i = 0; i < tam_lista ; i++){
-		log_info(logBrokerInterno, "Estoy en el Dump");
-
+		
 		particion_buscada = list_get(particiones, i);
+
+		char* cola = colaParaLogs(particion_buscada->tipo_mensaje);
 
 		switch(config_broker->algoritmo_memoria){
 			case PD:{
 				if(particion_buscada->libre == 0){
-					fprintf(archivo_dump, "Partición %d: %p - %p.		[X]		Size: %db		LRU: %ld.%06ld		Cola:%d		ID:%d\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), particion_buscada->tamanio, particion_buscada->time_ultima_ref.tv_sec, particion_buscada->time_ultima_ref.tv_usec, particion_buscada->tipo_mensaje, particion_buscada->id);
+					fprintf(archivo_dump, "Partición %d: %p - %p.		[X]		Size: %db		LRU: %ld.%06ld		Cola: %S				ID: %d\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), particion_buscada->tamanio, particion_buscada->time_ultima_ref.tv_sec, particion_buscada->time_ultima_ref.tv_usec, cola, particion_buscada->id);
 				}else{
 					fprintf(archivo_dump, "Partición %d: %p - %p.		[L]		Size: %db\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), particion_buscada->tamanio);
 				}
@@ -882,7 +883,7 @@ void dump_cache(){
 			}
 			case BUDDY:{
 				if(particion_buscada->libre == 0){
-					fprintf(archivo_dump, "Partición %d: %p - %p.		[X]		Size: %db		LRU: %ld.%06ld		Cola:%d		ID:%d\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), (int)pow(2, particion_buscada->buddy_i), particion_buscada->time_ultima_ref.tv_sec, particion_buscada->time_ultima_ref.tv_usec, particion_buscada->tipo_mensaje, particion_buscada->id);
+					fprintf(archivo_dump, "Partición %d: %p - %p.		[X]		Size: %db		LRU: %ld.%06ld		Cola: %s				ID: %d\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), (int)pow(2, particion_buscada->buddy_i), particion_buscada->time_ultima_ref.tv_sec, particion_buscada->time_ultima_ref.tv_usec, cola, particion_buscada->id);
 				}else{
 					fprintf(archivo_dump, "Partición %d: %p - %p.		[L]		Size: %db\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), (int)pow(2, particion_buscada->buddy_i));
 				}
@@ -892,7 +893,7 @@ void dump_cache(){
 		
 	}
 
-	fprintf(archivo_dump, "-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n");
+	fprintf(archivo_dump, "---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n");
 
 	fclose(archivo_dump);
 }
