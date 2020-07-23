@@ -334,8 +334,8 @@ void buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint3
 		list_clean(part_libre->susc_enviados);
 
 		list_replace(particiones,indice,part_libre);
-		log_info(logBrokerInterno, "ID_MENSAJE %d, asigno partición base %d y i %d",id, part_libre->base,part_libre->buddy_i);
-	
+		log_debug(logBrokerInterno, "ID_MENSAJE %d, asigno partición base %d y i %d",id, part_libre->base,part_libre->buddy_i);
+			
 		char* cola = colaParaLogs(part_libre->tipo_mensaje);
 
 		// 6. Almacenado de un mensaje dentro de la memoria (indicando posición de inicio de su partición).
@@ -684,7 +684,10 @@ void cachearLocalizedPokemon(t_localized_pokemon* msg){
 			offset += sizeof(uint32_t);
 			memcpy(stream + offset, &(pos_y), sizeof(uint32_t));
 			offset += sizeof(uint32_t);
+
+			free_split(pos_pair);
 		}
+		free_split(pos_list);
 	}
 
 	buscarParticionYAlocar(largo_stream,stream,LOCALIZED_POKEMON,msg->id_mensaje_correlativo);
@@ -972,7 +975,7 @@ void atenderMensajeNewPokemon(int socket_cliente){
 	log_info(logBroker, "Llegó un Mensaje NEW_POKEMON %s %d %d %d.",new_pokemon->nombre_pokemon,new_pokemon->pos_x,new_pokemon->pos_y,new_pokemon->cantidad);
 	log_info(logBrokerInterno, "Llegó un Mensaje NEW_POKEMON %s %d %d %d.",new_pokemon->nombre_pokemon,new_pokemon->pos_x,new_pokemon->pos_y,new_pokemon->cantidad);
 
-	uint32_t id_mensaje;
+	uint32_t id_mensaje = 0;
 
 	encolarNewPokemon(new_pokemon);
 
@@ -1025,7 +1028,7 @@ void atenderMensajeAppearedPokemon(int socket_cliente){
 		log_info(logBrokerInterno, "Llegó un Mensaje APPEARED_POKEMON %s %d %d.",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y);
 	}
 
-	uint32_t id_mensaje;
+	uint32_t id_mensaje = 0;
 
 	encolarAppearedPokemon(appeared_pokemon);
 
@@ -1070,7 +1073,7 @@ void atenderMensajeCatchPokemon(int socket_cliente){
 	log_info(logBroker, "Llegó un Mensaje CATCH_POKEMON %s %d %d.",catch_pokemon->nombre_pokemon,catch_pokemon->pos_x,catch_pokemon->pos_y);
 	log_info(logBrokerInterno, "Llegó un Mensaje CATCH_POKEMON %s %d %d.",catch_pokemon->nombre_pokemon,catch_pokemon->pos_x,catch_pokemon->pos_y);
 
-	uint32_t id_mensaje;
+	uint32_t id_mensaje = 0;
 
 	encolarCatchPokemon(catch_pokemon);
 
@@ -1165,7 +1168,7 @@ void atenderMensajeGetPokemon(int socket_cliente){
 	// 3. Llegada de un nuevo mensaje a una cola de mensajes.
 	log_info(logBroker, "Llegó un Mensaje GET_POKEMON %s.",get_pokemon->nombre_pokemon);
 	log_info(logBrokerInterno, "Llegó un Mensaje GET_POKEMON %s.",get_pokemon->nombre_pokemon);
-	uint32_t id_mensaje;
+	uint32_t id_mensaje = 0;
 
 	encolarGetPokemon(get_pokemon);
 
@@ -1210,7 +1213,7 @@ void atenderMensajeLocalizedPokemon(int socket_cliente){
 	log_info(logBroker, "Llegó un Mensaje LOCALIZED_POKEMON %s %d %s [%d]\n",localized_pokemon->nombre_pokemon,localized_pokemon->cant_pos,localized_pokemon->posiciones,localized_pokemon->id_mensaje_correlativo);
 	log_info(logBrokerInterno, "Llegó un Mensaje LOCALIZED_POKEMON %s %d %s [%d]\n",localized_pokemon->nombre_pokemon,localized_pokemon->cant_pos,localized_pokemon->posiciones,localized_pokemon->id_mensaje_correlativo);
 
-	uint32_t id_mensaje;
+	uint32_t id_mensaje = 0;
 
 	encolarLocalizedPokemon(localized_pokemon);
 
@@ -1798,6 +1801,7 @@ void enviarAppearedPokemonCacheados(int socket, t_suscribe* suscriptor){
 						}
 					}
 				}
+				free(descacheado.nombre_pokemon);
 				free(stream);
 			}
 		}
@@ -1883,8 +1887,6 @@ void enviarCatchPokemonCacheados(int socket, t_suscribe* suscriptor){
 				free(descacheado.nombre_pokemon);
 				free(stream);
 			}
-			free(descacheado.nombre_pokemon);
-			free(stream);
 		}
 	}
 }
@@ -2043,9 +2045,7 @@ void enviarGetPokemonCacheados(int socket, t_suscribe* suscriptor){
 				free(descacheado);
 				free(stream);
 			}
-			free(descacheado->nombre_pokemon);
-			free(descacheado);
-			free(stream);
+			
 		}
 	}
 }
@@ -2094,11 +2094,14 @@ void enviarLocalizedPokemonCacheados(int socket, t_suscribe* suscriptor){
 				}
 				// 4. Envío de un mensaje a un suscriptor específico.
 				if (enviado>0){			
-				log_info(logBroker, "Se envió el Mensaje: %s %s %d %s con ID de Mensaje Correlativo %d.", cola, descacheado.nombre_pokemon, descacheado.cant_pos, descacheado.posiciones, descacheado.id_mensaje_correlativo);
-				log_info(logBrokerInterno, "Se envió el Mensaje: %s %s %d %s con ID de Mensaje Correlativo %d.", cola, descacheado.nombre_pokemon, descacheado.cant_pos, descacheado.posiciones, descacheado.id_mensaje_correlativo);
+					log_info(logBroker, "Se envió el Mensaje: %s %s %d %s con ID de Mensaje Correlativo %d.", cola, descacheado.nombre_pokemon, descacheado.cant_pos, descacheado.posiciones, descacheado.id_mensaje_correlativo);
+					log_info(logBrokerInterno, "Se envió el Mensaje: %s %s %d %s con ID de Mensaje Correlativo %d.", cola, descacheado.nombre_pokemon, descacheado.cant_pos, descacheado.posiciones, descacheado.id_mensaje_correlativo);
 
-				log_info(logBrokerInterno, "Descacheado id correlativo %d", descacheado.id_mensaje_correlativo);
-				} else log_info(logBrokerInterno, "No se pudo enviar el Mensaje: %s %s %d %s con ID de Mensaje Correlativo %d.", cola, descacheado.nombre_pokemon, descacheado.cant_pos, descacheado.posiciones, descacheado.id_mensaje_correlativo);	
+					log_info(logBrokerInterno, "Descacheado id correlativo %d", descacheado.id_mensaje_correlativo);
+				} else 
+					log_info(logBrokerInterno, "No se pudo enviar el Mensaje: %s %s %d %s con ID de Mensaje Correlativo %d.", cola, descacheado.nombre_pokemon, descacheado.cant_pos, descacheado.posiciones, descacheado.id_mensaje_correlativo);	
+				
+				free(stream);
 			}
 		}
 	}
@@ -2173,7 +2176,10 @@ void confirmacionDeRecepcionGameBoy(int ack, t_suscribe* suscribe_gameboy, uint3
 		}
 	}
 }
-
+void destruir_particion(void* elem){
+	t_particion* part = elem;
+	list_destroy_and_destroy_elements(part->susc_enviados,free);
+}
 int main(void){
 	logBroker = log_create("broker.log", "Broker", 0, LOG_LEVEL_TRACE);
 	logBrokerInterno = log_create("brokerInterno.log", "Broker Interno", 1, LOG_LEVEL_TRACE);
@@ -2212,6 +2218,6 @@ int main(void){
 
 	log_destroy(logBrokerInterno);
 	log_destroy(logBroker);
-	list_destroy_and_destroy_elements(particiones,free);
+	list_destroy_and_destroy_elements(particiones,destruir_particion);
 	return 0;
 } 

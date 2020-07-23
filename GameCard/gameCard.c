@@ -504,7 +504,10 @@ void atender_getPokemon(t_get_pokemon* get_pokemon){
 		sleep(config_gamecard->tiempo_retardo_operacion);
 		// 5) Cerrar el archivo.
 		config_set_value(data_config,"OPEN","N");
+		sem_wait(&mx_file_metadata);
 		config_save(data_config);
+		sem_post(&mx_file_metadata);
+
 		config_destroy(data_config);
 		free(buffer);
 	}else{
@@ -602,7 +605,9 @@ void atender_catchPokemon(t_catch_pokemon* catch_pokemon){
 		sleep(config_gamecard->tiempo_retardo_operacion);
 		// 5) Cerrar el archivo.
 		config_set_value(data_config,"OPEN","N");
+		sem_wait(&mx_file_metadata);
 		config_save(data_config);
+		sem_post(&mx_file_metadata);
 		config_destroy(data_config);
 		free(buffer);
 	}else{
