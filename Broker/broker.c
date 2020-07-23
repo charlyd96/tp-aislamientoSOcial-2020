@@ -331,10 +331,11 @@ void buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint3
 		gettimeofday(&current_time, NULL);
 		part_libre->time_creacion = current_time; //Hora actual del sistema
 		part_libre->time_ultima_ref = current_time; //Hora actual del sistema
+		part_libre->tamanio = (uint32_t)pow(2,part_libre->buddy_i);
 		list_clean(part_libre->susc_enviados);
 
 		list_replace(particiones,indice,part_libre);
-		log_debug(logBrokerInterno, "ID_MENSAJE %d, asigno partición base %d y i %d",id, part_libre->base,part_libre->buddy_i);
+		log_debug(logBrokerInterno, "ID_MENSAJE %d, asigno partición base %d, i %d, tamanio %d",id, part_libre->base,part_libre->buddy_i,part_libre->tamanio);
 			
 		char* cola = colaParaLogs(part_libre->tipo_mensaje);
 
