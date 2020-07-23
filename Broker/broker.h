@@ -133,6 +133,7 @@ typedef struct {
 	uint32_t buddy_i; //para Buddy System
 	struct timeval time_creacion;
 	struct timeval time_ultima_ref;
+	sem_t sem_particion;
 } t_particion;
 
 /* VARIABLES GLOBALES */
