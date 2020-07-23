@@ -360,6 +360,7 @@ void liberarParticion(int indice_victima){
 		if(part_der->libre == true){
 			//Fusionar
 			part_liberar->tamanio = part_liberar->tamanio + part_der->tamanio;
+			list_clean(part_liberar->susc_enviados);
 			list_remove(particiones,indice_victima + 1);
 			log_info(logBrokerInterno,"Se consolida con particion indice %d",indice_victima+1);
 		}
@@ -371,6 +372,7 @@ void liberarParticion(int indice_victima){
 			//Fusionar
 			part_liberar->base = part_izq->base;
 			part_liberar->tamanio = part_liberar->tamanio + part_izq->tamanio;
+			list_clean(part_liberar->susc_enviados);
 			list_remove(particiones,indice_victima -1);
 			log_info(logBrokerInterno,"Se consolida con particion indice %d",indice_victima-1);
 		}
@@ -417,6 +419,7 @@ void eliminarParticionBuddy(){
 			if(part_der->libre == true && part_der->buddy_i == i_aux){
 				//Fusionar
 				part_liberar->buddy_i = part_liberar->buddy_i + 1;
+				list_clean(part_liberar->susc_enviados);
 				list_remove(particiones,indice_victima + 1);
 				// 8. Asociación de bloques (para buddy system), indicar que particiones se asociaron (indicar posición inicio de ambas particiones).
 				log_info(logBroker, "Asociación de Particiones: Partición %d con Partición %d.", part_liberar->base, part_der->base);
@@ -432,6 +435,7 @@ void eliminarParticionBuddy(){
 				//Fusionar
 				part_liberar->base = part_izq->base;
 				part_liberar->buddy_i = part_liberar->buddy_i + 1;
+				list_clean(part_liberar->susc_enviados);
 				list_remove(particiones,indice_victima -1);
 				// 8. Asociación de bloques (para buddy system), indicar que particiones se asociaron (indicar posición inicio de ambas particiones).
 				log_info(logBroker, "Asociación de Particiones: Partición %d con Partición %d.", part_liberar->base, part_izq->base);
