@@ -320,7 +320,7 @@ void buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint3
 		char* cola = colaParaLogs(part_nueva->tipo_mensaje);
 
 		// 6. Almacenado de un mensaje dentro de la memoria (indicando posición de inicio de su partición).
-		log_info(logBroker, "Se almacena el Mensaje %s en la Partición con posición de inicio %d (%p).", cola, part_nueva->base, part_nueva->base);
+		log_info(logBroker, "Se almacena el Mensaje %s en la Partición con posición de inicio %d (%p).", cola, part_nueva->base, cache + part_nueva->base);
 		//log_info(logBrokerInterno, "Se almacena el Mensaje %s en la Partición con posición de inicio %d (%p).", cola, part_nueva->base, part_nueva->base);
 
 		log_info(logBrokerInterno, "ID_MENSAJE %d, asigno partición base %d y tamanio %d",id, part_nueva->base,part_nueva->tamanio);
@@ -343,7 +343,7 @@ void buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint3
 		char* cola = colaParaLogs(part_libre->tipo_mensaje);
 
 		// 6. Almacenado de un mensaje dentro de la memoria (indicando posición de inicio de su partición).
-		log_info(logBroker, "Se almacena el Mensaje %s en la Partición con posición de inicio %d (%p).", cola, part_libre->base, part_libre->base);
+		log_info(logBroker, "Se almacena el Mensaje %s en la Partición con posición de inicio %d (%p).", cola, part_libre->base, cache + part_libre->base);
 		//log_info(logBrokerInterno, "Se almacena el Mensaje %s en la Partición con posición de inicio %d (%p).", cola, part_libre->base, part_libre->base);
 	}
 	//-> DESMUTEAR LISTA DE PARTICIONES
@@ -358,8 +358,8 @@ void liberarParticion(int indice_victima){
 	list_replace(particiones, indice_victima, part_liberar);
 
 	// 7. Eliminado de una partición de memoria (indicado la posición de inicio de la misma).
-	log_info(logBroker, "Se elimina la Partición con posición de inicio %d (%p).", part_liberar->base, part_liberar->base);
-	log_info(logBroker, "Se elimina la Partición con posición de inicio %d (%p).", part_liberar->base, part_liberar->base);
+	log_info(logBroker, "Se elimina la Partición con posición de inicio %d (%p).", part_liberar->base, cache+part_liberar->base);
+	log_info(logBrokerInterno, "Se elimina la Partición con posición de inicio %d (%p).", part_liberar->base, cache+part_liberar->base);
 	//Consolidar
 
 	//Si no es la última partición
@@ -414,8 +414,8 @@ void eliminarParticionBuddy(){
 	list_replace(particiones, indice_victima, part_liberar);
 
 	// 7. Eliminado de una partición de memoria (indicado la posición de inicio de la misma).
-	log_info(logBroker, "Se elimina la Partición con posición de inicio %d (%p).", part_liberar->base, part_liberar->base);
-	log_info(logBroker, "Se elimina la Partición con posición de inicio %d (%p).", part_liberar->base, part_liberar->base);
+	log_info(logBroker, "Se elimina la Partición con posición de inicio %d (%p).", part_liberar->base, cache+part_liberar->base);
+	log_info(logBrokerInterno, "Se elimina la Partición con posición de inicio %d (%p).", part_liberar->base, cache+part_liberar->base);
 
 	//Consolidar buddys
 	bool huboConsolidacion;
@@ -427,12 +427,12 @@ void eliminarParticionBuddy(){
 			t_particion* part_der = list_get(particiones,indice_victima+1);
 			if(part_der->libre == true && part_der->buddy_i == i_aux){
 				//Fusionar
+				// 8. Asociación de bloques (para buddy system), indicar que particiones se asociaron (indicar posición inicio de ambas particiones).
+				log_info(logBroker, "Asociación de Particiones: Partición %d con Partición %d.", part_liberar->base, part_der->base);
+				log_info(logBrokerInterno,"Se consolida a derecha con particion buddy indice %d, i %d",indice_victima+1,i_aux);
 				part_liberar->buddy_i = part_liberar->buddy_i + 1;
 				list_clean(part_der->susc_enviados);
 				list_remove(particiones,indice_victima + 1);
-				// 8. Asociación de bloques (para buddy system), indicar que particiones se asociaron (indicar posición inicio de ambas particiones).
-				log_info(logBroker, "Asociación de Particiones: Partición %d con Partición %d.", part_liberar->base, part_der->base);
-				log_info(logBrokerInterno,"Se consolida con particion buddy indice %d, i %d",indice_victima+1,i_aux);
 				huboConsolidacion = true;
 				i_aux++;
 			}
@@ -442,13 +442,13 @@ void eliminarParticionBuddy(){
 			t_particion* part_izq = list_get(particiones,indice_victima-1);
 			if(part_izq->libre == true && part_izq->buddy_i == i_aux){
 				//Fusionar
+				// 8. Asociación de bloques (para buddy system), indicar que particiones se asociaron (indicar posición inicio de ambas particiones).
+				log_info(logBroker, "Asociación de Particiones: Partición %d con Partición %d.", part_liberar->base, part_izq->base);
+				log_info(logBrokerInterno,"Se consolida a izquierda con particion indice %d",indice_victima-1);
 				part_liberar->base = part_izq->base;
 				part_liberar->buddy_i = part_liberar->buddy_i + 1;
 				list_clean(part_izq->susc_enviados);
 				list_remove(particiones,indice_victima -1);
-				// 8. Asociación de bloques (para buddy system), indicar que particiones se asociaron (indicar posición inicio de ambas particiones).
-				log_info(logBroker, "Asociación de Particiones: Partición %d con Partición %d.", part_liberar->base, part_izq->base);
-				log_info(logBrokerInterno,"Se consolida con particion indice %d",indice_victima-1);
 				huboConsolidacion = true;
 				indice_victima = indice_victima -1;
 				i_aux++;
@@ -546,7 +546,8 @@ void compactarParticiones(){
 	espacio_libre->base    = offset;
 	espacio_libre->tamanio = config_broker->tam_memoria - offset;
 	list_add(particiones,espacio_libre);
-
+	//Libero solo el puntero a la lista auxiliar, no sus elementos porque se los pasé a particiones
+	free(lista_aux);
 	// free(espacio_libre);
 }
 
