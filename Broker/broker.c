@@ -1029,25 +1029,20 @@ void atenderMensajeNewPokemon(int socket_cliente){
 	
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_new->suscriptores, j);
-		
-
-		
-
-			int enviado = enviarNewPokemon(suscriptor->socket_suscriptor, *new_pokemon,P_BROKER,0);
+		int enviado = enviarNewPokemon(suscriptor->socket_suscriptor, *new_pokemon,P_BROKER,0);
 			
-			if(enviado > 0){
-				uint32_t ack = recibirACK(suscriptor->socket_suscriptor);
-				if(ack == 1){
-					log_info(logBrokerInterno, "Se reenvió NEW_POKEMON %s %d %d %d [%d] al socket %d", new_pokemon->nombre_pokemon, new_pokemon->pos_x, new_pokemon->pos_y, new_pokemon->cantidad, new_pokemon->id_mensaje,suscriptor->socket_suscriptor);
-					log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
-					agregarSuscriptor(id_mensaje, suscriptor);
-				}
-			}else{
-				// 4. Envío de un mensaje a un suscriptor específico.
-				log_warning(logBroker, "NO se envió el Mensaje.");
-				log_warning(logBrokerInterno, "NO se envió el Mensaje.");
+		if(enviado > 0){
+			uint32_t ack = recibirACK(suscriptor->socket_suscriptor);
+			if(ack == 1){
+				log_info(logBrokerInterno, "Se reenvió NEW_POKEMON %s %d %d %d [%d] al socket %d", new_pokemon->nombre_pokemon, new_pokemon->pos_x, new_pokemon->pos_y, new_pokemon->cantidad, new_pokemon->id_mensaje,suscriptor->socket_suscriptor);
+				log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
+				agregarSuscriptor(id_mensaje, suscriptor);
 			}
-		
+		}else{
+			// 4. Envío de un mensaje a un suscriptor específico.	
+			log_warning(logBroker, "NO se envió el Mensaje con ID de Mensaje %d.", new_pokemon->id_mensaje);
+			log_warning(logBrokerInterno, "NO se envió el Mensaje con ID de Mensaje %d.", new_pokemon->id_mensaje);
+		}
 	}
 }
 
@@ -1122,23 +1117,20 @@ void atenderMensajeAppearedPokemon(int socket_cliente){
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_appeared->suscriptores, j);
 
-	
-	
-			int enviado = enviarAppearedPokemon(suscriptor->socket_suscriptor, *appeared_pokemon,P_BROKER,0);
+		int enviado = enviarAppearedPokemon(suscriptor->socket_suscriptor, *appeared_pokemon,P_BROKER,0);
 
-			if(enviado > 0){
-				uint32_t ack = recibirACK(suscriptor->socket_suscriptor);
-				if(ack == 1){
-					log_info(logBrokerInterno, "Se reenvió APPEARED_POKEMON %s %d %d [%d] al socket %d", appeared_pokemon->nombre_pokemon, appeared_pokemon->pos_x, appeared_pokemon->pos_y, appeared_pokemon->id_mensaje_correlativo,suscriptor->socket_suscriptor);
-					log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
-					agregarSuscriptor(id_mensaje, suscriptor);
-				}
-			}else{
-				// 4. Envío de un mensaje a un suscriptor específico.
-				log_warning(logBroker, "NO se envió el Mensaje.");
-				log_warning(logBrokerInterno, "NO se envió el Mensaje.");
+		if(enviado > 0){
+			uint32_t ack = recibirACK(suscriptor->socket_suscriptor);
+			if(ack == 1){
+				log_info(logBrokerInterno, "Se reenvió APPEARED_POKEMON %s %d %d [%d] al socket %d", appeared_pokemon->nombre_pokemon, appeared_pokemon->pos_x, appeared_pokemon->pos_y, appeared_pokemon->id_mensaje_correlativo,suscriptor->socket_suscriptor);
+				log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
+				agregarSuscriptor(id_mensaje, suscriptor);
 			}
-		
+		}else{
+			// 4. Envío de un mensaje a un suscriptor específico.
+			log_warning(logBroker, "NO se envió el Mensaje con ID de Mensaje Correlativo %d.", appeared_pokemon->id_mensaje_correlativo);
+			log_warning(logBrokerInterno, "NO se envió el Mensaje con ID de Mensaje Correlativo %d.", appeared_pokemon->id_mensaje_correlativo);
+		}	
 	}
 }
 
@@ -1213,10 +1205,9 @@ void atenderMensajeCatchPokemon(int socket_cliente){
 				}
 			}else{
 				// 4. Envío de un mensaje a un suscriptor específico.
-				log_warning(logBroker, "NO se envió el Mensaje.");
-				log_warning(logBrokerInterno, "NO se envió el Mensaje.");
+				log_warning(logBroker, "NO se envió el Mensaje con ID de Mensaje %d.", catch_pokemon->id_mensaje);
+				log_warning(logBrokerInterno, "NO se envió el Mensaje con ID de Mensaje %d.", catch_pokemon->id_mensaje);
 			}
-		
 	}
 }
 
@@ -1286,8 +1277,8 @@ void atenderMensajeCaughtPokemon(int socket_cliente){
 				}
 			}else{
 				// 4. Envío de un mensaje a un suscriptor específico.
-				log_warning(logBroker, "NO se envió el Mensaje.");
-				log_warning(logBrokerInterno, "NO se envió el Mensaje.");
+				log_warning(logBroker, "NO se envió el Mensaje con ID de Mensaje Correlativo %d.", caught_pokemon->id_mensaje_correlativo);
+				log_warning(logBrokerInterno, "NO se envió el Mensaje con ID de Mensaje Correlativo %d.", caught_pokemon->id_mensaje_correlativo);
 			}
 		
 	}
@@ -1360,8 +1351,8 @@ void atenderMensajeGetPokemon(int socket_cliente){
 				}
 			}else{
 				// 4. Envío de un mensaje a un suscriptor específico.
-				log_warning(logBroker, "NO se envió el Mensaje.");
-				log_warning(logBrokerInterno, "NO se envió el Mensaje.");
+				log_warning(logBroker, "NO se envió el Mensaje con ID de Mensaje %d.", get_pokemon->id_mensaje);
+				log_warning(logBrokerInterno, "NO se envió el Mensaje con ID de Mensaje %d.", get_pokemon->id_mensaje);
 			}
 		
 	}
@@ -1431,8 +1422,8 @@ void atenderMensajeLocalizedPokemon(int socket_cliente){
 				}
 			}else{
 				// 4. Envío de un mensaje a un suscriptor específico.
-				log_warning(logBroker, "NO se envió el Mensaje.");
-				log_warning(logBrokerInterno, "NO se envió el Mensaje.");
+				log_warning(logBroker, "NO se envió el Mensaje con ID de Mensaje Correlativo %d.", localized_pokemon->id_mensaje_correlativo);
+				log_warning(logBrokerInterno, "NO se envió el Mensaje con ID de Mensaje Correlativo %d.", localized_pokemon->id_mensaje_correlativo);
 			}
 
 		
