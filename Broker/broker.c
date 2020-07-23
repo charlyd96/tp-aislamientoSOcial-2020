@@ -299,7 +299,8 @@ void buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint3
 		gettimeofday(&current_time, NULL);
 		part_nueva->time_creacion = current_time; //Hora actual del sistema
 		part_nueva->time_ultima_ref = current_time; //Hora actual del sistema
-		list_clean(part_nueva->susc_enviados);
+		part_nueva->susc_enviados = list_create();
+		// list_clean(part_nueva->susc_enviados);
 
 		part_libre->base = part_libre->base + largo_stream;
 		part_libre->tamanio = part_libre->tamanio - largo_stream;
