@@ -33,6 +33,8 @@ int crearSocketCliente(char* ip, char* puerto){
 		freeaddrinfo(servinfo);
 		return intentar_conexion;
 	}
+	int activado=1;
+	setsockopt (socket_cliente, SOL_SOCKET, SO_REUSEADDR, &activado, sizeof (activado));
 
 	freeaddrinfo(servinfo);
 	log_destroy(logger);
@@ -136,7 +138,7 @@ int enviarACK(int socket_destino){
 	t_log* logger = log_create("conexion.log", "CONEXION", 0, LOG_LEVEL_ERROR);
 
 	uint32_t ack = 1;
-	int ack_enviado = send(socket_destino, &ack, sizeof(uint32_t), 0);
+	int ack_enviado = send(socket_destino, &ack, sizeof(uint32_t),MSG_NOSIGNAL);
 	if(ack_enviado == -1){
 		log_error(logger, "No se pudo enviar el ACK.");
 	}
@@ -172,11 +174,19 @@ int enviarMensaje(int nroSocket,op_code operacion,t_buffer* buffer, process_code
 	int tamanio_a_enviar;
 
 	void* mensajeSerializado = serializarPaquete(paquete, &tamanio_a_enviar);
-	int enviado = send(nroSocket, mensajeSerializado, tamanio_a_enviar, 0);
+	int error_code;
+	int error_code_size = sizeof(error_code);
+	getsockopt(nroSocket, SOL_SOCKET, SO_ERROR, &error_code, &error_code_size);
+	int return_value;
+	if(error_code == 0){
+		return_value = send(nroSocket, mensajeSerializado, tamanio_a_enviar, MSG_NOSIGNAL);
+	}else{
+		return_value = -1;
+	}
 
 	free(mensajeSerializado);
 	eliminarPaquete(paquete);
-	return enviado;
+	return return_value;
 }
 
 int enviarNewPokemon(int socket_cliente, t_new_pokemon mensaje,process_code tipo_proceso, uint32_t id_proceso){
@@ -203,7 +213,7 @@ int enviarSuscripcion(int nro_socket,t_suscribe suscripcion){
 		offset += sizeof(uint32_t);
 	}
 
-	int enviado = send(nro_socket, stream, bytes_enviar, 0);
+	int enviado = send(nro_socket, stream, bytes_enviar, MSG_NOSIGNAL);
 
 	free(stream);
 	return enviado;
@@ -348,23 +358,26 @@ t_localized_pokemon* recibirLocalizedPokemon(int socket_cliente){
 
 	recv(socket_cliente, &cant_pos, sizeof(uint32_t), MSG_WAITALL);
 	bytes_recibidos += sizeof(uint32_t);
-	string_append(&posicionesString,"[");
-	//Por cada cant_pos, recibir un par de enteros (armo el formato "[1|2,2|2]")
-	for(uint32_t i = 1; i<=cant_pos; i++){
-		recv(socket_cliente, &pos_x, sizeof(uint32_t), MSG_WAITALL);
-		bytes_recibidos += sizeof(uint32_t);
+	if(cant_pos > 0){
+		string_append(&posicionesString,"[");
+		//Por cada cant_pos, recibir un par de enteros (armo el formato "[1|2,2|2]")
+		for(uint32_t i = 1; i<=cant_pos; i++){
+			recv(socket_cliente, &pos_x, sizeof(uint32_t), MSG_WAITALL);
+			bytes_recibidos += sizeof(uint32_t);
 
-		string_append(&posicionesString,string_itoa(pos_x));
-		string_append(&posicionesString,"|");
+			string_append(&posicionesString,string_itoa(pos_x));
+			string_append(&posicionesString,"|");
 
-		recv(socket_cliente, &pos_y, sizeof(uint32_t), MSG_WAITALL);
-		bytes_recibidos += sizeof(uint32_t);
+			recv(socket_cliente, &pos_y, sizeof(uint32_t), MSG_WAITALL);
+			bytes_recibidos += sizeof(uint32_t);
 
-		string_append(&posicionesString,string_itoa(pos_y));
+			string_append(&posicionesString,string_itoa(pos_y));
 
-		if(i < cant_pos) string_append(&posicionesString,",");
+			if(i < cant_pos) string_append(&posicionesString,",");
+		}
+		string_append(&posicionesString,"]");
+
 	}
-	strcat(posicionesString,"]");
 	//Si me queda buffer por recibir, es el id_mensaje_correlativo
 	if(size_buffer > bytes_recibidos){
 		recv(socket_cliente, &id_mensaje_correlativo, sizeof(uint32_t), MSG_WAITALL);

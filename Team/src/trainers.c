@@ -14,8 +14,8 @@
 //    ***** Función que recibe un pokemon existente en el mapa y planifica al entrenador más cercano *****
 //        ***** Es un subrutina invocada por un hilo creado en la función Trainer_handler_create ****
 // ============================================================================================================
-
-void* trainer_to_catch()
+ 
+void trainer_to_catch(void)
 {
     int index=0;
     int target=-1;
@@ -82,7 +82,6 @@ void* trainer_to_catch()
                 trainer->actual_objective.name = actual_pokemon->name; 
                 trainer->actual_status= READY;
                 trainer->actual_operation= OP_EXECUTING_CATCH; 
-                trainer->ejecucion=PENDING;       
                 printf ("El entrenador %d se planificó para atrapar un %s ubicado en (%d,%d)\n", trainer->index,trainer->actual_objective.name,actual_pokemon->posx,actual_pokemon->posy);
                 send_trainer_to_ready (trainers, index, OP_EXECUTING_CATCH); 
                 index=-1;
@@ -335,9 +334,8 @@ void desbloquear_planificacion(void)
 }
 
 
-void* trainer_routine (void *train)
+void trainer_routine (Trainer *trainer)
 {
-    Trainer *trainer=train;
     trainer->ejecucion=EXECUTING; //Esto es para que SJF-CD valgrind no arroje que se está haciendo una comparación con un valor no inicializado
     sem_wait(&(trainer)->trainer_sem); //Bloqueo post-inicilización
    
@@ -347,7 +345,7 @@ void* trainer_routine (void *train)
 		{
 			case OP_EXECUTING_CATCH:
 			{
-				move_trainer_to_objective (train, OP_EXECUTING_CATCH); //Entre paréntesis debería ir "trainer". No sé por qué funciona así
+				move_trainer_to_objective (trainer, OP_EXECUTING_CATCH); //Entre paréntesis debería ir "trainer". No sé por qué funciona así
                 consumir_cpu(trainer);
 				int result= send_catch (trainer);
                 
@@ -395,12 +393,11 @@ void* trainer_routine (void *train)
 				break;
 			}
 
-
             case OP_EXECUTING_DEADLOCK:
             {
                 move_trainer_to_objective (trainer, OP_EXECUTING_DEADLOCK);
                 intercambiar(trainer, list_get(deadlock_list, trainer->objetivo.index_objective));
-                list_remove (deadlock_list,0);
+                list_remove (deadlock_list,0); //Cambiar
                 if (detectar_deadlock(trainer))
                 {
                     trainer->actual_status = BLOCKED_DEADLOCK;
@@ -722,7 +719,7 @@ int deadlock_recovery (void)
 }
 
 
-int intercambiar(Trainer *trainer1, Trainer *trainer2)
+void intercambiar(Trainer *trainer1, Trainer *trainer2)
 {
 
      void imprimir (void *element)
@@ -766,11 +763,6 @@ int intercambiar(Trainer *trainer1, Trainer *trainer2)
 bool detectar_deadlock (Trainer *trainer)
 {
     //Agregar: if trainer==NULL--> terminar (no hubo deadlocks)
-    if (trainer->index == 3)
-    {
-        log_error (internalLogTeam, "Comparar listas: %d \t list_size(objetivos): %d", comparar_listas(trainer->bag,trainer->personal_objective), list_size (trainer->personal_objective));
-
-    }
  if (list_size (trainer->bag) >= list_size (trainer->personal_objective)  && !comparar_listas(trainer->bag,trainer->personal_objective))
  return true; 
  else return false;
@@ -823,25 +815,25 @@ void move_trainer_to_objective (Trainer *trainer, Operation op)
         if ( calculate_distance (*Tx+1, *Ty, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
         consumir_cpu(trainer);
         *Tx=*Tx+1;
-        //log_info (logTeam , "El entrenador %d se movió  hacia la derecha. Posición: (%d,%d)", trainer->index, *Tx, *Ty);
+        log_info (logTeam , "El entrenador %d se movió  hacia la derecha. Posición: (%d,%d)", trainer->index, *Tx, *Ty);
         }
 
         if ( calculate_distance (*Tx, *Ty+1, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
         consumir_cpu(trainer);
         *Ty=*Ty+1;
-        //log_info (logTeam , "El entrenador %d se movió  hacia arriba. Posición: (%d,%d)", trainer->index, *Tx, *Ty);
+        log_info (logTeam , "El entrenador %d se movió  hacia arriba. Posición: (%d,%d)", trainer->index, *Tx, *Ty);
         }
 
         if ( calculate_distance (*Tx-1, *Ty, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
         consumir_cpu(trainer);
         *Tx=*Tx-1;
-        //log_info (logTeam , "El entrenador %d se movió  hacia la izquierda. Posición: (%d,%d)", trainer->index, *Tx, *Ty);
+        log_info (logTeam , "El entrenador %d se movió  hacia la izquierda. Posición: (%d,%d)", trainer->index, *Tx, *Ty);
         }
 
         if ( calculate_distance (*Tx, *Ty-1, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
         consumir_cpu(trainer);
         *Ty=*Ty-1;
-        //log_info (logTeam , "El entrenador %d se movió  hacia abajo. Posición: (%d,%d)", trainer->index, *Tx, *Ty);
+        log_info (logTeam , "El entrenador %d se movió  hacia abajo. Posición: (%d,%d)", trainer->index, *Tx, *Ty);
         }
     }
 }
