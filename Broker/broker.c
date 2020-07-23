@@ -987,8 +987,9 @@ void atenderMensajeNewPokemon(int socket_cliente){
 		}
 		case P_GAMECARD:{
 			// 1. Conexión de un proceso al broker.
-			log_info(logBroker, "Se conectó el Game Card %d.", id_proceso);
-			log_info(logBrokerInterno, "Se conectó el Game Card %d.", id_proceso);
+			log_info(logBroker, "NO se debe conectar el Game Card para enviar un NEW_POKEMON.");
+			log_info(logBrokerInterno, "NO se debe conectar el Game Card para enviar un NEW_POKEMON.");
+			
 			break;
 		}
 		case P_GAMEBOY:{
@@ -1058,8 +1059,9 @@ void atenderMensajeAppearedPokemon(int socket_cliente){
 	switch(tipo_proceso){
 		case P_TEAM:{
 			// 1. Conexión de un proceso al broker.
-			log_info(logBroker, "Se conectó el Team %d.", id_proceso);
-			log_info(logBrokerInterno, "Se conectó el Team %d.", id_proceso);
+			log_info(logBroker, "NO se debe conectar el Team para enviar un APPEARED_POKEMON.");
+			log_info(logBrokerInterno, "NO se debe conectar el Team para enviar un APPEARED_POKEMON.");
+			
 			break;	
 		}
 		case P_GAMECARD:{
@@ -1163,8 +1165,9 @@ void atenderMensajeCatchPokemon(int socket_cliente){
 		}
 		case P_GAMECARD:{
 			// 1. Conexión de un proceso al broker.
-			log_info(logBroker, "Se conectó el Game Card %d.", id_proceso);
-			log_info(logBrokerInterno, "Se conectó el Game Card %d.", id_proceso);
+			log_info(logBroker, "NO se debe conectar el Game Card para enviar un CATCH_POKEMON.");
+			log_info(logBrokerInterno, "NO se debe conectar el Game Card para enviar un CATCH_POKEMON.");
+			
 			break;
 		}
 		case P_GAMEBOY:{
@@ -1233,8 +1236,8 @@ void atenderMensajeCaughtPokemon(int socket_cliente){
 	switch(tipo_proceso){
 		case P_TEAM:{
 			// 1. Conexión de un proceso al broker.
-			log_info(logBroker, "Se conectó el Team %d.", id_proceso);
-			log_info(logBrokerInterno, "Se conectó el Team %d.", id_proceso);
+			log_info(logBroker, "NO se debe conectar el Team para enviar un CAUGHT_POKEMON.");
+			log_info(logBrokerInterno, "NO se debe conectar el Team para enviar un CAUGHT_POKEMON.");
 		
 			break;	
 		}
@@ -1338,8 +1341,8 @@ void atenderMensajeGetPokemon(int socket_cliente){
 		}
 		case P_GAMECARD:{
 			// 1. Conexión de un proceso al broker.
-			log_info(logBroker, "Se conectó el Game Card %d.", id_proceso);
-			log_info(logBrokerInterno, "Se conectó el Game Card %d.", id_proceso);
+			log_info(logBroker, "NO se debe conectar el Game Card para enviar un GET_POKEMON.");
+			log_info(logBrokerInterno, "NO se debe conectar el Game Card para enviar un GET_POKEMON.");
 			break;
 		}
 		case P_GAMEBOY:{
@@ -1407,8 +1410,8 @@ void atenderMensajeLocalizedPokemon(int socket_cliente){
 	switch(tipo_proceso){
 		case P_TEAM:{
 			// 1. Conexión de un proceso al broker.
-			log_info(logBroker, "Se conectó el Team %d.", id_proceso);
-			log_info(logBrokerInterno, "Se conectó el Team %d.", id_proceso);
+			log_info(logBroker, "NO se debe conectar el Team para enviar un LOCALIZED_POKEMON.");
+			log_info(logBrokerInterno, "NO se debe conectar el Team para enviar un LOCALIZED_POKEMON.");
 			break;	
 		}
 		case P_GAMECARD:{
@@ -1424,8 +1427,8 @@ void atenderMensajeLocalizedPokemon(int socket_cliente){
 		}
 		case P_GAMEBOY:{
 			// 1. Conexión de un proceso al broker.
-			log_info(logBroker, "Se conectó el Game Boy %d.", id_proceso);
-			log_info(logBrokerInterno, "Se conectó el Game Boy %d.", id_proceso);
+			log_info(logBroker, "NO se debe conectar el Game Boy para enviar un LOCALIZED_POKEMON.");
+			log_info(logBrokerInterno, "NO se debe conectar el Game Boy para enviar un LOCALIZED_POKEMON.");
 			break;
 		}
 		default:{
