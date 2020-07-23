@@ -849,7 +849,6 @@ char* fecha_y_hora_actual(){
 	struct tm *tlocal = localtime(&tiempo);
 	char* output = malloc(128);
 	strftime(output,128,"%d/%m/%y %H:%M:%S",tlocal);
-	printf("%s\n",output);
 
 	output[127] = '\0';
 
@@ -944,7 +943,6 @@ void atenderCliente(int socket){
 			break;
 		}
 		case LOCALIZED_POKEMON:{
-			printf("Es localized");
 			atenderMensajeLocalizedPokemon(socket_cliente);
 			break;
 		}
