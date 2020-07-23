@@ -214,7 +214,7 @@ t_buffer* serializarLocalizedPokemon(t_localized_pokemon mensaje){
 			
 			free_split(pos_pair);
 		}
-		free(pos_list);
+		free_split(pos_list);
 	}
 	
 	if(mensaje.id_mensaje_correlativo != 0){

@@ -149,9 +149,9 @@ int enviarACK(int socket_destino){
 int recibirACK(int socket_origen){
 	t_log* logger = log_create("conexion.log", "CONEXION", 0, LOG_LEVEL_ERROR);
 
-	uint32_t ack_recibido;
+	uint32_t ack_recibido = 0;
 	int ack = recv(socket_origen, &ack_recibido, sizeof(uint32_t), 0);
-	if(ack == -1 || ack == 0){
+	if(ack == -1 || ack == 0 || ack_recibido != 1){
 		log_error(logger, "No se pudo recibir el ACK."); //Creo que debería decir "No se pudo recibir el ACK". Firma: Charly :D
 														//Tratar al mensaje como que no fue recibido por el proceso. Reenviar luego de la reconexión.
 		log_destroy(logger);
