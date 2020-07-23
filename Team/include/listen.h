@@ -32,8 +32,15 @@ typedef enum
 } nuevo_pokemon;  
 
 extern t_list *mapped_pokemons;
+
 t_list *ID_caught;
 pthread_mutex_t ID_caught_sem;
+
+t_list *ID_localized;
+pthread_mutex_t ID_localized_sem;
+
+t_list *especies;
+pthread_mutex_t especies_sem;
 
 extern uint32_t ID_proceso;
 
@@ -41,10 +48,6 @@ extern t_log *internalLogTeam;
 extern t_log *logTeam;
 
 extern Config *config;
-
-t_list *ID_localized;
-
-pthread_mutex_t ID_localized_sem;
 
 sem_t terminar_appeared;
 
@@ -87,4 +90,10 @@ int informarIDcaught(uint32_t id, sem_t *trainer_sem);
 void informarIDlocalized(uint32_t id);
 
 void liberar_appeared (t_appeared_pokemon *mensaje);
+
+void agregar_nueva_especie (char *nueva_especie);
+
+bool especie_necesaria (char *nueva_especie);
+
+
 #endif /* INCLUDE_LISTEN_H_ */

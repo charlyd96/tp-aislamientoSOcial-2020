@@ -51,13 +51,18 @@ int main(int argc, char **argv)
     win=true;
     //sleep (2);
 
+    void imprimir (void *elemento)
+    {
+        printf ("Lista pokemones ingresados: %s\n", (char*)elemento);
+    }
+    list_iterate(especies,imprimir);
     //Antes de cerrar conexiones, esperar a que vuelvan todos los hilos
-   /* cerrar_conexiones();
+    cerrar_conexiones();
     destruir_log();
     destruir_listas();
     liberar_entrenadores();
     liberar_configuraciones();
-    sleep (3);*/
+    sleep (3);
     return 0;
 }
 
