@@ -339,7 +339,8 @@ void buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint3
 		part_libre->time_creacion = current_time; //Hora actual del sistema
 		part_libre->time_ultima_ref = current_time; //Hora actual del sistema
 		part_libre->tamanio = (uint32_t)pow(2,part_libre->buddy_i);
-		part_libre->susc_enviados = list_create();
+		// part_libre->susc_enviados = list_create();
+		list_clean(part_libre->susc_enviados);
 
 		list_replace(particiones,indice,part_libre);
 		log_debug(logBrokerInterno, "ID_MENSAJE %d, asigno partición base %d, i %d, tamanio %d",id, part_libre->base,part_libre->buddy_i,part_libre->tamanio);
@@ -2400,6 +2401,7 @@ void confirmacionDeRecepcionGameBoy(int ack, t_suscribe* suscribe_gameboy, uint3
 void destruir_particion(void* elem){
 	t_particion* part = elem;
 	list_destroy_and_destroy_elements(part->susc_enviados,free);
+	free(elem);
 }
 int main(void){
 	logBroker = log_create("broker.log", "Broker", 0, LOG_LEVEL_TRACE);
