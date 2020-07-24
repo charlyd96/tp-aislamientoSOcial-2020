@@ -10,7 +10,7 @@
 
 #include "team.h"
 
-
+bool planificar;
 sem_t trainer_count;
 sem_t trainer_deadlock_count;
 extern sem_t using_cpu;

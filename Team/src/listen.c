@@ -21,7 +21,7 @@ void  listen_routine_gameboy ()
 	{
 		while (1) //Este while en realidad debería llevar como condición, que el proceso Team no haya ganado.
 			{
-			//pthread_t thread;
+			pthread_t thread;
 			socketGameboyCliente = aceptarCliente (socketGameboy);
 			if (win)
 			{
@@ -30,8 +30,8 @@ void  listen_routine_gameboy ()
 			} 
 			printf ("Socket cliente: %d\n", socketGameboyCliente);
 			get_opcode(socketGameboyCliente);
-			//pthread_create (&thread, NULL, (void *) get_opcode, (int*)socket_cliente);
-			//pthread_detach (thread);
+			pthread_create (&thread, NULL, (void *) get_opcode, (int*)socketGameboyCliente);
+			pthread_detach (thread);
 			} 
 	}
 }
@@ -237,7 +237,7 @@ int reintentar_conexion(op_code colaSuscripcion)
 void procesar_appeared(t_appeared_pokemon *mensaje_appeared)
 {
 	nuevo_pokemon operacion = tratar_nuevo_pokemon (mensaje_appeared->nombre_pokemon);
-	printf ("\n\nOperacion: %d\nPokemon:%s\n\n",operacion,mensaje_appeared->nombre_pokemon);
+	printf ("Operacion: %d\nPokemon:%s\n",operacion,mensaje_appeared->nombre_pokemon);
 
 	switch (operacion)
 	{
@@ -298,11 +298,9 @@ void procesar_localized(t_localized_pokemon *mensaje_localized)
 		}
 		else return false;
 	}
-	puts ("\n\n\nme bloqueo 1\n\n\n");
 	pthread_mutex_lock (&ID_localized_sem); 
 	void * elemento = list_remove_by_condition(ID_localized, buscar_id_corr);
 	pthread_mutex_unlock (&ID_localized_sem); 
-	puts ("\n\n\npase 1\n\n\n");
 	if (elemento != NULL)
 	free(elemento);
 
@@ -391,13 +389,10 @@ void agregar_nueva_especie (char *nueva_especie)
 		if (!strcmp(especie_atrapada,nueva_especie))
 		return true; else return false;
 	}
-	puts ("\n\n\nme bloqueo 2\n\n\n");
 	pthread_mutex_lock(&especies_sem);
 	if (!list_any_satisfy(especies,comparar_especie))
 	list_add(especies,nueva_especie);
-
 	pthread_mutex_unlock(&especies_sem);
-	puts ("\n\n\n\npase 2\n\n\n");
 }
 
 bool especie_necesaria (char *nueva_especie)

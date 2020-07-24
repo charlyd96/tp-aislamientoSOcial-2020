@@ -22,7 +22,7 @@ void trainer_to_catch(void)
     u_int32_t distance_min= 100000  ; //Arreglar esta hardcodeada trucha
     mapPokemons *actual_pokemon;
     int i;
-    bool planificar=true;
+    planificar=true;
     sem_getvalue(&trainer_count,&i); //Saltea el proceso de planificación por distancia si se inicializa con todos los pokemones atrapados
     if (i==0) planificar=false; 
 
@@ -60,6 +60,7 @@ void trainer_to_catch(void)
             pthread_mutex_unlock (&global_sem);            
             sem_wait(&poklist_sem); //Para evitar espera activa si no hay pokemones en el mapa. Revisar este comentario.
             sem_wait(&poklist_sem2); //Para evitar espera activa si no hay pokemones en el mapa. En realidad es por productor consumidor
+            if (!planificar) break;
             actual_pokemon =  list_remove (mapped_pokemons, 0);
             sem_post(&poklist_sem2);
 
@@ -104,9 +105,6 @@ void trainer_to_catch(void)
                     break;
                 } 
             }
-                            //sem_wait (&trainer_count); // Este semáforo bloquea el proceso de planificación si no hay entrenadores para mandar a ready
-
-
     }
 
     puts ("Terminó la búsqueda de pokemones");
@@ -322,12 +320,13 @@ void desbloquear_planificacion(void)
     void buscar_entrenadores_libres (void *entrenador)
     {
         Trainer *trainer=entrenador;
-        if (trainer->actual_status==BLOCKED_DEADLOCK || trainer->actual_status==EXIT || trainer->actual_status==NEW )
+        if (trainer->actual_status==BLOCKED_DEADLOCK || trainer->actual_status==EXIT)
         trainer_block_exit++;  
     }
     list_iterate(trainers,buscar_entrenadores_libres);
     if (list_size(trainers)==trainer_block_exit)
     {
+    planificar=false;
     sem_post(&trainer_count);
     }
 
