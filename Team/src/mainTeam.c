@@ -21,12 +21,15 @@ int main(int argc, char **argv)
    pthread_detach(thread);*/
    if (argc!=2)
    {
-       puts ("No se proporcionó el número de ID de proceso");
+       log_error(logTeam,"Debe ingresar un ID de Proceso. Ejemplo: ./Team 1");
        exit(-1);
    }
     ID_proceso = atoi(argv[1]);
-    internalLogTeam= log_create ("internalLogTeam.log", "Team", 1,LOG_LEVEL_INFO);
-    logTeam= log_create ("logTeam.log", "Team", 1,LOG_LEVEL_INFO);
+    internalLogTeam= log_create ("internalLogTeam.log", "Team", 1,LOG_LEVEL_TRACE);
+    logTeam= log_create ("logTeam.log", "Team", 0,LOG_LEVEL_TRACE);
+
+    log_trace(logTeam, "****************************************** PROCESO TEAM %d ******************************************", ID_proceso);
+	
     Team_Init (); //Obtiene configuraciones y entrenadores, los localiza y define el objetivo global
 
     subscribe (); //Crea tres hilos para suscribirse a las tres colas de mensajes
@@ -53,7 +56,7 @@ int main(int argc, char **argv)
 
     void imprimir (void *elemento)
     {
-        printf ("Lista pokemones ingresados: %s\n", (char*)elemento);
+        puts((char*)elemento);
     }
     list_iterate(especies,imprimir);
     //Antes de cerrar conexiones, esperar a que vuelvan todos los hilos

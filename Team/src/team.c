@@ -67,7 +67,7 @@ void enviar_mensajes_get (t_list* GET_list)
             int enviado= enviarGetPokemon (socket, mensaje_get, P_TEAM, ID_proceso);
             log_info(internalLogTeam, "Se envió GET %s al broker. Enviado=%d. Socket= %d",mensaje_get.nombre_pokemon,enviado,socket);
             recv (socket,&(mensaje_get.id_mensaje),sizeof(uint32_t),MSG_WAITALL); //Recibir ID
-            printf ("\t\t\t\t\t\t\tEl Id devuelto fue: %d. Pertenece al pokemon %s\t\t\t\t\t\t\n", mensaje_get.id_mensaje, mensaje_get.nombre_pokemon);
+            log_info(internalLogTeam,"\t\t\t\t\t\t\tEl Id devuelto fue: %d. Pertenece al pokemon %s\t\t\t\t\t\t\n", mensaje_get.id_mensaje, mensaje_get.nombre_pokemon);
             informarIDlocalized(mensaje_get.id_mensaje);
             close (socket); 
         }
@@ -101,7 +101,7 @@ void fifo_exec (void)
     {
         sem_wait ( &qr_sem1 );
         sem_wait ( &qr_sem2 );
-        puts ("pase fifo fifo");
+        log_info(internalLogTeam,"pase fifo fifo");
         if (win) break;  
         Trainer* trainer= list_remove (ReadyQueue, 0);
         trainer->actual_status= EXEC;
@@ -177,8 +177,8 @@ void SJFCD_exec (void)
         trainer->rafagaAux=trainer->rafagaEstimada;
         sem_post ( &(trainer->trainer_sem) );
         sem_wait (&using_cpu);
-         puts ("wait");
-         printf ("Ejecucion: %d\n",trainer->ejecucion);
+         log_info(internalLogTeam,"wait");
+         log_info(internalLogTeam,"Ejecucion: %d\n",trainer->ejecucion);
         if (trainer->ejecucion==FINISHED)
         {
         trainer->rafagaEstimada = trainer->rafagaAux;
@@ -189,7 +189,7 @@ void SJFCD_exec (void)
         {
         newTrainerToReady=true;
         list_add (ReadyQueue, trainer);
-        puts ("\n\n\n\nEN EN EL ELSE\n\n\n\n\n");
+        log_info(internalLogTeam,"\n\n\n\nEN EN EL ELSE\n\n\n\n\n");
         sem_post (&qr_sem2);
         sem_post (&qr_sem1);
         } 
@@ -213,7 +213,7 @@ void ordenar_lista_ready (void)
 double  actualizar_estimacion (Trainer *trainer)
 {
     double nuevaRafaga=(config->alpha)*(trainer->rafagaEjecutada) + (1-config->alpha)*(trainer->rafagaEstimada);
-    printf ("************************************************************************Nueva ráfaga estimada (%d): %f******************************\n",trainer->index, nuevaRafaga);
+    log_info(internalLogTeam,"************************************************************************Nueva ráfaga estimada (%d): %f******************************\n",trainer->index, nuevaRafaga);
     return (nuevaRafaga) ; 
 }
 
@@ -249,19 +249,19 @@ int Trainer_handler_create ()
     int value;
 
     sem_getvalue(&resolviendo_deadlock, &value);
-    printf ("Resolviendo deadlock antes del recovery vale %d\n", value);
-    printf ("Resultado de la recuperación: %d\n",deadlock_recovery());
-    printf ("En lista Deadlock: %d\n", list_size (deadlock_list));
+    log_info(internalLogTeam,"Resolviendo deadlock antes del recovery vale %d\n", value);
+    log_info(internalLogTeam,"Resultado de la recuperación: %d\n",deadlock_recovery());
+    log_info(internalLogTeam,"En lista Deadlock: %d\n", list_size (deadlock_list));
     
     sem_getvalue(&resolviendo_deadlock, &value);
-    printf ("Resolviendo deadlock vale %d\n", value);
+    log_info(internalLogTeam,"Resolviendo deadlock vale %d\n", value);
     sem_wait (&resolviendo_deadlock);
     //sleep (4);
     }
 
     void imprimir_estados (void *trainer)
     {
-        printf ("Estado: %d\n",((Trainer*)trainer)->actual_status);
+        log_info(internalLogTeam,"Estado: %d\n",((Trainer*)trainer)->actual_status);
     }
 
     //list_iterate (trainers,imprimir_estados);
@@ -270,18 +270,18 @@ int Trainer_handler_create ()
     {
         void imprimir_objetivos (void *objetivo)
         {
-        printf ("%s\n",(char*)objetivo);
+        log_info(internalLogTeam,"%s\n",(char*)objetivo);
         }
 
         void imprimir_bag (void *capturado)
         {
-        printf ("%s\n",(char*)capturado);
+        log_info(internalLogTeam,"%s\n",(char*)capturado);
         }
 
-        printf ("Lista objetivos entrenador %d\n",((Trainer*)entrenador)->index);
+        log_info(internalLogTeam,"Lista objetivos entrenador %d\n",((Trainer*)entrenador)->index);
         list_iterate (((Trainer*)entrenador)->bag,imprimir_bag);
 
-        printf ("Lista capturados entrenador %d\n",((Trainer*)entrenador)->index);
+        log_info(internalLogTeam,"Lista capturados entrenador %d\n",((Trainer*)entrenador)->index);
         list_iterate(((Trainer*)entrenador)->personal_objective,imprimir_objetivos);
     }
 

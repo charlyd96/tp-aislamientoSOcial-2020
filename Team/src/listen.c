@@ -25,10 +25,10 @@ void  listen_routine_gameboy ()
 			socketGameboyCliente = aceptarCliente (socketGameboy);
 			if (win)
 			{
-				puts ("fin escucha");
+				log_info(internalLogTeam,"fin escucha");
 				break;
 			} 
-			printf ("Socket cliente: %d\n", socketGameboyCliente);
+			log_info(internalLogTeam,"Socket cliente: %d\n", socketGameboyCliente);
 			get_opcode(socketGameboyCliente);
 			pthread_create (&thread, NULL, (void *) get_opcode, (int*)socketGameboyCliente);
 			pthread_detach (thread);
@@ -103,7 +103,7 @@ int send_catch (Trainer *trainer)
 		sem_post(&using_cpu); //Disponibilizar la CPU para otro entrenador
 		recv (socket,&(message.id_mensaje),sizeof(uint32_t),MSG_WAITALL); //Recibir ID
 		close (socket);
-		printf ("\t\t\t\t\t\t\tEl Id devuelto fue: %d. Pertenece al pokemon %s\t\t\t\t\t\t\n", message.id_mensaje, message.nombre_pokemon);
+		log_info(internalLogTeam,"\t\t\t\t\t\t\tEl Id devuelto fue: %d. Pertenece al pokemon %s\t\t\t\t\t\t\n", message.id_mensaje, message.nombre_pokemon);
 		
 		int resultado = informarIDcaught(message.id_mensaje, &(trainer->trainer_sem));
 								 												  //Buscar en la cola caught con el ID correlativo
@@ -140,13 +140,15 @@ void listen_routine_colas (void *colaSuscripcion)
 					recibirIDProceso(socketAppeared);
 					t_appeared_pokemon* mensaje_appeared= recibirAppearedPokemon(socketAppeared);
 					enviarACK(socketAppeared);
-					log_info (internalLogTeam, "Mensaje recibido: %s %s %d %d",colaParaLogs((int)cod_op),mensaje_appeared->nombre_pokemon,mensaje_appeared->pos_x,mensaje_appeared->pos_y);
+					// 7. Llegada de un mensaje (indicando el tipo del mismo y sus datos).
+					log_info (internalLogTeam, "Llegó un Mensaje APPEARED_POKEMON %s %d %d con ID de Mensaje Correlativo [%d].",mensaje_appeared->nombre_pokemon,mensaje_appeared->pos_x,mensaje_appeared->pos_y, mensaje_appeared->id_mensaje_correlativo);
+					log_info (logTeam, "Llegó un Mensaje APPEARED_POKEMON %s %d %d con ID de Mensaje Correlativo [%d].",mensaje_appeared->nombre_pokemon,mensaje_appeared->pos_x,mensaje_appeared->pos_y, mensaje_appeared->id_mensaje_correlativo);
 					pthread_t thread;
 					pthread_create (&thread, NULL, (void *) procesar_appeared, mensaje_appeared);
 					pthread_detach (thread);	
 				}
 			}
-			puts ("cerrando appearead"); 
+			log_info(internalLogTeam,"cerrando appearead"); 
 			break;
 		}
 
@@ -169,12 +171,14 @@ void listen_routine_colas (void *colaSuscripcion)
 					recibirIDProceso(socketLocalized);
 					t_localized_pokemon* mensaje_localized= recibirLocalizedPokemon(socketLocalized);
 					enviarACK(socketLocalized);
-					log_info (internalLogTeam, "Mensaje recibido: %s %s %d %s [%d]",colaParaLogs((int)cod_op),mensaje_localized->nombre_pokemon,mensaje_localized->cant_pos,mensaje_localized->posiciones,mensaje_localized->id_mensaje_correlativo);
+					// 7. Llegada de un mensaje (indicando el tipo del mismo y sus datos).
+					log_info (internalLogTeam, "Llegó un Mensaje LOCALIZED_POKEMON %s %d %s con ID de Mensaje Correlativo [%d]",mensaje_localized->nombre_pokemon,mensaje_localized->cant_pos,mensaje_localized->posiciones,mensaje_localized->id_mensaje_correlativo);
+					log_info (logTeam, "Llegó un Mensaje LOCALIZED_POKEMON %s %d %s con ID de Mensaje Correlativo [%d]",mensaje_localized->nombre_pokemon,mensaje_localized->cant_pos,mensaje_localized->posiciones,mensaje_localized->id_mensaje_correlativo);
 					pthread_t thread;
 					pthread_create (&thread, NULL, (void *) procesar_localized, mensaje_localized);
 					pthread_detach (thread);
 				}					
-			}puts ("cerrando caught"); break;
+			}log_info(internalLogTeam,"cerrando caught"); break;
 		}
 		case CAUGHT_POKEMON:
 		{	
@@ -194,12 +198,14 @@ void listen_routine_colas (void *colaSuscripcion)
 					recibirIDProceso(socketCaught);
 					t_caught_pokemon* mensaje_caught= recibirCaughtPokemon(socketCaught);
 					enviarACK(socketCaught);
-					log_info (internalLogTeam, "Mensaje recibido: %s %d %d",colaParaLogs((int)cod_op),mensaje_caught->atrapo_pokemon, mensaje_caught->id_mensaje_correlativo);
+					// 7. Llegada de un mensaje (indicando el tipo del mismo y sus datos).
+					log_info (internalLogTeam, "Llegó un Mensaje CAUGHT_POKEMON %d con ID de Mensaje Correlativo [%d].",mensaje_caught->atrapo_pokemon, mensaje_caught->id_mensaje_correlativo);
+					log_info (logTeam, "Llegó un Mensaje CAUGHT_POKEMON %d con ID de Mensaje Correlativo [%d].",mensaje_caught->atrapo_pokemon, mensaje_caught->id_mensaje_correlativo);
 					pthread_t thread;
 					pthread_create (&thread, NULL, (void *) procesar_caught, mensaje_caught);
 					pthread_detach (thread);
 				}					
-			}puts ("cerrando caught"); break;
+			}log_info(internalLogTeam,"cerrando caught"); break;
 		}
 
 		case OP_UNKNOWN:
@@ -225,19 +231,25 @@ int reintentar_conexion(op_code colaSuscripcion)
 	
 	while ( (socket_cliente == -1 || enviado==0) && !win )
 		{
-			log_info (internalLogTeam, "Falló la conexión al broker con la cola %s",colaParaLogs(colaSuscripcion));
+			// 9. Errores de comunicación con el Broker (indicando que se realizará la operación por default).
+			log_info (internalLogTeam, "Fallo de Conexión con Broker %s : %s a la cola %s.", config->broker_IP, config->broker_port,colaParaLogs(colaSuscripcion));
+			log_info (internalLogTeam, "Fallo de Conexión con Broker %s : %s a la cola %s.", config->broker_IP, config->broker_port,colaParaLogs(colaSuscripcion));
+			
+			// 10. Inicio de proceso de reintento de comunicación con el Broker.
+			log_info(internalLogTeam, "Inicio de reintento de conexión.");
+			log_info(logTeam, "Inicio de reintento de conexión.");
 			sleep (config->reconnection_time);
 			socket_cliente = crearSocketCliente (config->broker_IP,config->broker_port);
 			enviado=enviarSuscripcion (socket_cliente, colaAppeared);
 		}
-	if (!win) log_info (internalLogTeam, "Conexión exitosa con la cola %s", colaParaLogs(colaSuscripcion));
+	if (!win) log_info (internalLogTeam, "Suscripción del Team %d a la cola %s.", colaAppeared.id_proceso, colaParaLogs(colaSuscripcion));
 	return (socket_cliente);
 }
 
 void procesar_appeared(t_appeared_pokemon *mensaje_appeared)
 {
 	nuevo_pokemon operacion = tratar_nuevo_pokemon (mensaje_appeared->nombre_pokemon);
-	printf ("Operacion: %d\nPokemon:%s\n",operacion,mensaje_appeared->nombre_pokemon);
+	log_info(internalLogTeam,"Operacion: %d - Pokemon:%s",operacion,mensaje_appeared->nombre_pokemon);
 
 	switch (operacion)
 	{
@@ -311,7 +323,7 @@ void procesar_localized(t_localized_pokemon *mensaje_localized)
 	}
 	else
 	{
-		printf ("Cantidad posiciones: %d\n", mensaje_localized->cant_pos);
+		log_info(internalLogTeam,"Cantidad posiciones: %d\n", mensaje_localized->cant_pos);
 		char **coordenadas;
 		char **posiciones = string_get_string_as_array(mensaje_localized->posiciones);
 		for (int i=0; *(posiciones+i) != NULL; i++)
