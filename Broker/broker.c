@@ -6,7 +6,11 @@
  */
 
 #include "broker.h"
-
+void destruir_particion(void* elem){
+	t_particion* part = elem;
+	list_destroy_and_destroy_elements(part->susc_enviados,free);
+	free(elem);
+}
 /* FUNCIONES - INICIALIZACIÓN */
 
 int crearConfigBroker(){
@@ -339,7 +343,8 @@ void buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint3
 		part_libre->time_creacion = current_time; //Hora actual del sistema
 		part_libre->time_ultima_ref = current_time; //Hora actual del sistema
 		part_libre->tamanio = (uint32_t)pow(2,part_libre->buddy_i);
-		part_libre->susc_enviados = list_create();
+		// part_libre->susc_enviados = list_create();
+		list_clean(part_libre->susc_enviados);
 
 		list_replace(particiones,indice,part_libre);
 		log_debug(logBrokerInterno, "ID_MENSAJE %d, asigno partición base %d, i %d, tamanio %d",id, part_libre->base,part_libre->buddy_i,part_libre->tamanio);
@@ -439,8 +444,8 @@ void eliminarParticionBuddy(){
 				log_info(logBroker, "Asociación de Particiones: Partición %d con Partición %d.", part_liberar->base, part_der->base);
 				log_info(logBrokerInterno,"Se consolida a derecha con particion buddy indice %d, i %d",indice_victima+1,i_aux);
 				part_liberar->buddy_i = part_liberar->buddy_i + 1;
-				list_clean(part_der->susc_enviados);
-				list_remove(particiones,indice_victima + 1);
+				// list_clean(part_der->susc_enviados);
+				list_remove_and_destroy_element(particiones,indice_victima + 1,destruir_particion);
 				huboConsolidacion = true;
 				i_aux++;
 			}
@@ -455,8 +460,8 @@ void eliminarParticionBuddy(){
 				log_info(logBrokerInterno,"Se consolida a izquierda con particion indice %d",indice_victima-1);
 				part_liberar->base = part_izq->base;
 				part_liberar->buddy_i = part_liberar->buddy_i + 1;
-				list_clean(part_izq->susc_enviados);
-				list_remove(particiones,indice_victima -1);
+				// list_clean(part_izq->susc_enviados);
+				list_remove_and_destroy_element(particiones,indice_victima -1,destruir_particion);
 				huboConsolidacion = true;
 				indice_victima = indice_victima -1;
 				i_aux++;
@@ -558,7 +563,7 @@ void compactarParticiones(){
 	espacio_libre->tamanio = config_broker->tam_memoria - offset;
 	list_add(particiones,espacio_libre);
 	//Libero solo el puntero a la lista auxiliar, no sus elementos porque se los pasé a particiones
-	free(lista_aux);
+	list_destroy(lista_aux);
 	// free(espacio_libre);
 }
 
@@ -2397,10 +2402,7 @@ void confirmacionDeRecepcionGameBoy(int ack, t_suscribe* suscribe_gameboy, uint3
 		}
 	}
 }
-void destruir_particion(void* elem){
-	t_particion* part = elem;
-	list_destroy_and_destroy_elements(part->susc_enviados,free);
-}
+
 int main(void){
 	logBroker = log_create("broker.log", "Broker", 0, LOG_LEVEL_TRACE);
 	logBrokerInterno = log_create("brokerInterno.log", "Broker Interno", 1, LOG_LEVEL_TRACE);

@@ -203,7 +203,13 @@ t_error_codes parsearCaughtPokemon(process_code proc, char** argv,
 
 	t_caught_pokemon caught_pokemon;
 	caught_pokemon.id_mensaje_correlativo = atoi(argv[3]);
-	caught_pokemon.atrapo_pokemon = atoi(argv[4]);
+	if(strcmp(argv[4],"OK") == 0){
+		caught_pokemon.atrapo_pokemon = 1;
+	}else if(strcmp(argv[4],"FAIL") == 0){
+		caught_pokemon.atrapo_pokemon = 0;
+	}else{
+		return ERROR_BAD_REQUEST;
+	}
 
 	t_buffer* buffer = serializarCaughtPokemon(caught_pokemon);
 
