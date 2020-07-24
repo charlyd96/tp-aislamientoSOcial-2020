@@ -21,7 +21,7 @@ int main(int argc, char **argv)
    pthread_detach(thread);*/
    if (argc!=2)
    {
-       puts ("No se proporcionó el número de ID de proceso");
+       log_error(logTeam,"Debe ingresar un ID de Proceso. Ejemplo: ./Team 1");
        exit(-1);
    }
     ID_proceso = atoi(argv[1]);
@@ -53,7 +53,7 @@ int main(int argc, char **argv)
 
     void imprimir (void *elemento)
     {
-        printf ("Lista pokemones ingresados: %s\n", (char*)elemento);
+        puts((char*)elemento);
     }
     list_iterate(especies,imprimir);
     //Antes de cerrar conexiones, esperar a que vuelvan todos los hilos

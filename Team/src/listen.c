@@ -25,10 +25,10 @@ void  listen_routine_gameboy ()
 			socketGameboyCliente = aceptarCliente (socketGameboy);
 			if (win)
 			{
-				puts ("fin escucha");
+				log_info(internalLogTeam,"fin escucha");
 				break;
 			} 
-			printf ("Socket cliente: %d\n", socketGameboyCliente);
+			log_info(internalLogTeam,"Socket cliente: %d\n", socketGameboyCliente);
 			get_opcode(socketGameboyCliente);
 			pthread_create (&thread, NULL, (void *) get_opcode, (int*)socketGameboyCliente);
 			pthread_detach (thread);
@@ -103,7 +103,7 @@ int send_catch (Trainer *trainer)
 		sem_post(&using_cpu); //Disponibilizar la CPU para otro entrenador
 		recv (socket,&(message.id_mensaje),sizeof(uint32_t),MSG_WAITALL); //Recibir ID
 		close (socket);
-		printf ("\t\t\t\t\t\t\tEl Id devuelto fue: %d. Pertenece al pokemon %s\t\t\t\t\t\t\n", message.id_mensaje, message.nombre_pokemon);
+		log_info(internalLogTeam,"\t\t\t\t\t\t\tEl Id devuelto fue: %d. Pertenece al pokemon %s\t\t\t\t\t\t\n", message.id_mensaje, message.nombre_pokemon);
 		
 		int resultado = informarIDcaught(message.id_mensaje, &(trainer->trainer_sem));
 								 												  //Buscar en la cola caught con el ID correlativo
@@ -146,7 +146,7 @@ void listen_routine_colas (void *colaSuscripcion)
 					pthread_detach (thread);	
 				}
 			}
-			puts ("cerrando appearead"); 
+			log_info(internalLogTeam,"cerrando appearead"); 
 			break;
 		}
 
@@ -174,7 +174,7 @@ void listen_routine_colas (void *colaSuscripcion)
 					pthread_create (&thread, NULL, (void *) procesar_localized, mensaje_localized);
 					pthread_detach (thread);
 				}					
-			}puts ("cerrando caught"); break;
+			}log_info(internalLogTeam,"cerrando caught"); break;
 		}
 		case CAUGHT_POKEMON:
 		{	
@@ -199,7 +199,7 @@ void listen_routine_colas (void *colaSuscripcion)
 					pthread_create (&thread, NULL, (void *) procesar_caught, mensaje_caught);
 					pthread_detach (thread);
 				}					
-			}puts ("cerrando caught"); break;
+			}log_info(internalLogTeam,"cerrando caught"); break;
 		}
 
 		case OP_UNKNOWN:
@@ -237,7 +237,7 @@ int reintentar_conexion(op_code colaSuscripcion)
 void procesar_appeared(t_appeared_pokemon *mensaje_appeared)
 {
 	nuevo_pokemon operacion = tratar_nuevo_pokemon (mensaje_appeared->nombre_pokemon);
-	printf ("Operacion: %d\nPokemon:%s\n",operacion,mensaje_appeared->nombre_pokemon);
+	log_info(internalLogTeam,"Operacion: %d - Pokemon:%s",operacion,mensaje_appeared->nombre_pokemon);
 
 	switch (operacion)
 	{
@@ -311,7 +311,7 @@ void procesar_localized(t_localized_pokemon *mensaje_localized)
 	}
 	else
 	{
-		printf ("Cantidad posiciones: %d\n", mensaje_localized->cant_pos);
+		log_info(internalLogTeam,"Cantidad posiciones: %d\n", mensaje_localized->cant_pos);
 		char **coordenadas;
 		char **posiciones = string_get_string_as_array(mensaje_localized->posiciones);
 		for (int i=0; *(posiciones+i) != NULL; i++)

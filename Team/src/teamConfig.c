@@ -215,16 +215,16 @@ void Team_load_global_config()
     /* Just to test the correct reading from the configurations file to the globals configurations*/
     if (PRINT_TEST == 1)
     {
-        puts ("\n\n\nShowing the global configurations:");
-        printf ("TIEMPO_RECONEXION= %d\n",config->reconnection_time );
-        printf ("RETARDO_CICLO_CPU= %d\n",config->retardo_cpu);
-        printf ("ALGORITMO_PLANIFICACION= %s\n",config->planning_algorithm);
-        printf ("QUANTUM= %d\n",config->quantum);
-        printf ("ESTIMACION_INICIAL= %d\n",config->initial_estimation);
-        printf ("IP_BROKER= %s\n", config->broker_IP);
-        printf ("PUERTO_BROKER= %s\n", config->broker_port);
-        printf ("IP_TEAM= %s\n", config->team_IP);
-        printf ("PUERTO_TEAM= %s\n", config->team_port);
+        log_info(internalLogTeam, ("\n\n\nShowing the global configurations:");
+        log_info(internalLogTeam,"TIEMPO_RECONEXION= %d\n",config->reconnection_time );
+        log_info(internalLogTeam,"RETARDO_CICLO_CPU= %d\n",config->retardo_cpu);
+        log_info(internalLogTeam,"ALGORITMO_PLANIFICACION= %s\n",config->planning_algorithm);
+        log_info(internalLogTeam,"QUANTUM= %d\n",config->quantum);
+        log_info(internalLogTeam,"ESTIMACION_INICIAL= %d\n",config->initial_estimation);
+        log_info(internalLogTeam,"IP_BROKER= %s\n", config->broker_IP);
+        log_info(internalLogTeam,"PUERTO_BROKER= %s\n", config->broker_port);
+        log_info(internalLogTeam,"IP_TEAM= %s\n", config->team_IP);
+        log_info(internalLogTeam,"PUERTO_TEAM= %s\n", config->team_port);
     }
     
     log_info (internalLogTeam,"Se cargaron correctamente las configuraciones globales del Team");
@@ -272,13 +272,13 @@ void _imprimir_lista (void *elemento)
 
 void _imprimir_inventario (void *elemento)
 {
-    printf ("Atrapados: %s\n",(char *)elemento);
+    log_info(internalLogTeam,"Atrapados: %s\n",(char *)elemento);
 }
 
 
 void _imprimir_objetivos (void *elemento)
 {
-    printf ("Objetivos: %s\n",(char *) elemento);
+    log_info(internalLogTeam,"Objetivos: %s\n",(char *) elemento);
 }
 
 
@@ -319,11 +319,11 @@ void remover_objetivos_globales_conseguidos(t_list *global_bag)
 
 void cerrar_conexiones(void)
 {
-    printf ("Cerrando conexión gameboy: %d\n", shutdown(socketGameboy, SHUT_RDWR));
+    log_info(internalLogTeam,"Cerrando conexión gameboy: %d\n", shutdown(socketGameboy, SHUT_RDWR));
     sem_wait(&terminar_appeared);
-    printf ("Cerrando conexión appeared: %d\n", shutdown(socketAppeared, SHUT_RDWR));
+    log_info(internalLogTeam,"Cerrando conexión appeared: %d\n", shutdown(socketAppeared, SHUT_RDWR));
     sem_wait(&terminar_caught);
-    printf ("Cerrando conexión caught: %d\n", shutdown(socketCaught, SHUT_RDWR));
+    log_info(internalLogTeam,"Cerrando conexión caught: %d\n", shutdown(socketCaught, SHUT_RDWR));
     //Para terminar el hilo de ejecucio que simula a la CPU
     sem_post ( &qr_sem1 );
     sem_post ( &qr_sem2 );
