@@ -13,7 +13,7 @@ endif
 ifeq ($(config),debug)
   RESCOMP = windres
   TARGETDIR = Debug
-  TARGET = $(TARGETDIR)/GameBoy
+  TARGET = $(TARGETDIR)/gameboy
   OBJDIR = obj/Debug
   DEFINES += -DDB_DEBUG
   INCLUDES += -I. -I../SharedLibrary
@@ -40,7 +40,7 @@ endif
 ifeq ($(config),release)
   RESCOMP = windres
   TARGETDIR = Release
-  TARGET = $(TARGETDIR)/GameBoy
+  TARGET = $(TARGETDIR)/gameboy
   OBJDIR = obj/Release
   DEFINES += -DDB_RELEASE
   INCLUDES += -I. -I../SharedLibrary
@@ -78,7 +78,7 @@ ifeq (.exe,$(findstring .exe,$(ComSpec)))
 endif
 
 $(TARGET): $(GCH) ${CUSTOMFILES} $(OBJECTS) $(LDDEPS) $(RESOURCES) | $(TARGETDIR)
-	@echo Linking GameBoy
+	@echo Linking gameboy
 	$(SILENT) $(LINKCMD)
 	$(POSTBUILDCMDS)
 
@@ -101,7 +101,7 @@ else
 endif
 
 clean:
-	@echo Cleaning GameBoy
+	@echo Cleaning gameboy
 ifeq (posix,$(SHELLTYPE))
 	$(SILENT) rm -f  $(TARGET)
 	$(SILENT) rm -rf $(OBJDIR)

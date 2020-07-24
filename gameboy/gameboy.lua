@@ -1,4 +1,4 @@
-project "GameBoy"
+project "gameboy"
 
     kind "ConsoleApp"
     language "C"

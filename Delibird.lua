@@ -24,5 +24,5 @@ workspace "Delibird"
     include ("SharedLibrary/SharedLibrary.lua")
     include ("Team/Team.lua")
     include ("Broker/Broker.lua")
-    include ("GameBoy/GameBoy.lua")
+    include ("gameboy/gameboy.lua")
     include ("GameCard/GameCard.lua")
