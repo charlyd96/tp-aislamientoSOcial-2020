@@ -74,7 +74,7 @@ void listen_routine_colas (void *colaSuscripcion){
 					uint32_t PID = recibirIDProceso(socket_cliente);
 					log_info(logInterno,"Se conectó el Proceso %s [%u]",tipoProcesoParaLogs(tipo_proceso),PID);
 					t_new_pokemon *new_pokemon =recibirNewPokemon (socket_cliente);
-					log_info(logGamecard, "Recepción del Mensaje NEW_POKEMON %s %u %u %u [%u]",new_pokemon->nombre_pokemon,new_pokemon->pos_x,new_pokemon->pos_y,new_pokemon->cantidad,new_pokemon->id_mensaje);
+					log_info(logGamecard, "Recepción del Mensaje NEW_POKEMON %s %u %u %u [%u].",new_pokemon->nombre_pokemon,new_pokemon->pos_x,new_pokemon->pos_y,new_pokemon->cantidad,new_pokemon->id_mensaje);
 					int enviado = enviarACK(socket_cliente);
 					if(enviado > 0){
 						log_info(logGamecard,"Se envió el ACK del Mensaje NEW_POKEMON con ID de Mensaje [%u].", new_pokemon->id_mensaje);		
@@ -493,7 +493,7 @@ void atender_getPokemon(t_get_pokemon* get_pokemon){
 			archivoAbierto = strcmp(config_get_string_value(data_config,"OPEN"),"Y") == 0;
 			
 		}
-		log_info(logGamecard,"[GET_POKEMON] Consulto /%s -> ESTÁ CERRADO .> Se realiza la operación.",get_pokemon->nombre_pokemon);
+		log_info(logGamecard,"[GET_POKEMON] Consulto /%s -> ESTÁ CERRADO -> Se realiza la operación.",get_pokemon->nombre_pokemon);
 		//Seteo OPEN=Y en el archivo
 		config_set_value(data_config,"OPEN","Y");
 		config_save(data_config);
@@ -513,6 +513,7 @@ void atender_getPokemon(t_get_pokemon* get_pokemon){
 		free(buffer);
 	}else{
 		//Error -> enviar localized vacio
+	//	log_error(logGamecard,"ERROR GET_POKEMON: El directorio del Pokemon %s NO existe.",get_pokemon->nombre_pokemon);
 		sleep(config_gamecard->tiempo_retardo_operacion);
 
 	}
@@ -975,7 +976,7 @@ t_block* actualizar_datos (char* texto,char ** lista_bloques) {
 	
 	sem_wait(&mx_w_bloques);
 	char *bitmap = get_bitmap();
-	log_info(logGamecard,"BITMAP antes de escribir: %s", bitmap);
+	log_info(logGamecard,"BITMAP antes de escribir: %s.", bitmap);
 	//Para "fusionar" los bloques al escribir una nueva linea, lo más fácil es marcar como libres
 	//los bloques de este pokemon, y el 2do for va a escribir todo de nuevo + la nueva linea
 	if(lista_bloques != NULL){ //Si se escribe por primera vez, es NULL
@@ -1009,11 +1010,11 @@ t_block* actualizar_datos (char* texto,char ** lista_bloques) {
 	}
 	sem_post(&mx_w_bloques);
 	string_append(&blocks_text,"]");
-	log_info(logGamecard,"Bloques escritos: %s",blocks_text);
+	log_info(logGamecard,"Bloques escritos: %s.",blocks_text);
 	
     info_block->blocks=malloc(strlen(blocks_text)+1);
 	strcpy(info_block->blocks,blocks_text);
-	log_info(logGamecard,"BITMAP después de escribir: %s", bitmap);
+	log_info(logGamecard,"BITMAP después de escribir: %s.", bitmap);
 	free(texto);
 	unmap_bitmap(bitmap);
 	free(blocks_text);
