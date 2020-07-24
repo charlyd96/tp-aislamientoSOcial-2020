@@ -579,149 +579,171 @@ void cachearNewPokemon(t_new_pokemon* msg){
 	uint32_t largo_nombre = strlen(msg->nombre_pokemon); //Sin el \0
 	uint32_t largo_stream = 4*sizeof(uint32_t) + largo_nombre;
 
-	if(largo_stream < config_broker->tam_minimo_particion){
-		largo_stream = config_broker->tam_minimo_particion;
+	if(largo_stream > config_broker->tam_memoria){
+		log_error(logBrokerInterno, "ERROR: El tamaño del Mensaje supera el tamaño de la Memoria %d B.", config_broker->tam_memoria);
+	}else{
+		if(largo_stream < config_broker->tam_minimo_particion){
+			largo_stream = config_broker->tam_minimo_particion;
+		}
+
+		void* stream = malloc(largo_stream);
+		uint32_t offset = 0;
+		memcpy(stream + offset, &largo_nombre, sizeof(uint32_t));
+		offset += sizeof(uint32_t);
+		memcpy(stream + offset, msg->nombre_pokemon, largo_nombre);	//Copio "pikachu" sin el \0
+		offset += largo_nombre;
+		memcpy(stream + offset, &(msg->pos_x), sizeof(uint32_t));
+		offset += sizeof(uint32_t);
+		memcpy(stream + offset, &(msg->pos_y), sizeof(uint32_t));
+		offset += sizeof(uint32_t);
+		memcpy(stream + offset, &(msg->cantidad), sizeof(uint32_t));
+		offset += sizeof(uint32_t);
+
+		buscarParticionYAlocar(largo_stream,stream,NEW_POKEMON,msg->id_mensaje);
+		free(stream);
 	}
-
-	void* stream = malloc(largo_stream);
-	uint32_t offset = 0;
-	memcpy(stream + offset, &largo_nombre, sizeof(uint32_t));
-	offset += sizeof(uint32_t);
-	memcpy(stream + offset, msg->nombre_pokemon, largo_nombre);	//Copio "pikachu" sin el \0
-	offset += largo_nombre;
-	memcpy(stream + offset, &(msg->pos_x), sizeof(uint32_t));
-	offset += sizeof(uint32_t);
-	memcpy(stream + offset, &(msg->pos_y), sizeof(uint32_t));
-	offset += sizeof(uint32_t);
-	memcpy(stream + offset, &(msg->cantidad), sizeof(uint32_t));
-	offset += sizeof(uint32_t);
-
-	buscarParticionYAlocar(largo_stream,stream,NEW_POKEMON,msg->id_mensaje);
-	free(stream);
-
 }
 
 void cachearAppearedPokemon(t_appeared_pokemon* msg){
 	uint32_t largo_nombre = strlen(msg->nombre_pokemon); //Sin el \0
 	uint32_t largo_stream = 3 * sizeof(uint32_t) + largo_nombre;
 
-	if(largo_stream < config_broker->tam_minimo_particion){
-		largo_stream = config_broker->tam_minimo_particion;
+	if(largo_stream > config_broker->tam_memoria){
+		log_error(logBrokerInterno, "ERROR: El tamaño del Mensaje supera el tamaño de la Memoria %d B.", config_broker->tam_memoria);
+	}else{
+		if(largo_stream < config_broker->tam_minimo_particion){
+			largo_stream = config_broker->tam_minimo_particion;
+		}
+
+		void* stream = malloc(largo_stream);
+		uint32_t offset = 0;
+		memcpy(stream + offset, &largo_nombre, sizeof(uint32_t));
+		offset += sizeof(uint32_t);
+		memcpy(stream + offset, msg->nombre_pokemon, largo_nombre);	//Copio "pikachu" sin el \0
+		offset += largo_nombre;
+		memcpy(stream + offset, &(msg->pos_x), sizeof(uint32_t));
+		offset += sizeof(uint32_t);
+		memcpy(stream + offset, &(msg->pos_y), sizeof(uint32_t));
+		offset += sizeof(uint32_t);
+
+		buscarParticionYAlocar(largo_stream,stream,APPEARED_POKEMON,msg->id_mensaje_correlativo);
+		free(stream);
 	}
-
-	void* stream = malloc(largo_stream);
-	uint32_t offset = 0;
-	memcpy(stream + offset, &largo_nombre, sizeof(uint32_t));
-	offset += sizeof(uint32_t);
-	memcpy(stream + offset, msg->nombre_pokemon, largo_nombre);	//Copio "pikachu" sin el \0
-	offset += largo_nombre;
-	memcpy(stream + offset, &(msg->pos_x), sizeof(uint32_t));
-	offset += sizeof(uint32_t);
-	memcpy(stream + offset, &(msg->pos_y), sizeof(uint32_t));
-	offset += sizeof(uint32_t);
-
-	buscarParticionYAlocar(largo_stream,stream,APPEARED_POKEMON,msg->id_mensaje_correlativo);
-	free(stream);
 }
 
 void cachearCatchPokemon(t_catch_pokemon* msg){
 	uint32_t largo_nombre = strlen(msg->nombre_pokemon); //Sin el \0
 	uint32_t largo_stream = 3 * sizeof(uint32_t) + largo_nombre;
 
-	if(largo_stream < config_broker->tam_minimo_particion){
-		largo_stream = config_broker->tam_minimo_particion;
+	if(largo_stream > config_broker->tam_memoria){
+		log_error(logBrokerInterno, "ERROR: El tamaño del Mensaje supera el tamaño de la Memoria %d B.", config_broker->tam_memoria);
+	}else{
+		if(largo_stream < config_broker->tam_minimo_particion){
+			largo_stream = config_broker->tam_minimo_particion;
+		}
+
+		void* stream = malloc(largo_stream);
+		uint32_t offset = 0;
+		memcpy(stream + offset, &largo_nombre, sizeof(uint32_t));
+		offset += sizeof(uint32_t);
+		memcpy(stream + offset, msg->nombre_pokemon, largo_nombre);	//Copio "pikachu" sin el \0
+		offset += largo_nombre;
+		memcpy(stream + offset, &(msg->pos_x), sizeof(uint32_t));
+		offset += sizeof(uint32_t);
+		memcpy(stream + offset, &(msg->pos_y), sizeof(uint32_t));
+		offset += sizeof(uint32_t);
+
+		buscarParticionYAlocar(largo_stream,stream,CATCH_POKEMON,msg->id_mensaje);
+
+		free(stream);
 	}
-
-	void* stream = malloc(largo_stream);
-	uint32_t offset = 0;
-	memcpy(stream + offset, &largo_nombre, sizeof(uint32_t));
-	offset += sizeof(uint32_t);
-	memcpy(stream + offset, msg->nombre_pokemon, largo_nombre);	//Copio "pikachu" sin el \0
-	offset += largo_nombre;
-	memcpy(stream + offset, &(msg->pos_x), sizeof(uint32_t));
-	offset += sizeof(uint32_t);
-	memcpy(stream + offset, &(msg->pos_y), sizeof(uint32_t));
-	offset += sizeof(uint32_t);
-
-	buscarParticionYAlocar(largo_stream,stream,CATCH_POKEMON,msg->id_mensaje);
-
-	free(stream);
 }
 
 void cachearCaughtPokemon(t_caught_pokemon* msg){
 	uint32_t largo_stream = sizeof(uint32_t);
 
-	if(largo_stream < config_broker->tam_minimo_particion){
-		largo_stream = config_broker->tam_minimo_particion;
+	if(largo_stream > config_broker->tam_memoria){
+		log_error(logBrokerInterno, "ERROR: El tamaño del Mensaje supera el tamaño de la Memoria %d B.", config_broker->tam_memoria);
+	}else{
+		if(largo_stream < config_broker->tam_minimo_particion){
+			largo_stream = config_broker->tam_minimo_particion;
+		}
+
+		void* stream = malloc(largo_stream);
+
+		memcpy(stream, &(msg->atrapo_pokemon), sizeof(uint32_t));
+		
+		buscarParticionYAlocar(largo_stream,stream,CAUGHT_POKEMON,msg->id_mensaje_correlativo);
+
+		free(stream);
 	}
-
-	void* stream = malloc(largo_stream);
-
-	memcpy(stream, &(msg->atrapo_pokemon), sizeof(uint32_t));
-	
-	buscarParticionYAlocar(largo_stream,stream,CAUGHT_POKEMON,msg->id_mensaje_correlativo);
-
-	free(stream);
-
 }
 
 void cachearGetPokemon(t_get_pokemon* msg){
 	uint32_t largo_nombre = strlen(msg->nombre_pokemon); //Sin el \0
 	uint32_t largo_stream = sizeof(uint32_t) + largo_nombre;
 
-	if(largo_stream < config_broker->tam_minimo_particion){
-		largo_stream = config_broker->tam_minimo_particion;
+	if(largo_stream > config_broker->tam_memoria){
+		log_error(logBrokerInterno, "ERROR: El tamaño del Mensaje supera el tamaño de la Memoria %d B.", config_broker->tam_memoria);
+	}else{
+		if(largo_stream < config_broker->tam_minimo_particion){
+			largo_stream = config_broker->tam_minimo_particion;
+		}
+
+		//Serializo el msg
+		void* stream = malloc(largo_stream);
+		uint32_t offset = 0;
+		memcpy(stream + offset, &largo_nombre, sizeof(uint32_t));
+		offset += sizeof(uint32_t);
+		memcpy(stream + offset, msg->nombre_pokemon, largo_nombre);	//Copio "pikachu" sin el \0
+
+		buscarParticionYAlocar(largo_stream,stream,GET_POKEMON,msg->id_mensaje);
+
+		free(stream);
 	}
-
-	//Serializo el msg
-	void* stream = malloc(largo_stream);
-	uint32_t offset = 0;
-	memcpy(stream + offset, &largo_nombre, sizeof(uint32_t));
-	offset += sizeof(uint32_t);
-	memcpy(stream + offset, msg->nombre_pokemon, largo_nombre);	//Copio "pikachu" sin el \0
-
-	buscarParticionYAlocar(largo_stream,stream,GET_POKEMON,msg->id_mensaje);
-
-	free(stream);
 }
 
 void cachearLocalizedPokemon(t_localized_pokemon* msg){
 	uint32_t largo_nombre = strlen(msg->nombre_pokemon); //Sin el \0
 	uint32_t largo_stream = 2 * sizeof(uint32_t) + largo_nombre + 2* sizeof(uint32_t) * msg->cant_pos;
 
-	if(largo_stream < config_broker->tam_minimo_particion){
-		largo_stream = config_broker->tam_minimo_particion;
-	}
-
-	void* stream = malloc(largo_stream);
-	uint32_t offset = 0;
-	memcpy(stream + offset, &largo_nombre, sizeof(uint32_t));
-	offset += sizeof(uint32_t);
-	memcpy(stream + offset, msg->nombre_pokemon, largo_nombre);	//Copio "pikachu" sin el \0
-	offset += largo_nombre;
-	memcpy(stream + offset, &(msg->cant_pos), sizeof(uint32_t));
-	offset += sizeof(uint32_t);
-	if(msg->cant_pos > 0){
-		uint32_t pos_x, pos_y;
-		char** pos_list = string_get_string_as_array(msg->posiciones);
-		for(uint32_t i=0; i<(msg->cant_pos); i++){
-			char** pos_pair = string_split(pos_list[i],"|");
-			pos_x = atoi(pos_pair[0]);
-			pos_y = atoi(pos_pair[1]);
-
-			memcpy(stream + offset, &(pos_x), sizeof(uint32_t));
-			offset += sizeof(uint32_t);
-			memcpy(stream + offset, &(pos_y), sizeof(uint32_t));
-			offset += sizeof(uint32_t);
-
-			free_split(pos_pair);
+	if(largo_stream > config_broker->tam_memoria){
+		log_error(logBrokerInterno, "ERROR: El tamaño del Mensaje supera el tamaño de la Memoria %d B.", config_broker->tam_memoria);
+	}else{
+		if(largo_stream < config_broker->tam_minimo_particion){
+			largo_stream = config_broker->tam_minimo_particion;
 		}
-		free_split(pos_list);
+
+		void* stream = malloc(largo_stream);
+		uint32_t offset = 0;
+		memcpy(stream + offset, &largo_nombre, sizeof(uint32_t));
+		offset += sizeof(uint32_t);
+		memcpy(stream + offset, msg->nombre_pokemon, largo_nombre);	//Copio "pikachu" sin el \0
+		offset += largo_nombre;
+		memcpy(stream + offset, &(msg->cant_pos), sizeof(uint32_t));
+		offset += sizeof(uint32_t);
+		if(msg->cant_pos > 0){
+			uint32_t pos_x, pos_y;
+			char** pos_list = string_get_string_as_array(msg->posiciones);
+			for(uint32_t i=0; i<(msg->cant_pos); i++){
+				char** pos_pair = string_split(pos_list[i],"|");
+				pos_x = atoi(pos_pair[0]);
+				pos_y = atoi(pos_pair[1]);
+
+				memcpy(stream + offset, &(pos_x), sizeof(uint32_t));
+				offset += sizeof(uint32_t);
+				memcpy(stream + offset, &(pos_y), sizeof(uint32_t));
+				offset += sizeof(uint32_t);
+
+				free_split(pos_pair);
+			}
+			free_split(pos_list);
+		}
+
+		buscarParticionYAlocar(largo_stream,stream,LOCALIZED_POKEMON,msg->id_mensaje_correlativo);
+
+		free(stream);
 	}
-
-	buscarParticionYAlocar(largo_stream,stream,LOCALIZED_POKEMON,msg->id_mensaje_correlativo);
-
-	free(stream);
 }
 
 t_new_pokemon* descachearNewPokemon(void* stream, uint32_t id){
