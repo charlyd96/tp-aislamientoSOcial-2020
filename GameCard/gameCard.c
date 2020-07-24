@@ -171,20 +171,21 @@ void subscribe()
 }
 
 int main(int argc, char** argv){
-	logInterno = log_create("gamecardInterno.log", "Game Card Interno", 0, LOG_LEVEL_TRACE);
+	logGamecard = log_create("gamecard.log", "Game Card", 1, LOG_LEVEL_TRACE);
+
 	if(argc != 2){
 		log_error(logGamecard,"Debe ingresar un ID de Proceso. Ejemplo: ./Gamecard 1");
-		log_destroy(logInterno);
+		log_destroy(logGamecard);
 		exit(-1);
 	}
 	ID_PROCESO = atoi(argv[1]);
 	sem_init(&mx_file_metadata,0,(unsigned int) 1);
 	sem_init(&mx_creacion_archivo,0,(unsigned int) 1);
 	sem_init(&mx_w_bloques,0,(unsigned int) 1);
+	logInterno = log_create("gamecardInterno.log", "Game Card Interno", 0, LOG_LEVEL_TRACE);
 
 	log_info(logInterno,"ID seteado %d",ID_PROCESO);
 
-	logGamecard = log_create("gamecard.log", "Game Card", 1, LOG_LEVEL_TRACE);
 
 	log_trace(logGamecard, "****************************************** PROCESO GAME CARD ******************************************");
 	
@@ -203,6 +204,8 @@ int main(int argc, char** argv){
 	sem_destroy(&mx_creacion_archivo);
 	sem_destroy(&mx_file_metadata);
 	sem_destroy(&mx_w_bloques);
+	log_destroy(logInterno);
+	log_destroy(logGamecard);
 
 }
 
