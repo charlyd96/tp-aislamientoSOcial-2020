@@ -12,18 +12,18 @@ ifeq ($(config),debug)
   SharedLibrary_config = debug
   Team_config = debug
   Broker_config = debug
-  GameBoy_config = debug
+  gameboy_config = debug
   GameCard_config = debug
 endif
 ifeq ($(config),release)
   SharedLibrary_config = release
   Team_config = release
   Broker_config = release
-  GameBoy_config = release
+  gameboy_config = release
   GameCard_config = release
 endif
 
-PROJECTS := SharedLibrary Team Broker GameBoy GameCard
+PROJECTS := SharedLibrary Team Broker gameboy GameCard
 
 .PHONY: all clean help $(PROJECTS) 
 
@@ -47,10 +47,10 @@ ifneq (,$(Broker_config))
 	@${MAKE} --no-print-directory -C Broker -f Makefile config=$(Broker_config)
 endif
 
-GameBoy: SharedLibrary
-ifneq (,$(GameBoy_config))
-	@echo "==== Building GameBoy ($(GameBoy_config)) ===="
-	@${MAKE} --no-print-directory -C GameBoy -f Makefile config=$(GameBoy_config)
+gameboy: SharedLibrary
+ifneq (,$(gameboy_config))
+	@echo "==== Building gameboy ($(gameboy_config)) ===="
+	@${MAKE} --no-print-directory -C gameboy -f Makefile config=$(gameboy_config)
 endif
 
 GameCard: SharedLibrary
@@ -63,7 +63,7 @@ clean:
 	@${MAKE} --no-print-directory -C SharedLibrary -f Makefile clean
 	@${MAKE} --no-print-directory -C Team -f Makefile clean
 	@${MAKE} --no-print-directory -C Broker -f Makefile clean
-	@${MAKE} --no-print-directory -C GameBoy -f Makefile clean
+	@${MAKE} --no-print-directory -C gameboy -f Makefile clean
 	@${MAKE} --no-print-directory -C GameCard -f Makefile clean
 
 help:
@@ -79,7 +79,7 @@ help:
 	@echo "   SharedLibrary"
 	@echo "   Team"
 	@echo "   Broker"
-	@echo "   GameBoy"
+	@echo "   gameboy"
 	@echo "   GameCard"
 	@echo ""
 	@echo "For more information, see https://github.com/premake/premake-core/wiki"

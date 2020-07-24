@@ -29,8 +29,8 @@ int crearConfigBroker(){
 	    config_broker->log_file = config_get_string_value(config_ruta, "LOG_FILE");
 
 	    algoritmo_mem = config_get_string_value(config_ruta, "ALGORITMO_MEMORIA");
-		if(strcmp(algoritmo_mem,"PD") == 0) config_broker->algoritmo_memoria = PD;
-		if(strcmp(algoritmo_mem,"BUDDY") == 0) config_broker->algoritmo_memoria = BUDDY;
+		if(strcmp(algoritmo_mem,"PARTICIONES") == 0) config_broker->algoritmo_memoria = PARTICIONES;
+		if(strcmp(algoritmo_mem,"BS") == 0) config_broker->algoritmo_memoria = BS;
 
 		algoritmo_reemplazo = config_get_string_value(config_ruta, "ALGORITMO_REEMPLAZO");
 		if(strcmp(algoritmo_reemplazo,"FIFO") == 0) config_broker->algoritmo_reemplazo = FIFO;
@@ -112,7 +112,7 @@ void inicializarMemoria(){
 	//Partición libre inicial
 	t_particion* particionInicial = malloc(sizeof(t_particion));
 
-	if(config_broker->algoritmo_memoria == BUDDY){
+	if(config_broker->algoritmo_memoria == BS){
 		//Exponente en base 2 que representa a la memoria (para buddy)
 		buddy_U = (uint32_t)ceil(log10(config_broker->tam_memoria)/log10(2));
 		log_info(logBrokerInterno,"EL U es %d",buddy_U);
@@ -246,7 +246,7 @@ void buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint3
 	sem_wait(&mx_particiones);
 	int indice = -1;
 
-	if(config_broker->algoritmo_memoria == PD){
+	if(config_broker->algoritmo_memoria == PARTICIONES){
 		//buscarParticionLibre(largo_stream) devuelve el índice de la particion libre o -1 si no encuentra
 		indice = buscarParticionLibre(largo_stream);
 		int cant_intentos_fallidos = 0;
@@ -272,7 +272,7 @@ void buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint3
 			indice = buscarParticionLibre(largo_stream);
 		}
 	}
-	if(config_broker->algoritmo_memoria == BUDDY){
+	if(config_broker->algoritmo_memoria == BS){
 		//calculo la potencia de 2 mínima para contener el stream
 		int i = (int)ceil(log10(largo_stream)/log10(2));
 		//log_info(logBrokerInterno,"el i es %d",i);
@@ -294,7 +294,7 @@ void buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint3
 
 	//actualizar estructura administrativa (lista de particiones)
 	//Esto depende del tipo de algoritmo
-	if(config_broker->algoritmo_memoria == PD){
+	if(config_broker->algoritmo_memoria == PARTICIONES){
 		t_particion* part_nueva = malloc(sizeof(t_particion));
 		part_nueva->libre = false;
 		part_nueva->tipo_mensaje = tipo_msg;
@@ -329,7 +329,7 @@ void buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint3
 
 		log_info(logBrokerInterno, "ID_MENSAJE %d, asigno partición base %d y tamanio %d",id, part_nueva->base,part_nueva->tamanio);
 	}
-	if(config_broker->algoritmo_memoria == BUDDY){
+	if(config_broker->algoritmo_memoria == BS){
 
 		part_libre->libre = false;
 		part_libre->tipo_mensaje = tipo_msg;
@@ -884,7 +884,7 @@ void dump_cache(){
 		char* cola = colaParaLogs(particion_buscada->tipo_mensaje);
 
 		switch(config_broker->algoritmo_memoria){
-			case PD:{
+			case PARTICIONES:{
 				if(particion_buscada->libre == 0){
 					fprintf(archivo_dump, "Partición %d: %p - %p.		[X]		Size: %db		LRU: %ld.%06ld		Cola: %s 				ID: %d\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), particion_buscada->tamanio, particion_buscada->time_ultima_ref.tv_sec, particion_buscada->time_ultima_ref.tv_usec, cola, particion_buscada->id);
 				}else{
@@ -892,7 +892,7 @@ void dump_cache(){
 				}
 				break;
 			}
-			case BUDDY:{
+			case BS:{
 				if(particion_buscada->libre == 0){
 					fprintf(archivo_dump, "Partición %d: %p - %p.		[X]		Size: %db		LRU: %ld.%06ld		Cola: %s				ID: %d\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), (int)pow(2, particion_buscada->buddy_i), particion_buscada->time_ultima_ref.tv_sec, particion_buscada->time_ultima_ref.tv_usec, cola, particion_buscada->id);
 				}else{
@@ -970,7 +970,7 @@ void atenderCliente(int socket){
 			break;
 		}
 		default:{
-			log_info(logBrokerInterno, "No se pudo conectar ningún proceso.");
+			log_warning(logBrokerInterno, "No se pudo conectar ningún proceso.");
 			break;
 		}
 	}
@@ -1466,7 +1466,7 @@ void atenderSuscripcionTeam(int socket_cliente){
 			break;
 		}
 		default:{
-			log_info(logBrokerInterno, "No se pudo enviar mensajes cacheados.");
+			log_warning(logBrokerInterno, "No se pudo enviar mensajes cacheados.");
 			break;
 		}
 	}
@@ -1504,7 +1504,7 @@ void atenderSuscripcionGameCard(int socket_cliente){
 			break;
 		}
 		default:{
-			log_info(logBrokerInterno, "No se pudo enviar mensajes cacheados.");
+			log_warning(logBrokerInterno, "No se pudo enviar mensajes cacheados.");
 			break;
 		}
 	}
@@ -1554,7 +1554,7 @@ void atenderSuscripcionGameBoy(int socket_cliente){
 			break;
 		}*/
 		default:{
-			log_info(logBrokerInterno, "No se pudo enviar mensajes cacheados.");
+			log_warning(logBrokerInterno, "No se pudo enviar mensajes cacheados.");
 			break;
 		}
 	}
@@ -1615,7 +1615,7 @@ int suscribir(t_suscriptor* suscriptor, op_code cola){
 		}
 		default:
 			index = -1;
-			log_info(logBrokerInterno, "No se suscribe ningún proceso.");
+			log_warning(logBrokerInterno, "No se suscribe ningún proceso.");
 	}
 	return index;
 }
@@ -1816,6 +1816,7 @@ int devolverID(int socket,uint32_t* id_mensaje){
 	}else{
 		log_info(logBrokerInterno,"No se pudo enviar el ID_MENSAJE %d",*id_mensaje);
 	}
+
 	free(stream);
 	return enviado;
 }
