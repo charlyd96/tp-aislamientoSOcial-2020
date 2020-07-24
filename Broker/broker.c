@@ -887,7 +887,7 @@ void dump_cache(){
 	FILE* archivo_dump;
 	archivo_dump = fopen("archivo_dump.txt", "w+");
 
-	fprintf(archivo_dump, "---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n");
+	fprintf(archivo_dump, "---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n");
 	fprintf(archivo_dump, "Dump: %s\n", fecha_y_hora);
 
 	for (int i = 0; i < tam_lista ; i++){
@@ -899,17 +899,17 @@ void dump_cache(){
 		switch(config_broker->algoritmo_memoria){
 			case PARTICIONES:{
 				if(particion_buscada->libre == 0){
-					fprintf(archivo_dump, "Partición %d: %p - %p.		[X]		Size: %db		LRU: %ld.%06ld		Cola: %s 				ID: %d\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), particion_buscada->tamanio, particion_buscada->time_ultima_ref.tv_sec, particion_buscada->time_ultima_ref.tv_usec, cola, particion_buscada->id);
+					fprintf(archivo_dump, "Partición %d: %p - %p.\t\t\t[X]\t\t\tSize: %db\t\t\tLRU: %ld.%06ld\t\t\tCola: %s\t\tID: %d\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), particion_buscada->tamanio, particion_buscada->time_ultima_ref.tv_sec, particion_buscada->time_ultima_ref.tv_usec, cola, particion_buscada->id);
 				}else{
-					fprintf(archivo_dump, "Partición %d: %p - %p.		[L]		Size: %db\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), particion_buscada->tamanio);
+					fprintf(archivo_dump, "Partición %d: %p - %p.\t\t\t[L]\t\t\tSize: %db\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), particion_buscada->tamanio);
 				}
 				break;
 			}
 			case BS:{
 				if(particion_buscada->libre == 0){
-					fprintf(archivo_dump, "Partición %d: %p - %p.		[X]		Size: %db		LRU: %ld.%06ld		Cola: %s				ID: %d\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), (int)pow(2, particion_buscada->buddy_i), particion_buscada->time_ultima_ref.tv_sec, particion_buscada->time_ultima_ref.tv_usec, cola, particion_buscada->id);
+					fprintf(archivo_dump, "Partición %d: %p - %p.\t\t\t[X]\t\t\tSize: %db\t\t\tLRU: %ld.%06ld\t\t\tCola: %s\t\tID: %d\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), (int)pow(2, particion_buscada->buddy_i), particion_buscada->time_ultima_ref.tv_sec, particion_buscada->time_ultima_ref.tv_usec, cola, particion_buscada->id);
 				}else{
-					fprintf(archivo_dump, "Partición %d: %p - %p.		[L]		Size: %db\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), (int)pow(2, particion_buscada->buddy_i));
+					fprintf(archivo_dump, "Partición %d: %p - %p.\t\t\t[L]\t\t\tSize: %db\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), (int)pow(2, particion_buscada->buddy_i));
 				}
 				break;
 			}
@@ -917,7 +917,7 @@ void dump_cache(){
 		
 	}
 
-	fprintf(archivo_dump, "---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n");
+	fprintf(archivo_dump, "---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n");
 
 	fclose(archivo_dump);
 }
