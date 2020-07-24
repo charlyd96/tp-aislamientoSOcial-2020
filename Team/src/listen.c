@@ -322,6 +322,8 @@ void procesar_localized(t_localized_pokemon *mensaje_localized)
 	log_error (internalLogTeam, "Se descartó el Mensaje LOCALIZED_POKEMON %s %d %s con ID de Mensaje Correlativo [%d]",mensaje_localized->nombre_pokemon,mensaje_localized->cant_pos,mensaje_localized->posiciones,mensaje_localized->id_mensaje_correlativo);
 
 		//liberar_localized(mensaje_localized);
+		free(mensaje_localized->nombre_pokemon);
+		free(mensaje_localized);
 	}
 	else
 	{
@@ -334,7 +336,7 @@ void procesar_localized(t_localized_pokemon *mensaje_localized)
 			uint32_t pos_x= atoi (*(coordenadas));
 			uint32_t pos_y= atoi (*(coordenadas +1));
 			t_appeared_pokemon *mensaje_appeared = malloc (sizeof (t_appeared_pokemon));
-			mensaje_appeared->nombre_pokemon = mensaje_localized->nombre_pokemon;
+			mensaje_appeared->nombre_pokemon = string_duplicate(mensaje_localized->nombre_pokemon);
 			mensaje_appeared->pos_x=pos_x;
 			mensaje_appeared->pos_y=pos_y;
 			procesar_appeared(mensaje_appeared);
@@ -342,7 +344,9 @@ void procesar_localized(t_localized_pokemon *mensaje_localized)
 		free_split(posiciones);
 		free_split(coordenadas);
 	}
-	//else liberar_localized(mensaje_localized);
+	// liberar_localized(mensaje_localized);
+	free(mensaje_localized->nombre_pokemon);
+	free(mensaje_localized);
 }
 
 void procesar_caught (t_caught_pokemon *mensaje_caught)
@@ -405,7 +409,7 @@ void agregar_nueva_especie (char *nueva_especie)
 	}
 	pthread_mutex_lock(&especies_sem);
 	if (!list_any_satisfy(especies,comparar_especie))
-	list_add(especies,nueva_especie);
+	list_add(especies,string_duplicate(nueva_especie));
 	pthread_mutex_unlock(&especies_sem);
 }
 
@@ -463,8 +467,8 @@ nuevo_pokemon tratar_nuevo_pokemon (char *nombre_pokemon)
 void liberar_appeared (t_appeared_pokemon *mensaje)
 
 {
-	//free (mensaje->nombre_pokemon);
-	//free (mensaje);
+	free (mensaje->nombre_pokemon);
+	free (mensaje);
 }
 
 char* colaParaLogs(op_code cola){
