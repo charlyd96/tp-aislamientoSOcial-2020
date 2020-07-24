@@ -22,7 +22,7 @@
 
 /* STRUCTS */
 
-typedef enum {PD, BUDDY} t_tipo_particionado;
+typedef enum {PARTICIONES, BS} t_tipo_particionado;
 typedef enum {FIFO, LRU} t_algoritmo_reemplazo;
 
 typedef enum {FF, BF} t_algoritmo_particion_libre;
