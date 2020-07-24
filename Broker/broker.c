@@ -11,6 +11,11 @@ void destruir_particion(void* elem){
 	list_destroy_and_destroy_elements(part->susc_enviados,free);
 	free(elem);
 }
+void clean_particion(void* elem){
+	t_particion* part = elem;
+	list_clean(part->susc_enviados);
+
+}
 /* FUNCIONES - INICIALIZACIÓN */
 
 int crearConfigBroker(){
@@ -320,7 +325,7 @@ void buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint3
 		list_add_in_index(particiones,indice,part_nueva);
 		//y luego eliminar/reemplazar la part_libre original
 		if(part_libre->tamanio == 0){
-			list_remove_and_destroy_element(particiones,indice+1,free);
+			list_remove_and_destroy_element(particiones,indice+1,destruir_particion);
 		}else{
 			list_replace(particiones,indice+1,part_libre);
 		}
@@ -377,8 +382,8 @@ void liberarParticion(int indice_victima){
 		if(part_der->libre == true){
 			//Fusionar
 			part_liberar->tamanio = part_liberar->tamanio + part_der->tamanio;
-			list_clean(part_der->susc_enviados);
-			list_remove(particiones,indice_victima + 1);
+			// list_clean(part_der->susc_enviados);
+			list_remove_and_destroy_element(particiones,indice_victima + 1,destruir_particion);
 			log_info(logBrokerInterno,"Se consolida con particion indice %d",indice_victima+1);
 		}
 	}
@@ -389,8 +394,8 @@ void liberarParticion(int indice_victima){
 			//Fusionar
 			part_liberar->base = part_izq->base;
 			part_liberar->tamanio = part_liberar->tamanio + part_izq->tamanio;
-			list_clean(part_izq->susc_enviados);
-			list_remove(particiones,indice_victima -1);
+			// list_clean(part_izq->susc_enviados);
+			list_remove_and_destroy_element(particiones,indice_victima -1,destruir_particion);
 			log_info(logBrokerInterno,"Se consolida con particion indice %d",indice_victima-1);
 		}
 	}
@@ -545,7 +550,7 @@ int victimaSegunLRU(){
 void compactarParticiones(){
 	int cant_particiones = list_size(particiones);
 	t_list* lista_aux = list_duplicate(particiones);
-	list_clean(particiones);
+	list_clean_and_destroy_elements(particiones,clean_particion);
 
 	uint32_t offset = 0;
 	for(int i=0; i < cant_particiones; i++){
@@ -555,12 +560,15 @@ void compactarParticiones(){
 			part->base = offset;
 			offset += part->tamanio;
 			list_add(particiones,part);
+		}else{
+			destruir_particion(part);
 		}
 	}
 	t_particion* espacio_libre = malloc(sizeof(t_particion));
 	espacio_libre->libre   = true;
 	espacio_libre->base    = offset;
 	espacio_libre->tamanio = config_broker->tam_memoria - offset;
+	espacio_libre->susc_enviados = list_create();
 	list_add(particiones,espacio_libre);
 	//Libero solo el puntero a la lista auxiliar, no sus elementos porque se los pasé a particiones
 	list_destroy(lista_aux);

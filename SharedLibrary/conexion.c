@@ -366,14 +366,17 @@ t_localized_pokemon* recibirLocalizedPokemon(int socket_cliente){
 		for(uint32_t i = 1; i<=cant_pos; i++){
 			recv(socket_cliente, &pos_x, sizeof(uint32_t), MSG_WAITALL);
 			bytes_recibidos += sizeof(uint32_t);
-
-			string_append(&posicionesString,string_itoa(pos_x));
+			char* itoa_x = string_itoa(pos_x);
+			string_append(&posicionesString,itoa_x);
 			string_append(&posicionesString,"|");
 
 			recv(socket_cliente, &pos_y, sizeof(uint32_t), MSG_WAITALL);
 			bytes_recibidos += sizeof(uint32_t);
+			char* itoa_y = string_itoa(pos_y);
+			string_append(&posicionesString,itoa_y);
 
-			string_append(&posicionesString,string_itoa(pos_y));
+			free(itoa_x);
+			free(itoa_y);
 
 			if(i < cant_pos) string_append(&posicionesString,",");
 		}
