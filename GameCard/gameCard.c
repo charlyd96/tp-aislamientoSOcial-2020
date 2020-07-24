@@ -11,17 +11,17 @@ void levantarPuertoEscucha(void){
 	int socketServidorGamecard = crearSocketServidor(config_gamecard->ip_gamecard, config_gamecard->puerto_gamecard);
 	
 	if(socketServidorGamecard == -1){
-		log_info(logGamecard, "No se pudo crear el Servidor GameCard");
+		log_info(logInterno, "No se pudo crear el Servidor Game Card.");
 	}else{
-		log_info(logGamecard, "Socket Servidor %d\n", socketServidorGamecard);
+		log_info(logInterno, "Socket Servidor %d", socketServidorGamecard);
 		while(1){ //Verificar la condición de salida de este while
 					// log_info(logInterno,"While de aceptar cliente");
 					int cliente = aceptarCliente(socketServidorGamecard);
 					int enviado = enviarACK(cliente);
 					if(enviado > 0){
-						log_info(logGamecard,"Se devolvió el ACK al gameboy, socket %d",cliente);
+						log_info(logInterno,"Se envió el ACK al Game Boy (Socket %d).",cliente);
 					}else{
-						log_info(logGamecard,"ERROR al devolver ACK al gameboy, socket %d",cliente);
+						log_error(logInterno,"ERROR: No se pudo enviar el ACK al Game Boy (Socket %d).",cliente);
 					}
 					pthread_t hiloCliente;
 					pthread_create(&hiloCliente, NULL, (void*)atender_cliente, (void*)cliente);
@@ -29,7 +29,7 @@ void levantarPuertoEscucha(void){
 					pthread_detach(hiloCliente);
 				}
 		close(socketServidorGamecard);
-		log_info(logGamecard, "Se cerro el Soket Servidor %d\n", socketServidorGamecard);
+		log_info(logInterno, "Se cerro el Soket Servidor %d.", socketServidorGamecard);
 	}
 }
 int reintentar_conexion(op_code colaSuscripcion)
@@ -45,12 +45,12 @@ int reintentar_conexion(op_code colaSuscripcion)
 
 	while (socket_cliente == -1 || enviado==0)
 		{
-			log_info (logGamecard, "Fallo de conexión o desconexín broker %s:%s con la cola %s",config_gamecard->ip_broker,config_gamecard->puerto_broker,colaParaLogs(colaSuscripcion));
+			log_info(logGamecard, "Fallo de Conexión con Broker %s : %s a la cola %s.",config_gamecard->ip_broker,config_gamecard->puerto_broker,colaParaLogs(colaSuscripcion));
 			sleep (config_gamecard->tiempo_reintento_conexion);
 			socket_cliente = crearSocketCliente (config_gamecard->ip_broker,config_gamecard->puerto_broker);
 			enviado=enviarSuscripcion (socket_cliente, suscripcion);
 		}
-	log_info (logGamecard, "Suscripción exitosa con la cola %s", colaParaLogs(colaSuscripcion));
+	log_info (logGamecard, "Suscripción del Game Card %d a la cola %s.", suscripcion.id_proceso, colaParaLogs(colaSuscripcion));
 	return (socket_cliente);
 }
 void listen_routine_colas (void *colaSuscripcion){
@@ -72,14 +72,14 @@ void listen_routine_colas (void *colaSuscripcion){
 				{
 					process_code tipo_proceso = recibirTipoProceso(socket_cliente);
 					uint32_t PID = recibirIDProceso(socket_cliente);
-					log_info(logInterno,"Se conectó el proceso %s [%u]\n",tipoProcesoParaLogs(tipo_proceso),PID);
+					log_info(logInterno,"Se conectó el proceso %s [%u]",tipoProcesoParaLogs(tipo_proceso),PID);
 					t_new_pokemon *new_pokemon =recibirNewPokemon (socket_cliente);
-					log_info(logGamecard, "Recibi NEW_POKEMON %s %u %u %u [%u]\n",new_pokemon->nombre_pokemon,new_pokemon->pos_x,new_pokemon->pos_y,new_pokemon->cantidad,new_pokemon->id_mensaje);
+					log_info(logGamecard, "Recepción del Mensaje NEW_POKEMON %s %u %u %u [%u]",new_pokemon->nombre_pokemon,new_pokemon->pos_x,new_pokemon->pos_y,new_pokemon->cantidad,new_pokemon->id_mensaje);
 					int enviado = enviarACK(socket_cliente);
 					if(enviado > 0){
-						log_info(logGamecard,"Se devolvió el ACK");		
+						log_info(logGamecard,"Se envió el ACK del Mensaje NEW_POKEMON con ID de Mensaje [%u].", new_pokemon->id_mensaje);		
 					}else{
-						log_info(logGamecard,"ERROR al devolver ACK");
+						log_warning(logGamecard,"No se pudo enviar el ACK del Mensaje NEW_POKEMON con ID de Mensaje [%u].", new_pokemon->id_mensaje);
 					}
 					pthread_t thread;
 					pthread_create (&thread, NULL, (void *) atender_newPokemon, new_pokemon);
@@ -102,14 +102,14 @@ void listen_routine_colas (void *colaSuscripcion){
 				{
 					process_code tipo_proceso = recibirTipoProceso(socket_cliente);
 					uint32_t PID = recibirIDProceso(socket_cliente);
-					log_info(logInterno,"Se conectó el proceso %s [%u]\n",tipoProcesoParaLogs(tipo_proceso),PID);
+					log_info(logInterno,"Se conectó el proceso %s [%u]",tipoProcesoParaLogs(tipo_proceso),PID);
 					t_get_pokemon *get_pokemon =recibirGetPokemon (socket_cliente);
-					log_info(logGamecard, "Recibi GET_POKEMON %s [%u]\n",get_pokemon->nombre_pokemon,get_pokemon->id_mensaje);
+					log_info(logGamecard, "Recepción del Mensaje GET_POKEMON %s [%u].",get_pokemon->nombre_pokemon,get_pokemon->id_mensaje);
 					int enviado = enviarACK(socket_cliente);
 					if(enviado > 0){
-						log_info(logGamecard,"Se devolvió el ACK");		
+						log_info(logGamecard,"Se envió el ACK del Mensaje GET_POKEMON con ID de Mensaje [%u].", get_pokemon->id_mensaje);			
 					}else{
-						log_info(logGamecard,"ERROR al devolver ACK");
+						log_info(logGamecard,"No se pudo enviar el ACK del Mensaje GET_POKEMON con ID de Mensaje [%d]",get_pokemon->id_mensaje);
 					}
 					pthread_t thread;
 					pthread_create (&thread, NULL, (void *) atender_getPokemon, get_pokemon);
@@ -132,12 +132,12 @@ void listen_routine_colas (void *colaSuscripcion){
 					uint32_t PID = recibirIDProceso(socket_cliente);
 					log_info(logInterno,"Se conectó el proceso %s [%u]\n",tipoProcesoParaLogs(tipo_proceso),PID);
 					t_catch_pokemon *catch_pokemon = recibirCatchPokemon(socket_cliente);
-					log_info(logGamecard, "Recibi CATCH_POKEMON %s %u %u [%u]\n",catch_pokemon->nombre_pokemon,catch_pokemon->pos_x,catch_pokemon->pos_y,catch_pokemon->id_mensaje);
+					log_info(logGamecard, "Recepción del Mensaje CATCH_POKEMON %s %u %u [%u].",catch_pokemon->nombre_pokemon,catch_pokemon->pos_x,catch_pokemon->pos_y,catch_pokemon->id_mensaje);
 					int enviado = enviarACK(socket_cliente);
 					if(enviado > 0){
-						log_info(logGamecard,"Se devolvió el ACK");		
+						log_info(logGamecard,"Se envió el ACK del Mensaje con ID de Mensaje [%d].", catch_pokemon->id_mensaje);	
 					}else{
-						log_info(logGamecard,"ERROR al devolver ACK");
+						log_info(logGamecard,"No se pudo enviar el ACK del Mensaje con ID de Mensaje [%d].", catch_pokemon->id_mensaje);
 					}
 					pthread_t thread;
 					pthread_create (&thread, NULL, (void *) atender_catchPokemon, catch_pokemon);
@@ -148,11 +148,11 @@ void listen_routine_colas (void *colaSuscripcion){
 
 		case OP_UNKNOWN:
 		{
-			log_error (logGamecard, "Operacion inválida");
+			log_error (logInterno, "Operacion inválida");
 			break;
 		}
 
-		default: log_error (logGamecard, "Operacion no reconocida por el sistema");
+		default: log_error (logInterno, "Operacion no reconocida por el sistema");
 	}
 }
 void subscribe()
@@ -171,7 +171,7 @@ void subscribe()
 }
 
 int main(int argc, char** argv){
-	logInterno = log_create("gamecardInterno.log", "GamecardInterno", 1, LOG_LEVEL_INFO);
+	logInterno = log_create("gamecardInterno.log", "Game Card Interno", 0, LOG_LEVEL_TRACE);
 	if(argc != 2){
 		log_error(logInterno,"No se ha proporcionado un id. Ej: ./Gamecard 1");
 		log_destroy(logInterno);
@@ -184,8 +184,10 @@ int main(int argc, char** argv){
 
 	log_info(logInterno,"ID seteado %d",ID_PROCESO);
 
-	logGamecard = log_create("gamecard.log", "Gamecard", 1, LOG_LEVEL_INFO);
+	logGamecard = log_create("gamecard.log", "Game Card", 1, LOG_LEVEL_TRACE);
 
+	log_trace(logGamecard, "****************************************** PROCESO GAME CARD ******************************************");
+	
 	crear_config_gamecard();
 	leer_FS_metadata(config_gamecard);
 	log_info(logInterno,"ip %s:%s\n",config_gamecard->ip_gamecard,config_gamecard->puerto_gamecard);
@@ -207,13 +209,13 @@ int main(int argc, char** argv){
 
 void crear_config_gamecard(){
 
-    log_info(logGamecard, "Inicializacion del log.\n");
+    log_info(logInterno, "Inicializacion del log.");
 	config_gamecard = malloc(sizeof(t_configuracion));
 	
 	config_ruta = config_create(pathGamecardConfig);
 	
 	if (config_ruta == NULL){
-	log_error(logGamecard, "ERROR: No se pudo levantar el archivo de configuración.\n");
+	log_error(logInterno, "ERROR: No se pudo levantar el archivo de configuración.");
 	exit (FILE_CONFIG_ERROR);
 	}
 
@@ -243,7 +245,7 @@ void leer_FS_metadata (t_configuracion *config_gamecard){
 	}
 	else {
 		//config_destroy (FSmetadata);
-		log_error (logGamecard, "No se pudo leer el archivo Metadata del File System");
+		log_error(logGamecard, "ERROR: No se pudo leer el archivo Metadata del File System.");
 		exit (FILE_FSMETADATA_ERROR);
 	}
 	free(pathMetadata);
@@ -262,11 +264,11 @@ bool existe_archivo(char* path){
 }
 
 void atender_cliente(int socket){
-	log_info(logGamecard, "Atender cliente %d \n",socket);
+	log_info(logInterno, "Atender cliente %d",socket);
 	op_code cod_op = recibirOperacion(socket);
 	process_code tipo_proceso = recibirTipoProceso(socket);
 	uint32_t PID = recibirIDProceso(socket);
-	log_info(logInterno,"Se conectó el proceso %s [%u]\n",tipoProcesoParaLogs(tipo_proceso),PID);
+	log_info(logInterno,"Se conectó el proceso %s [%u]",tipoProcesoParaLogs(tipo_proceso),PID);
 	switch(cod_op){
 		case NEW_POKEMON:{
 			t_new_pokemon *new_pokemon=recibirNewPokemon(socket);
@@ -292,7 +294,7 @@ void atender_cliente(int socket){
 int enviarAppearedAlBroker(t_new_pokemon * new_pokemon){
 	int socket_cliente = crearSocketCliente (config_gamecard->ip_broker,config_gamecard->puerto_broker);
 	if(socket_cliente <= 0){
-		log_info(logGamecard,"No se pudo conectar al broker para enviar APPEARED");
+		log_info(logGamecard,"No se pudo conectar al Broker para enviar APPEARED_POKEMON.");
 		// close(socket_cliente);
 		return socket_cliente;
 	}else{
@@ -304,16 +306,16 @@ int enviarAppearedAlBroker(t_new_pokemon * new_pokemon){
 
 		int app_enviado = enviarAppearedPokemon(socket_cliente, *appeared_pokemon, P_GAMECARD, ID_PROCESO);
 		if(app_enviado > 0){
-			log_info(logGamecard,"Se devolvió APPEARED_POKEMON %s %u %u [%u]",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y,appeared_pokemon->id_mensaje_correlativo);
+			log_info(logGamecard,"Se envió el Mensaje APPEARED_POKEMON %s %u %u [%u].",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y,appeared_pokemon->id_mensaje_correlativo);
 			//Reutilizo esta funcion para el id_mensaje
 			uint32_t id_mensaje = recibirIDProceso(socket_cliente);
 			if(id_mensaje>0){
-				log_info(logGamecard,"APPEARED con correlativo [%u] recibió ID_MENSAJE %u",appeared_pokemon->id_mensaje_correlativo,id_mensaje);
+				log_info(logInterno,"APPEARED con correlativo [%u] recibió ID_MENSAJE %u",appeared_pokemon->id_mensaje_correlativo,id_mensaje);
 			}else{
-				log_info(logGamecard,"Error al recibir el ID para APPEARED con correlativo [%u]",appeared_pokemon->id_mensaje_correlativo);
+				log_info(logInterno,"Error al recibir el ID para APPEARED con correlativo [%u]",appeared_pokemon->id_mensaje_correlativo);
 			}
 		}else{
-			log_warning(logGamecard,"No se pudo devolver el appeared");
+			log_warning(logGamecard,"No se pudo enviar el Mensaje APPEARED_POKEMON.");
 		}
 		close(socket_cliente);
 		free(appeared_pokemon);
@@ -323,22 +325,22 @@ int enviarAppearedAlBroker(t_new_pokemon * new_pokemon){
 int enviarLocalizedAlBroker(t_localized_pokemon * msg_localized){
 	int socket_cliente = crearSocketCliente (config_gamecard->ip_broker,config_gamecard->puerto_broker);
 	if(socket_cliente <= 0){
-		log_info(logGamecard,"No se pudo conectar al broker para enviar el LOCALIZED");
+		log_info(logGamecard,"No se pudo conectar al Broker para enviar LOCALIZED_POKEMON.");
 		// close(socket_cliente);
 		return socket_cliente;
 	}else{
 		int enviado = enviarLocalizedPokemon(socket_cliente,*msg_localized,P_GAMECARD,ID_PROCESO);
 		if(enviado > 0){
-			log_info(logGamecard,"Se devolvió LOCALIZED_POKEMON %s %u %s [%u]",msg_localized->nombre_pokemon,msg_localized->cant_pos,msg_localized->posiciones,msg_localized->id_mensaje_correlativo);
+			log_info(logGamecard,"Se envió el Mensaje LOCALIZED_POKEMON %s %u %s [%u].",msg_localized->nombre_pokemon,msg_localized->cant_pos,msg_localized->posiciones,msg_localized->id_mensaje_correlativo);
 			//Reutilizo esta funcion para el id_mensaje
 			uint32_t id_mensaje = recibirIDProceso(socket_cliente);
 			if(id_mensaje>0){
-				log_info(logGamecard,"LOCALIZED con correlativo [%u] recibió ID_MENSAJE %u",msg_localized->id_mensaje_correlativo,id_mensaje);
+				log_info(logInterno,"LOCALIZED con correlativo [%u] recibió ID_MENSAJE %u",msg_localized->id_mensaje_correlativo,id_mensaje);
 			}else{
-				log_info(logGamecard,"Error al recibir el ID para LOCALIZED con correlativo [%u]",msg_localized->id_mensaje_correlativo);
+				log_info(logInterno,"Error al recibir el ID para LOCALIZED con correlativo [%u]",msg_localized->id_mensaje_correlativo);
 			}
 		}else{
-			log_warning(logGamecard,"No se pudo devolver el LOCALIZED");
+			log_warning(logGamecard,"No se pudo enviar el Mensaje LOCALIZED_POKEMON.");
 		}
 		close(socket_cliente);
 		if(msg_localized->cant_pos > 0)
@@ -351,22 +353,22 @@ int enviarLocalizedAlBroker(t_localized_pokemon * msg_localized){
 int enviarCaughtAlBroker(t_caught_pokemon * msg_caught){
 	int socket_cliente = crearSocketCliente (config_gamecard->ip_broker,config_gamecard->puerto_broker);
 	if(socket_cliente <= 0){
-		log_info(logGamecard,"No se pudo conectar al broker para enviar el CAUGHT");
+		log_info(logGamecard,"No se pudo conectar al Broker para enviar CAUGHT_POKEMON");
 		// close(socket_cliente);
 		return socket_cliente;
 	}else{
 		int enviado = enviarCaughtPokemon(socket_cliente,*msg_caught,P_GAMECARD,ID_PROCESO);
 		if(enviado > 0){
-			log_info(logGamecard,"Se devolvió CAUGHT_POKEMON %u [%u]",msg_caught->atrapo_pokemon,msg_caught->id_mensaje_correlativo);
+			log_info(logGamecard,"Se envió el Mensaje CAUGHT_POKEMON %u [%u].",msg_caught->atrapo_pokemon,msg_caught->id_mensaje_correlativo);
 			//Reutilizo esta funcion para el id_mensaje
 			uint32_t id_mensaje = recibirIDProceso(socket_cliente);
 			if(id_mensaje>0){
-				log_info(logGamecard,"CAUGHT_POKEMON con correlativo [%u] recibió ID_MENSAJE %u",msg_caught->id_mensaje_correlativo,id_mensaje);
+				log_info(logInterno,"CAUGHT_POKEMON con correlativo [%u] recibió ID_MENSAJE %u",msg_caught->id_mensaje_correlativo,id_mensaje);
 			}else{
-				log_info(logGamecard,"Error al recibir el ID para CAUGHT_POKEMON con correlativo [%u]",msg_caught->id_mensaje_correlativo);
+				log_info(logInterno,"Error al recibir el ID para CAUGHT_POKEMON con correlativo [%u]",msg_caught->id_mensaje_correlativo);
 			}
 		}else{
-			log_warning(logGamecard,"No se pudo devolver el CAUGHT_POKEMON");
+			log_warning(logGamecard,"No se pudo enviar el Mensaje CAUGHT_POKEMON.");
 		}
 		close(socket_cliente);
 		free(msg_caught);
@@ -411,7 +413,7 @@ void atender_newPokemon(t_new_pokemon* new_pokemon){
 			archivoAbierto = strcmp(config_get_string_value(data_config,"OPEN"),"Y") == 0;
 			
 		}
-		log_info(log_interno,"[NEW] Consulto /%s -> ESTÁ CERRADO, se realiza la operación\n",new_pokemon->nombre_pokemon);
+		log_info(logInterno,"[NEW] Consulto /%s -> ESTÁ CERRADO, se realiza la operación\n",new_pokemon->nombre_pokemon);
 		//Seteo OPEN=Y en el archivo
 		config_set_value(data_config,"OPEN","Y");
 		config_save(data_config);
@@ -480,7 +482,7 @@ void atender_getPokemon(t_get_pokemon* get_pokemon){
 
 		// 2) Si el archivo está abierto, espero y reintento luego del delay
 		while(archivoAbierto == true){
-			log_info(log_interno,"[GET] Consulto /%s -> ESTÁ ABIERTO, se aguarda reintento\n",get_pokemon->nombre_pokemon);
+			log_info(logInterno,"[GET] Consulto /%s -> ESTÁ ABIERTO, se aguarda reintento\n",get_pokemon->nombre_pokemon);
 			sem_post(&mx_file_metadata);
 			config_destroy(data_config);
 
@@ -491,7 +493,7 @@ void atender_getPokemon(t_get_pokemon* get_pokemon){
 			archivoAbierto = strcmp(config_get_string_value(data_config,"OPEN"),"Y") == 0;
 			
 		}
-		log_info(log_interno,"[GET] Consulto /%s -> ESTÁ CERRADO, se realiza la operación\n",get_pokemon->nombre_pokemon);
+		log_info(logInterno,"[GET] Consulto /%s -> ESTÁ CERRADO, se realiza la operación\n",get_pokemon->nombre_pokemon);
 		//Seteo OPEN=Y en el archivo
 		config_set_value(data_config,"OPEN","Y");
 		config_save(data_config);
@@ -565,7 +567,7 @@ void atender_catchPokemon(t_catch_pokemon* catch_pokemon){
 		t_config *data_config = config_create (pathMetadata);
 		bool archivoAbierto = strcmp(config_get_string_value(data_config,"OPEN"),"Y") == 0;
 		while(archivoAbierto == true){
-			log_info(log_interno,"[CATCH] Consulto /%s -> ESTÁ ABIERTO, se aguarda reintento\n",catch_pokemon->nombre_pokemon);
+			log_info(logInterno,"[CATCH] Consulto /%s -> ESTÁ ABIERTO, se aguarda reintento\n",catch_pokemon->nombre_pokemon);
 			sem_post(&mx_file_metadata);
 			config_destroy(data_config);
 
@@ -575,7 +577,7 @@ void atender_catchPokemon(t_catch_pokemon* catch_pokemon){
 			data_config = config_create(pathMetadata);
 			archivoAbierto = strcmp(config_get_string_value(data_config,"OPEN"),"Y") == 0;
 		}
-		log_info(log_interno,"[CATCH] Consulto /%s -> ESTÁ CERRADO, se realiza la operación\n",catch_pokemon->nombre_pokemon);
+		log_info(logInterno,"[CATCH] Consulto /%s -> ESTÁ CERRADO, se realiza la operación\n",catch_pokemon->nombre_pokemon);
 		//Seteo OPEN=Y en el archivo
 		config_set_value(data_config,"OPEN","Y");
 		config_save(data_config);
@@ -719,9 +721,9 @@ void bloques_disponibles(int cantidad,t_list* blocks){
 	perror("Error  mapping \n");
 	exit(1);
 	}
-	log_info(log_interno,"cant:%d %c\n",cantidad,newchar);
+	log_info(logInterno,"cant:%d %c\n",cantidad,newchar);
 
-	log_info(log_interno,"\nfile contents before:\n%s \n", addr); /* write current file contents */
+	log_info(logInterno,"\nfile contents before:\n%s \n", addr); /* write current file contents */
 
 	for(int i = 0; i < file_st.st_size && cantidad >= contador; i++) /* replace characters  */
 	{
@@ -731,11 +733,11 @@ void bloques_disponibles(int cantidad,t_list* blocks){
 			addr[i] = newchar;
 			list_add(blocks,&x);
 			contador++;
-			log_info(log_interno,"i:%c -s:%c -n:%c -bloque modificado: %d\n",addr[i],seekchar,newchar,(int)list_get(blocks,contador));
+			log_info(logInterno,"i:%c -s:%c -n:%c -bloque modificado: %d\n",addr[i],seekchar,newchar,(int)list_get(blocks,contador));
 		}
 	}
 		
-	log_info(log_interno,"\nfile contents after:\n%s \n", addr); /* write file contents after modification */
+	log_info(logInterno,"\nfile contents after:\n%s \n", addr); /* write file contents after modification */
 }
  
 
@@ -838,7 +840,7 @@ void actualizar_metadata (t_config* config_metadata,t_block* info_block) {
 
 char* agregar_pokemon(char *buffer, t_new_pokemon* new_pokemon){
 	char* posicion = string_from_format("%lu-%lu=",new_pokemon->pos_x,new_pokemon->pos_y);
-	log_info(log_interno,"Posición objetivo: %s \n",posicion);
+	log_info(logInterno,"Posición objetivo: %s \n",posicion);
 
 	bool bandera = 0;
 	int posicion_remplazo = 0;
@@ -848,12 +850,12 @@ char* agregar_pokemon(char *buffer, t_new_pokemon* new_pokemon){
 	for (int i=0; *(split+i) != NULL && bandera == 0; i++) {
 		//Si la linea empieza con x-y=
 		if(string_starts_with(*(split+i),posicion)){
-			log_info(log_interno,"Coincidencia con linea %s\n",*(split+i));
+			log_info(logInterno,"Coincidencia con linea %s\n",*(split+i));
 			bandera=1;
 			nueva_linea= editar_posicion(*(split+i), (int)new_pokemon->cantidad, posicion);
 			nuevo_buffer = string_new();
 
-			log_info(log_interno,"La linea modificada queda: %s",nueva_linea);
+			log_info(logInterno,"La linea modificada queda: %s",nueva_linea);
 			posicion_remplazo = i;
 		}
 	}
@@ -877,7 +879,7 @@ char* agregar_pokemon(char *buffer, t_new_pokemon* new_pokemon){
 		string_append(&nuevo_buffer,buffer);
 		
 		nueva_linea = string_from_format("%s%lu\n",posicion,new_pokemon->cantidad);
-		log_info(log_interno,"No hubo coincidencia. Se agrega la linea: %s",nueva_linea);
+		log_info(logInterno,"No hubo coincidencia. Se agrega la linea: %s",nueva_linea);
 		string_append(&nuevo_buffer,nueva_linea);
 	}
 	free_split(split);
@@ -914,11 +916,11 @@ int cantidadPokemonesEnPosicion(char* pos_string,char* buffer,int* indice){
 	int cantidad = -1;
 	for(int i = 0; lineas[i] != NULL && encontrado == false; i++){
 		if(string_starts_with(lineas[i],pos_string)){
-			log_info(log_interno,"Coincidencia con linea %s\n",lineas[i]);
+			log_info(logInterno,"Coincidencia con linea %s\n",lineas[i]);
 			encontrado = true;
 			*indice = i;
 			cantidad = obtenerCantidadEnLinea(lineas[i]);
-			log_info(log_interno,"La cantidad es: %d\n",cantidad);
+			log_info(logInterno,"La cantidad es: %d\n",cantidad);
 		}
 	}
 	free_split(lineas);
@@ -953,14 +955,14 @@ char* descontarPokemonEnLinea(int indice,char*pos_string,char* buffer,int nueva_
 }
 
 t_block* actualizar_datos (char* texto,char ** lista_bloques) {
-	log_info(log_interno,"Nuevos datos a escribir en los bloques:\n%s\n",texto);
-	log_info(log_interno,"Tamaño nuevos datos: %dB, tamaño bloques: %d\n",strlen(texto),FS_config->BLOCK_SIZE);
+	log_info(logInterno,"Nuevos datos a escribir en los bloques:\n%s\n",texto);
+	log_info(logInterno,"Tamaño nuevos datos: %dB, tamaño bloques: %d\n",strlen(texto),FS_config->BLOCK_SIZE);
 
     int block_size = FS_config->BLOCK_SIZE;
 	int total_bloques = FS_config->BLOCKS;
     int largo_texto = strlen(texto);
 	int cant_bloques = cantidad_bloques(largo_texto, block_size);
-	log_info(log_interno,"cant bloques a ocupar: %d\n",cant_bloques);
+	log_info(logInterno,"cant bloques a ocupar: %d\n",cant_bloques);
 	t_block* info_block = malloc(sizeof(t_block));
 	char* blocks_text = string_new();
 	int contador_avance_bloque = 0;
@@ -973,7 +975,7 @@ t_block* actualizar_datos (char* texto,char ** lista_bloques) {
 	
 	sem_wait(&mx_w_bloques);
 	char *bitmap = get_bitmap();
-	log_info(log_interno,"\nBITMAP antes de escribir:\n%s \n", bitmap);
+	log_info(logInterno,"\nBITMAP antes de escribir:\n%s \n", bitmap);
 	//Para "fusionar" los bloques al escribir una nueva linea, lo más fácil es marcar como libres
 	//los bloques de este pokemon, y el 2do for va a escribir todo de nuevo + la nueva linea
 	if(lista_bloques != NULL){ //Si se escribe por primera vez, es NULL
@@ -1007,11 +1009,11 @@ t_block* actualizar_datos (char* texto,char ** lista_bloques) {
 	}
 	sem_post(&mx_w_bloques);
 	string_append(&blocks_text,"]");
-	log_info(log_interno,"Bloques escritos: %s\n",blocks_text);
+	log_info(logInterno,"Bloques escritos: %s\n",blocks_text);
 	
     info_block->blocks=malloc(strlen(blocks_text)+1);
 	strcpy(info_block->blocks,blocks_text);
-	log_info(log_interno,"\nBITMAP después de escribir:\n%s \n", bitmap);
+	log_info(logInterno,"\nBITMAP después de escribir:\n%s \n", bitmap);
 	free(texto);
 	unmap_bitmap(bitmap);
 	free(blocks_text);
@@ -1022,7 +1024,7 @@ char* concatenar_lista_char(int largo_texto, char ** lista){
 	char* texto_concatenado = malloc(largo_texto);
 	for (int i=0; *(lista+i) != NULL; i++) {
 		memcpy(*(lista+i),texto_concatenado,strlen(*(lista+i)));
-		log_info(log_interno,"texto_concatenado %d: %s",i,texto_concatenado);
+		log_info(logInterno,"texto_concatenado %d: %s",i,texto_concatenado);
 	}
 	return texto_concatenado;
 }
@@ -1040,7 +1042,7 @@ char* concatenar_bloques(int largo_texto, char ** lista_bloques){ //Acá puede p
 	for (int i=0; *(lista_bloques +i) != NULL; i++) {
 		
 		char *dir_bloque=string_from_format ("%s/Blocks/%s.bin",config_gamecard->punto_montaje,*(lista_bloques+i));
-		log_info(log_interno,"path archivo %s\n",dir_bloque);
+		log_info(logInterno,"path archivo %s\n",dir_bloque);
 		
 		int archivo=open (dir_bloque, O_RDWR);
 		// printf("%c",*(lista_bloques+i));
