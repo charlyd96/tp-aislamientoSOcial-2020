@@ -21,7 +21,9 @@ void Team_Init(void)
 {
     inicializar_listas(); 
     inicializar_semaforos();  
-    newTrainerToReady=false; //Mejorar la ubiocación de esa instrucción
+    newTrainerToReady=false; //Mejorar la ubicación de esa instrucción
+    ciclos_cpu=0;
+    context_switch=0;
     config= malloc (sizeof (Config));
     config->team_config = get_config();
     Team_load_global_config();
@@ -107,6 +109,7 @@ void fifo_exec (void)
         sem_post ( &qr_sem2 );
         sem_post ( &(trainer->trainer_sem) );
         sem_wait (&using_cpu);
+        context_switch++;
     }
     sem_post(&terminar_ejecucion);
 }
@@ -131,6 +134,7 @@ void RR_exec (void)
             }
             trainer->rafagaEjecutada=0;
             puts ("cambio de contexto");
+            context_switch++;
        }
        sem_post(&terminar_ejecucion);
 }
@@ -154,6 +158,7 @@ void SJFSD_exec (void)
         sem_wait (&using_cpu);
         trainer->rafagaEstimada = actualizar_estimacion(trainer);
         trainer->rafagaEjecutada=0;
+        context_switch++;
     }
     sem_post(&terminar_ejecucion);
 
@@ -190,6 +195,7 @@ void SJFCD_exec (void)
         sem_post (&qr_sem2);
         sem_post (&qr_sem1);
         } 
+        context_switch++;
     }
     sem_post(&terminar_ejecucion);
 }
@@ -378,4 +384,51 @@ void cerar_semaforos (void)
     sem_close (&trainer_count);					
     sem_close (&using_cpu);
     sem_close (&terminar_ejecucion);
+}
+
+void imprimir_metricas (void)
+{
+    log_debug(logTeam,"**************************************************************");
+    log_debug(logTeam,"¡Felicidades! ¡Team ha alcanzado su objetivo satisfactoriamente!");
+    log_debug(logTeam,"\t\t¡Veamos los resultados!");
+    log_debug(logTeam,"Resultados Globales:");
+    log_debug(logTeam,"Ciclos de CPU totales: %d", ciclos_cpu);
+    log_debug(logTeam,"Cambios de contexto: %d\n", context_switch-1); //Porque cuando termina de iterar cuenta uno más
+
+    void metricas_entrenador (void *trainer)
+    {   
+        Trainer *entrenador=trainer;
+        log_debug(logTeam,"Entrenador %d: ",entrenador->index);
+        log_debug(logTeam,"Ciclos CPU utilizados: %d\n",  entrenador->ciclos_cpu_totales);
+    }
+    
+    log_debug(logTeam,"Resultados de cada Entrenador: ");
+    list_iterate(trainers,metricas_entrenador);
+
+    log_debug(logTeam, "Ocurrieron los siguientes deadlocks entre los entrenadores:");
+    
+    void imprimir_deadlocks (void *entrenador)
+    {
+    char *involucrados=formar_string_involucrados( (Trainer*) entrenador);
+    if (involucrados != NULL)
+    log_debug (logTeam, "El entrenador %d estuvo involucrado en un deadlock con: %s", ((Trainer*)entrenador)->index, involucrados );
+    free (involucrados);
+    }
+    list_iterate(trainers,imprimir_deadlocks);
+}
+
+char * formar_string_involucrados(Trainer *trainer)
+{
+    if (list_is_empty(trainer->involucrados))
+    return (NULL);
+    char *numString = string_new();
+    void crear_string (void *numeros)
+    {
+    char *num= string_itoa((int)numeros);
+    string_append(&numString, num);
+    string_append(&numString, "\t");
+    free(num);
+    }
+    list_iterate(trainer->involucrados, crear_string);
+    return(numString);
 }

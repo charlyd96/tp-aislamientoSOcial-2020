@@ -63,7 +63,9 @@ void trainer_to_catch(void)
             if (!planificar) break;
             actual_pokemon =  list_remove (mapped_pokemons, 0);
             sem_post(&poklist_sem2);
-
+            char *nombre_pokemon = string_duplicate(actual_pokemon->name);
+            free(actual_pokemon->name);
+            free(actual_pokemon);
             mover_objetivo_a_lista_auxiliar (actual_pokemon->name);
 
             void imprimir_estados (void *trainer)
@@ -74,15 +76,16 @@ void trainer_to_catch(void)
 
             list_iterate (trainers,calculate_distance);
             //printf ("target= %d\n",target);
-            log_info(internalLogTeam, "indice planificado: %d\n", index);
+            //log_info(internalLogTeam, "indice planificado: %d\n", index);
             if (target ==1) //Si se pudo encontrar un entrenador libre y más cercano que vaya a cazar al pokemon, avanzo y lo mando
             {
-                Trainer *trainer=list_get (trainers, index);
+                Trainer *trainer=list_get(trainers, index);
                 trainer->actual_objective.posx = actual_pokemon->posx;
                 trainer->actual_objective.posy = actual_pokemon->posy;
-                trainer->actual_objective.name = actual_pokemon->name; 
+                trainer->actual_objective.name = nombre_pokemon;
                 trainer->actual_status= READY;
                 trainer->actual_operation= OP_EXECUTING_CATCH; 
+
                 // 3. Operación de atrapar (indicando la ubicación y el pokemon a atrapar).
                 log_info(internalLogTeam, "El entrenador %d se planificó para atrapar un %s ubicado en (%d,%d)\n", trainer->index,trainer->actual_objective.name,actual_pokemon->posx,actual_pokemon->posy);
                 log_info(logTeam, "El entrenador %d se planificó para atrapar un %s ubicado en (%d,%d)\n", trainer->index,trainer->actual_objective.name,actual_pokemon->posx,actual_pokemon->posy);
@@ -853,13 +856,15 @@ void consumir_cpu(Trainer *trainer)
         case FIFO:
         {
             usleep (config->retardo_cpu * 1); //Uso usleep para que no sea tan lenta la ejecución
+            trainer->ciclos_cpu_totales++;
+            ciclos_cpu++;
             break;
         }
 
         case RR:
         {
             if (trainer->rafagaEjecutada >= config->quantum)
-            { printf ("rafaga ejecutada: %f\n",trainer->rafagaEjecutada);
+            { 
                 trainer->actual_status=READY;
                 trainer->ejecucion= PENDING;
                 sem_post(&using_cpu);
@@ -873,6 +878,8 @@ void consumir_cpu(Trainer *trainer)
                 trainer->ejecucion= EXECUTING;
             }
             trainer->rafagaEjecutada++;
+            trainer->ciclos_cpu_totales++;
+            ciclos_cpu++;
             break;
         }
 
@@ -880,12 +887,16 @@ void consumir_cpu(Trainer *trainer)
         {
             usleep (config->retardo_cpu * 1); //Uso usleep para que no sea tan lenta la ejecución
             trainer->rafagaEjecutada++;
+            trainer->ciclos_cpu_totales++;
+            ciclos_cpu++;
             break;
         }
 
         case SJFCD:
         {   
             trainer->rafagaEjecutada++;
+            trainer->ciclos_cpu_totales++; 
+            ciclos_cpu++;
             sem_wait(&qr_sem2);
             if (newTrainerToReady)
             {

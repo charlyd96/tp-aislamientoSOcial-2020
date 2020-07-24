@@ -18,6 +18,7 @@ extern t_list *mapped_pokemons;
 extern sem_t poklist_sem;
 extern sem_t poklist_sem2;
 
+int ciclos_cpu;
 sem_t resolviendo_deadlock;
 
 t_list *deadlock_list;
@@ -94,6 +95,8 @@ typedef struct
     float rafagaEstimada;
     float rafagaEjecutada;
     float rafagaAux;
+
+    int ciclos_cpu_totales;
 
     /*Identificador del entrenador*/
     int index;

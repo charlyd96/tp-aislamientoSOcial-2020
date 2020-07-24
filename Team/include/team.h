@@ -37,6 +37,9 @@ extern t_list *especies;
 
 pthread_mutex_t especies_sem;
 
+extern int ciclos_cpu;
+
+int context_switch;
 bool win;
 
 extern t_list *deadlock_list;
@@ -148,4 +151,6 @@ void ordenar_lista_ready(void);
 void inicializar_listas(void); 
 
 void inicializar_semaforos(void);  
+
+char * formar_string_involucrados();
 #endif /* TEAM_H_ */

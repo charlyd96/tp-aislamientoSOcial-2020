@@ -19,14 +19,15 @@ int main(int argc, char **argv)
    pthread_t thread;
    pthread_create(&thread,NULL,routine,NULL);
    pthread_detach(thread);*/
+   internalLogTeam= log_create ("internalLogTeam.log", "Team", 1,LOG_LEVEL_TRACE);
+   logTeam= log_create ("logTeam.log", "Team", 1,LOG_LEVEL_TRACE);
    if (argc!=2)
    {
        log_error(logTeam,"Debe ingresar un ID de Proceso. Ejemplo: ./Team 1");
        exit(-1);
    }
     ID_proceso = atoi(argv[1]);
-    internalLogTeam= log_create ("internalLogTeam.log", "Team", 1,LOG_LEVEL_TRACE);
-    logTeam= log_create ("logTeam.log", "Team", 1,LOG_LEVEL_TRACE);
+   
 
     log_trace(logTeam, "****************************************** PROCESO TEAM %d ******************************************", ID_proceso);
 	
@@ -60,6 +61,7 @@ int main(int argc, char **argv)
     }
     list_iterate(especies,imprimir);
     //Antes de cerrar conexiones, esperar a que vuelvan todos los hilos
+    imprimir_metricas();
     cerrar_conexiones();
     destruir_log();
     destruir_listas();

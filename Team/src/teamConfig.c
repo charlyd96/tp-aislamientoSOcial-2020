@@ -126,6 +126,7 @@ void Team_load_trainers_config(void)
         entrenadores->rafagaEjecutada=0;
         entrenadores->rafagaEstimada=config->initial_estimation;
         entrenadores->rafagaAux=0;
+        entrenadores->ciclos_cpu_totales=0;
         
         if (detectar_deadlock(entrenadores))
         {
