@@ -195,7 +195,12 @@ void partirBuddy(int indice){
 	//limpio lista de enviados
 	list_clean(buddy_izq->susc_enviados);
 	t_particion* buddy_der = malloc(sizeof(t_particion));
-	*buddy_der = *buddy_izq;
+	buddy_der->base = buddy_izq->base;
+	buddy_der->buddy_i = buddy_izq->buddy_i;
+	buddy_der->susc_enviados = list_create();
+	buddy_der->libre = buddy_izq->libre;
+	buddy_der->tamanio = buddy_izq->tamanio;
+
 	//El orden (exponente en base 2) actual del buddy
 	i = buddy_izq->buddy_i;
 	//log_info(logBrokerInterno,"Se parte el buddy indice %d base %d i %d",indice,buddy_izq->base,buddy_izq->buddy_i);
@@ -334,7 +339,7 @@ void buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint3
 		part_libre->time_creacion = current_time; //Hora actual del sistema
 		part_libre->time_ultima_ref = current_time; //Hora actual del sistema
 		part_libre->tamanio = (uint32_t)pow(2,part_libre->buddy_i);
-		list_clean(part_libre->susc_enviados);
+		part_libre->susc_enviados = list_create();
 
 		list_replace(particiones,indice,part_libre);
 		log_debug(logBrokerInterno, "ID_MENSAJE %d, asigno partición base %d, i %d, tamanio %d",id, part_libre->base,part_libre->buddy_i,part_libre->tamanio);
@@ -1030,9 +1035,6 @@ void atenderMensajeNewPokemon(int socket_cliente){
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_new->suscriptores, j);
 		
-
-		
-
 			int enviado = enviarNewPokemon(suscriptor->socket_suscriptor, *new_pokemon,P_BROKER,0);
 			
 			if(enviado > 0){
@@ -1826,18 +1828,24 @@ int devolverID(int socket,uint32_t* id_mensaje){
 
 void enviarNewPokemonCacheados(int socket, t_suscribe* suscriptor){
 
-	sem_t *semaforo_new = malloc (sizeof (sem_t));
-	sem_init(semaforo_new,0,1);
-	/*pthread_mutex_lock(&lista_semaforos);
-	list_add(lista_semaforos,semaforo_new);
-	pthread_mutex_unlock(&lista_semaforos);*/
 	int tam_lista = list_size(particiones);
 	t_particion* particion_buscada;
-
-	for(int i = 0; i < tam_lista ; i++){
+	bool me_pase = false;
+	for(int i = 0; i < tam_lista && me_pase == false ; i++){
+		sem_wait(&mx_particiones);
+		if(i >= list_size(particiones)){
+			me_pase = true;
+			sem_post(&mx_particiones);
+			log_warning(logBrokerInterno,"Sali por pasarme de indice en descachear NEW");
+			continue;
+		}
 		particion_buscada = list_get(particiones, i);
-
+	
 		if(particion_buscada->libre == 0 && particion_buscada->tipo_mensaje == suscriptor->cola_suscribir){
+			void* stream = malloc(particion_buscada->tamanio);
+			memcpy(stream, cache + particion_buscada->base, particion_buscada->tamanio);
+			sem_post(&mx_particiones);
+
 			bool comparar_id_proceso(void *element){
 				uint32_t id_proceso = suscriptor->id_proceso;
 				uint32_t id_nodo = (uint32_t)element;
@@ -1849,9 +1857,7 @@ void enviarNewPokemonCacheados(int socket, t_suscribe* suscriptor){
 			}
 
 			if(!list_any_satisfy(particion_buscada->susc_enviados, comparar_id_proceso)){
-				void* stream = malloc(particion_buscada->tamanio);
-				memcpy(stream, cache + particion_buscada->base, particion_buscada->tamanio);
-
+				
 				t_new_pokemon* descacheado = descachearNewPokemon(stream, particion_buscada->id);
 
 				struct timeval time_aux;
@@ -1910,6 +1916,8 @@ void enviarNewPokemonCacheados(int socket, t_suscribe* suscriptor){
 				free(descacheado);
 				free(stream);
 			}
+		}else{
+			sem_post(&mx_particiones);
 		}
 	}
 }
@@ -1917,11 +1925,21 @@ void enviarNewPokemonCacheados(int socket, t_suscribe* suscriptor){
 void enviarAppearedPokemonCacheados(int socket, t_suscribe* suscriptor){
 	int tam_lista = list_size(particiones);
 	t_particion* particion_buscada;
-
-	for(int i = 0; i < tam_lista ; i++){
+	bool me_pase = false;
+	for(int i = 0; i < tam_lista && me_pase == false ; i++){
+		sem_wait(&mx_particiones);
+		if(i >= list_size(particiones)){
+			me_pase = true;
+			sem_post(&mx_particiones);
+			log_warning(logBrokerInterno,"Sali por pasarme de indice en descachear APPEARED");
+			continue;
+		}
 		particion_buscada = list_get(particiones, i);
-
+	
 		if(particion_buscada->libre == 0 && particion_buscada->tipo_mensaje == suscriptor->cola_suscribir){	
+			void* stream = malloc(particion_buscada->tamanio);
+			memcpy(stream, cache + particion_buscada->base, particion_buscada->tamanio);
+			sem_post(&mx_particiones);
 			bool comparar_id_proceso(void *element){
 				uint32_t id_proceso = (uint32_t) suscriptor->id_proceso;
 				uint32_t id_nodo = (uint32_t) element;
@@ -1933,8 +1951,6 @@ void enviarAppearedPokemonCacheados(int socket, t_suscribe* suscriptor){
 			}
 
 			if(!list_any_satisfy(particion_buscada->susc_enviados, comparar_id_proceso)){
-				void* stream = malloc(particion_buscada->tamanio);
-				memcpy(stream, cache + particion_buscada->base, particion_buscada->tamanio);
 
 				t_appeared_pokemon descacheado = descachearAppearedPokemon(stream, particion_buscada->id);
 
@@ -1990,6 +2006,8 @@ void enviarAppearedPokemonCacheados(int socket, t_suscribe* suscriptor){
 				free(descacheado.nombre_pokemon);
 				free(stream);
 			}
+		}else{
+			sem_post(&mx_particiones);
 		}
 	}
 }
@@ -1998,10 +2016,22 @@ void enviarCatchPokemonCacheados(int socket, t_suscribe* suscriptor){
 	int tam_lista = list_size(particiones);
 	t_particion* particion_buscada;
 
-	for(int i = 0; i < tam_lista ; i++){
+	bool me_pase = false;
+	for(int i = 0; i < tam_lista && me_pase == false ; i++){
+		sem_wait(&mx_particiones);
+		if(i >= list_size(particiones)){
+			me_pase = true;
+			sem_post(&mx_particiones);
+			log_warning(logBrokerInterno,"Sali por pasarme de indice en descachear CATCH");
+			continue;
+		}
 		particion_buscada = list_get(particiones, i);
 
 		if(particion_buscada->libre == 0 && particion_buscada->tipo_mensaje == suscriptor->cola_suscribir){
+			void* stream = malloc(particion_buscada->tamanio);
+			memcpy(stream, cache + particion_buscada->base, particion_buscada->tamanio);
+			sem_post(&mx_particiones);
+
 			bool comparar_id_proceso(void *element){
 				uint32_t id_proceso = (uint32_t)suscriptor->id_proceso;
 				uint32_t id_nodo = (uint32_t)element;
@@ -2013,8 +2043,7 @@ void enviarCatchPokemonCacheados(int socket, t_suscribe* suscriptor){
 			}
 
 			if(!list_any_satisfy(particion_buscada->susc_enviados, comparar_id_proceso)){
-				void* stream = malloc(particion_buscada->tamanio);
-				memcpy(stream, cache + particion_buscada->base, particion_buscada->tamanio);
+				
 
 				t_catch_pokemon descacheado = descachearCatchPokemon(stream, particion_buscada->id);
 
@@ -2069,6 +2098,8 @@ void enviarCatchPokemonCacheados(int socket, t_suscribe* suscriptor){
 				free(descacheado.nombre_pokemon);
 				free(stream);
 			}
+		}else{
+			sem_post(&mx_particiones);
 		}
 	}
 }
@@ -2076,11 +2107,22 @@ void enviarCatchPokemonCacheados(int socket, t_suscribe* suscriptor){
 void enviarCaughtPokemonCacheados(int socket, t_suscribe* suscriptor){
 	int tam_lista = list_size(particiones);
 	t_particion* particion_buscada;
-
-	for(int i = 0; i < tam_lista ; i++){
+	bool me_pase = false;
+	for(int i = 0; i < tam_lista && me_pase == false ; i++){
+		sem_wait(&mx_particiones);
+		if(i >= list_size(particiones)){
+			me_pase = true;
+			sem_post(&mx_particiones);
+			log_warning(logBrokerInterno,"Sali por pasarme de indice en descachear caught");
+			continue;
+		}
 		particion_buscada = list_get(particiones, i);
-		
+
 		if(particion_buscada->libre == 0 && particion_buscada->tipo_mensaje == suscriptor->cola_suscribir){
+			void* stream = malloc(particion_buscada->tamanio);
+			memcpy(stream, cache + particion_buscada->base, particion_buscada->tamanio);
+			sem_post(&mx_particiones);
+
 			bool comparar_id_proceso(void *element){
 				uint32_t id_proceso = (uint32_t)suscriptor->id_proceso;
 				uint32_t id_nodo = (uint32_t)element;
@@ -2092,9 +2134,6 @@ void enviarCaughtPokemonCacheados(int socket, t_suscribe* suscriptor){
 			}
 
 			if(!list_any_satisfy(particion_buscada->susc_enviados, comparar_id_proceso)){
-				void* stream = malloc(particion_buscada->tamanio);
-				memcpy(stream, cache + particion_buscada->base, particion_buscada->tamanio);
-
 				t_caught_pokemon descacheado = descachearCaughtPokemon(stream, particion_buscada->id);
 
 				struct timeval time_aux;
@@ -2141,6 +2180,8 @@ void enviarCaughtPokemonCacheados(int socket, t_suscribe* suscriptor){
 				
 				free(stream);
 			}
+		}else{
+			sem_post(&mx_particiones);
 		}
 	}
 }
@@ -2148,11 +2189,21 @@ void enviarCaughtPokemonCacheados(int socket, t_suscribe* suscriptor){
 void enviarGetPokemonCacheados(int socket, t_suscribe* suscriptor){
 	int tam_lista = list_size(particiones);
 	t_particion* particion_buscada;
-
-	for(int i = 0; i < tam_lista ; i++){
+	bool me_pase = false;
+	for(int i = 0; i < tam_lista && me_pase == false ; i++){
+		sem_wait(&mx_particiones);
+		if(i >= list_size(particiones)){
+			me_pase = true;
+			sem_post(&mx_particiones);
+			log_warning(logBrokerInterno,"Sali por pasarme de indice en descachear NEW");
+			continue;
+		}
 		particion_buscada = list_get(particiones, i);
 
 		if(particion_buscada->libre == 0 && particion_buscada->tipo_mensaje == suscriptor->cola_suscribir){
+			void* stream = malloc(particion_buscada->tamanio);
+			memcpy(stream, cache + particion_buscada->base, particion_buscada->tamanio);
+			sem_post(&mx_particiones);
 			bool comparar_id_proceso(void *element){
 				uint32_t id_proceso = (uint32_t) suscriptor->id_proceso;
 				uint32_t id_nodo = (uint32_t) element;
@@ -2164,9 +2215,7 @@ void enviarGetPokemonCacheados(int socket, t_suscribe* suscriptor){
 			}
 
 			if(!list_any_satisfy(particion_buscada->susc_enviados, comparar_id_proceso)){
-				void* stream = malloc(particion_buscada->tamanio);
-				memcpy(stream, cache + particion_buscada->base, particion_buscada->tamanio);
-
+				
 				t_get_pokemon* descacheado = descachearGetPokemon(stream, particion_buscada->id);
 
 				struct timeval time_aux;
@@ -2219,6 +2268,8 @@ void enviarGetPokemonCacheados(int socket, t_suscribe* suscriptor){
 				free(stream);
 			}
 			
+		}else{
+			sem_post(&mx_particiones);
 		}
 	}
 }
@@ -2226,11 +2277,22 @@ void enviarGetPokemonCacheados(int socket, t_suscribe* suscriptor){
 void enviarLocalizedPokemonCacheados(int socket, t_suscribe* suscriptor){
 	int tam_lista = list_size(particiones);
 	t_particion* particion_buscada;
-
-	for(int i = 0; i < tam_lista ; i++){
+	bool me_pase = false;
+	for(int i = 0; i < tam_lista && me_pase == false ; i++){
+		sem_wait(&mx_particiones);
+		if(i >= list_size(particiones)){
+			me_pase = true;
+			sem_post(&mx_particiones);
+			log_warning(logBrokerInterno,"Sali por pasarme de indice en descachear LOCALIZED");
+			continue;
+		}
 		particion_buscada = list_get(particiones, i);
 
 		if(particion_buscada->libre == 0 && particion_buscada->tipo_mensaje == suscriptor->cola_suscribir){
+			void* stream = malloc(particion_buscada->tamanio);
+			memcpy(stream, cache + particion_buscada->base, particion_buscada->tamanio);
+			sem_post(&mx_particiones);
+			
 			bool comparar_id_proceso(void *element){
 				uint32_t id_proceso = (uint32_t)suscriptor->id_proceso;
 				uint32_t id_nodo = (uint32_t)element;
@@ -2242,9 +2304,7 @@ void enviarLocalizedPokemonCacheados(int socket, t_suscribe* suscriptor){
 			}
 
 			if(!list_any_satisfy(particion_buscada->susc_enviados, comparar_id_proceso)){
-				void* stream = malloc(particion_buscada->tamanio);
-				memcpy(stream, cache + particion_buscada->base, particion_buscada->tamanio);
-
+				
 				t_localized_pokemon descacheado = descachearLocalizedPokemon(stream, particion_buscada->id);
 
 				struct timeval time_aux;
@@ -2270,6 +2330,8 @@ void enviarLocalizedPokemonCacheados(int socket, t_suscribe* suscriptor){
 				
 				free(stream);
 			}
+		}else{
+			sem_post(&mx_particiones);
 		}
 	}
 }
