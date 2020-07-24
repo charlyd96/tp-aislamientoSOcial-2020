@@ -25,8 +25,11 @@ int main(int argc, char **argv)
        exit(-1);
    }
     ID_proceso = atoi(argv[1]);
-    internalLogTeam= log_create ("internalLogTeam.log", "Team", 1,LOG_LEVEL_INFO);
-    logTeam= log_create ("logTeam.log", "Team", 1,LOG_LEVEL_INFO);
+    internalLogTeam= log_create ("internalLogTeam.log", "Team", 1,LOG_LEVEL_TRACE);
+    logTeam= log_create ("logTeam.log", "Team", 0,LOG_LEVEL_TRACE);
+
+    log_trace(logTeam, "****************************************** PROCESO TEAM %d ******************************************", ID_proceso);
+	
     Team_Init (); //Obtiene configuraciones y entrenadores, los localiza y define el objetivo global
 
     subscribe (); //Crea tres hilos para suscribirse a las tres colas de mensajes

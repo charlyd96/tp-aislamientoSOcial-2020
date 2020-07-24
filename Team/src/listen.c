@@ -140,7 +140,9 @@ void listen_routine_colas (void *colaSuscripcion)
 					recibirIDProceso(socketAppeared);
 					t_appeared_pokemon* mensaje_appeared= recibirAppearedPokemon(socketAppeared);
 					enviarACK(socketAppeared);
-					log_info (internalLogTeam, "Mensaje recibido: %s %s %d %d",colaParaLogs((int)cod_op),mensaje_appeared->nombre_pokemon,mensaje_appeared->pos_x,mensaje_appeared->pos_y);
+					// 7. Llegada de un mensaje (indicando el tipo del mismo y sus datos).
+					log_info (internalLogTeam, "Llegó un Mensaje APPEARED_POKEMON %s %d %d con ID de Mensaje Correlativo [%d].",mensaje_appeared->nombre_pokemon,mensaje_appeared->pos_x,mensaje_appeared->pos_y, mensaje_appeared->id_mensaje_correlativo);
+					log_info (logTeam, "Llegó un Mensaje APPEARED_POKEMON %s %d %d con ID de Mensaje Correlativo [%d].",mensaje_appeared->nombre_pokemon,mensaje_appeared->pos_x,mensaje_appeared->pos_y, mensaje_appeared->id_mensaje_correlativo);
 					pthread_t thread;
 					pthread_create (&thread, NULL, (void *) procesar_appeared, mensaje_appeared);
 					pthread_detach (thread);	
@@ -169,7 +171,9 @@ void listen_routine_colas (void *colaSuscripcion)
 					recibirIDProceso(socketLocalized);
 					t_localized_pokemon* mensaje_localized= recibirLocalizedPokemon(socketLocalized);
 					enviarACK(socketLocalized);
-					log_info (internalLogTeam, "Mensaje recibido: %s %s %d %s [%d]",colaParaLogs((int)cod_op),mensaje_localized->nombre_pokemon,mensaje_localized->cant_pos,mensaje_localized->posiciones,mensaje_localized->id_mensaje_correlativo);
+					// 7. Llegada de un mensaje (indicando el tipo del mismo y sus datos).
+					log_info (internalLogTeam, "Llegó un Mensaje LOCALIZED_POKEMON %s %d %s con ID de Mensaje Correlativo [%d]",mensaje_localized->nombre_pokemon,mensaje_localized->cant_pos,mensaje_localized->posiciones,mensaje_localized->id_mensaje_correlativo);
+					log_info (logTeam, "Llegó un Mensaje LOCALIZED_POKEMON %s %d %s con ID de Mensaje Correlativo [%d]",mensaje_localized->nombre_pokemon,mensaje_localized->cant_pos,mensaje_localized->posiciones,mensaje_localized->id_mensaje_correlativo);
 					pthread_t thread;
 					pthread_create (&thread, NULL, (void *) procesar_localized, mensaje_localized);
 					pthread_detach (thread);
@@ -194,7 +198,9 @@ void listen_routine_colas (void *colaSuscripcion)
 					recibirIDProceso(socketCaught);
 					t_caught_pokemon* mensaje_caught= recibirCaughtPokemon(socketCaught);
 					enviarACK(socketCaught);
-					log_info (internalLogTeam, "Mensaje recibido: %s %d %d",colaParaLogs((int)cod_op),mensaje_caught->atrapo_pokemon, mensaje_caught->id_mensaje_correlativo);
+					// 7. Llegada de un mensaje (indicando el tipo del mismo y sus datos).
+					log_info (internalLogTeam, "Llegó un Mensaje CAUGHT_POKEMON %d con ID de Mensaje Correlativo [%d].",mensaje_caught->atrapo_pokemon, mensaje_caught->id_mensaje_correlativo);
+					log_info (logTeam, "Llegó un Mensaje CAUGHT_POKEMON %d con ID de Mensaje Correlativo [%d].",mensaje_caught->atrapo_pokemon, mensaje_caught->id_mensaje_correlativo);
 					pthread_t thread;
 					pthread_create (&thread, NULL, (void *) procesar_caught, mensaje_caught);
 					pthread_detach (thread);
@@ -225,12 +231,18 @@ int reintentar_conexion(op_code colaSuscripcion)
 	
 	while ( (socket_cliente == -1 || enviado==0) && !win )
 		{
-			log_info (internalLogTeam, "Falló la conexión al broker con la cola %s",colaParaLogs(colaSuscripcion));
+			// 9. Errores de comunicación con el Broker (indicando que se realizará la operación por default).
+			log_info (internalLogTeam, "Fallo de Conexión con Broker %s : %s a la cola %s.", config->broker_IP, config->broker_port,colaParaLogs(colaSuscripcion));
+			log_info (internalLogTeam, "Fallo de Conexión con Broker %s : %s a la cola %s.", config->broker_IP, config->broker_port,colaParaLogs(colaSuscripcion));
+			
+			// 10. Inicio de proceso de reintento de comunicación con el Broker.
+			log_info(internalLogTeam, "Inicio de reintento de conexión.");
+			log_info(logTeam, "Inicio de reintento de conexión.");
 			sleep (config->reconnection_time);
 			socket_cliente = crearSocketCliente (config->broker_IP,config->broker_port);
 			enviado=enviarSuscripcion (socket_cliente, colaAppeared);
 		}
-	if (!win) log_info (internalLogTeam, "Conexión exitosa con la cola %s", colaParaLogs(colaSuscripcion));
+	if (!win) log_info (internalLogTeam, "Suscripción del Team %d a la cola %s.", colaAppeared.id_proceso, colaParaLogs(colaSuscripcion));
 	return (socket_cliente);
 }
 

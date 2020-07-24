@@ -215,7 +215,7 @@ void Team_load_global_config()
     /* Just to test the correct reading from the configurations file to the globals configurations*/
     if (PRINT_TEST == 1)
     {
-        log_info(internalLogTeam, ("\n\n\nShowing the global configurations:");
+        log_info(internalLogTeam, "\n\n\nShowing the global configurations:");
         log_info(internalLogTeam,"TIEMPO_RECONEXION= %d\n",config->reconnection_time );
         log_info(internalLogTeam,"RETARDO_CICLO_CPU= %d\n",config->retardo_cpu);
         log_info(internalLogTeam,"ALGORITMO_PLANIFICACION= %s\n",config->planning_algorithm);
