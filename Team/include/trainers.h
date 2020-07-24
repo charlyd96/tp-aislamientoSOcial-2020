@@ -87,6 +87,9 @@ typedef struct
     /* Entrenador con el cual deberá realizar el intercambio */
     Deadlock objetivo;
 
+    /* Lista de entrenadores con los que se involucró en un deadlock */ 
+    t_list *involucrados;
+
     /* Para los algoritmos SJF-SD y SJF-CD */
     float rafagaEstimada;
     float rafagaEjecutada;

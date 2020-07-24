@@ -137,14 +137,14 @@ void send_trainer_to_ready (t_list *lista, int index, Operation op) //Eliminar e
             list_add (ReadyQueue , list_get (lista, index) );
             sem_post (&qr_sem2);
             sem_post (&qr_sem1);
-            //log_info (internalLogTeam, "Se planificó a Ready al entrenador %d para resolver un DEADLOCK", 
-            //( (Trainer*) list_get(trainers, index) )->index); //Verificar si en esta lista va trainers
+            log_info (internalLogTeam, "Se planificó a Ready al entrenador %d para resolver un DEADLOCK", 
+            ( (Trainer*) list_get(lista, index) )->index); //Verificar si en esta lista va trainers
             break;
         }
     }
 }
 
-void mover_objetivo_a_lista_auxiliar (char *name) //Cambiar firma por "char * "
+void mover_objetivo_a_lista_auxiliar (char *name)
 {
     pthread_mutex_lock (&auxglobal_sem);
     list_add (aux_global_objective , name);
@@ -406,25 +406,12 @@ void trainer_routine (Trainer *trainer)
             {
                 move_trainer_to_objective (trainer, OP_EXECUTING_DEADLOCK);
                 intercambiar(trainer, list_get(deadlock_list, trainer->objetivo.index_objective));
-                list_remove (deadlock_list,0); //Cambiar
-                if (detectar_deadlock(trainer))
-                {
-                    trainer->actual_status = BLOCKED_DEADLOCK;
-                    trainer_to_deadlock (trainer);
-                    sem_post (&using_cpu); //Como en este caso no hay mensaje CATCH, necesito disponibilizar la CPU  
-                    sem_post (&resolviendo_deadlock);
-                    sem_wait (&trainer->trainer_sem); //Bloqueo al entrenador hasta ejecutar el algoritmo de recuperación de deadlock
-                }
-                else 
-                {
-                    trainer->actual_status = EXIT; 
-                    sem_post (&resolviendo_deadlock);  
-                    sem_post (&using_cpu); //Como en este caso no hay mensaje CATCH, necesito disponibilizar la CPU  
-                }
-                break;
+                sem_post (&resolviendo_deadlock);
+                sem_post (&using_cpu); //Como en este caso no hay mensaje CATCH, necesito disponibilizar la CPU  
+                sem_wait (&trainer->trainer_sem); //Bloqueo al entrenador hasta ejecutar el algoritmo de recuperación de deadlock
+                break; 
             }
-				
-				default: log_info(internalLogTeam, "Operación no válida"); //exit (INVALID_TRAINER_OP);
+			default: log_error(internalLogTeam, "Operación no válida"); //exit (INVALID_TRAINER_OP);
 		}
     }
     
@@ -439,7 +426,7 @@ void trainer_routine (Trainer *trainer)
 void trainer_to_deadlock(Trainer *trainer)
 {
     sem_wait (&deadlock_sem2); //Verificar si se requiere sincronización (esquema productor consumidor: ¿necesario?)
-    list_add (deadlock_list, trainer); 
+    list_add_in_index (deadlock_list, 0, trainer); 
     sem_post (&deadlock_sem2);
     sem_post (&deadlock_sem1);
     log_info (internalLogTeam, "Se agregó al entrenador %d a la cola de bloqueados por Deadlock.", trainer->index);
@@ -585,9 +572,9 @@ void split_objetivos_capturados (Trainer *trainer, t_list *lista_pok_sobrantes, 
 }
 
 
-
 int deadlock_recovery (void)
 {
+    /*
     log_info(internalLogTeam, "Size lista de deadlock: %d\n", list_size (deadlock_list));
     if (!detectar_deadlock (list_get(deadlock_list, 0)))
     {
@@ -596,7 +583,7 @@ int deadlock_recovery (void)
         sem_post(&trainer->trainer_sem);
         sem_post(&resolviendo_deadlock);
         return 0;
-    }
+    }*/
     log_info (logTeam,"Se comenzó a ejecutar el algoritmo de recuperación de DEADLOCK");
     //Correr algoritmo de detección (menos la primera vez)
 
@@ -672,37 +659,38 @@ int deadlock_recovery (void)
         list_destroy(trainer2_faltantes);
         return (RECURSIVE_RECOVERY_SUCESS); //Retornar el éxito dando aviso de que fue recursivo
     }  
-
-        //Si trainer1 le puede dar un pokemon a trainer2, pero trainer2 no tiene ninguno que le sirva a trainer1, le saco el primero
-        // que no le sirva a trainer2 y se lo paso a trainer1
-        if (entregar_trainer1 != NULL && recibir_trainer1 == NULL)
-        {
-        log_info(internalLogTeam, "segundo if");
-        //recibir_trainer1 = list_get(trainer2_sobrantes, 0);
-        } 
         
-            //Si trainer2 le puede dar un pokemon a trainer1, pero trainer1 no tiene ninguno que le sirva a trainer2, le saco el primero
-            // que no le sirva a trainer1 y se lo paso a trainer2
-            if (entregar_trainer1 == NULL && recibir_trainer1 != NULL)
-            {
-            log_info(internalLogTeam, "tercer if");
-            entregar_trainer1 = list_get(trainer1_sobrantes, 0);
-            } //Si no se cumple ninguna, se realiza un intercambio efectivo para ambos entrenadores
+    //Si trainer2 le puede dar un pokemon a trainer1, pero trainer1 no tiene ninguno que le sirva a trainer2, le saco el primero
+    // que no le sirva a trainer1 y se lo paso a trainer2
+    if (entregar_trainer1 == NULL && recibir_trainer1 != NULL)
+    {
+    log_info(internalLogTeam, "tercer if");
+    entregar_trainer1 = list_get(trainer1_sobrantes, 0);
+    } //Si no se cumple, se realiza un intercambio efectivo para ambos entrenadores
 
     trainer1->objetivo.recibir=recibir_trainer1;
     trainer1->objetivo.entregar=entregar_trainer1;
     trainer1->objetivo.posx=trainer2->posx;
     trainer1->objetivo.posy=trainer2->posy;
     trainer1->objetivo.index_objective=index;
-    log_info(internalLogTeam, "SEND TRAINER TO READY");
     trainer1->actual_operation = OP_EXECUTING_DEADLOCK;
     trainer2->actual_operation = OP_EXECUTING_DEADLOCK; //Mejorar esto ya que puede ser confuso. Agregar un estado "waiting for deadlock"
     send_trainer_to_ready(deadlock_list, 0, OP_EXECUTING_DEADLOCK); //Cambiar esa constante por trainer1->actual_operation
     
     
-    log_info(internalLogTeam, "Trainer %d entregará %s\n", trainer1->index, entregar_trainer1);
-    log_info(internalLogTeam, "Trainer %d recibirá %s\n",  trainer1->index, recibir_trainer1);
-    log_info(internalLogTeam, "");
+    log_info(internalLogTeam, "Trainer %d entregará %s", trainer1->index, entregar_trainer1);
+    log_info(internalLogTeam, "Trainer %d recibirá %s",  trainer1->index, recibir_trainer1);
+
+    sem_wait (&resolviendo_deadlock);
+    
+    list_add(trainer1->involucrados,(void*)trainer2->index);
+    printf ("Involucrado: %d\n", trainer2->index);
+    bool deadlockTrainer1= detectar_deadlock(trainer1);
+    bool deadlockTrainer2= detectar_deadlock(trainer2);
+    if (!deadlockTrainer2) list_remove(deadlock_list,index);
+    if (!deadlockTrainer1) list_remove(deadlock_list,0);
+
+    index=0;
 
     /*
     //}
@@ -718,7 +706,6 @@ int deadlock_recovery (void)
     list_iterate(trainer2_sobrantes, imprimir3);
     printf ("Faltantes entrenador %d:\n",trainer2->index);
     list_iterate(trainer2_faltantes, imprimir3);*/
-    index=0; //Reiniciar el index para ejecutar nuevamente el algoritmo con otros entrenadores luego del intercambio
     list_destroy(trainer1_sobrantes);
     list_destroy(trainer1_faltantes);
     list_destroy(trainer2_sobrantes);
@@ -733,12 +720,12 @@ void intercambiar(Trainer *trainer1, Trainer *trainer2)
 
      void imprimir (void *element)
     {
-        log_info(internalLogTeam, "%s\t",(char*)element);
+        log_info(internalLogTeam, "%s",(char*)element);
     }
     log_info(internalLogTeam, "Antes del intercambio");
-    log_info(internalLogTeam, "Bag entrenador %d: ", trainer1->index);
+    log_info(internalLogTeam, "Bag entrenador %d tiene %d elementos: ", trainer1->index, list_size(trainer1->bag) );
     list_iterate (trainer1->bag,imprimir);
-    log_info(internalLogTeam, "\nBag entrenador %d: ", trainer2->index);
+    log_info(internalLogTeam, "Bag entrenador %d tiene %d elementos: ", trainer2->index, list_size(trainer2->bag) );
     list_iterate (trainer2->bag,imprimir);
     char *recibir=trainer1->objetivo.recibir;
     char *entregar=trainer1->objetivo.entregar;
@@ -760,12 +747,12 @@ void intercambiar(Trainer *trainer1, Trainer *trainer2)
     list_add(trainer1->bag,aux_recibir);
     list_add(trainer2->bag,aux_entregar);
 
-    log_info(internalLogTeam, "\nDespués del intercambio");
+    log_info(internalLogTeam, "Después del intercambio\n");
     log_info(internalLogTeam, "Bag entrenador %d: ", trainer1->index);
     list_iterate (trainer1->bag,imprimir);
-    log_info(internalLogTeam, "\nBag entrenador %d: ", trainer2->index);
+    log_info(internalLogTeam, "Bag entrenador %d: ", trainer2->index);
     list_iterate (trainer2->bag,imprimir);
-    log_info(internalLogTeam, "");
+    
 }
 
 
@@ -816,8 +803,11 @@ void move_trainer_to_objective (Trainer *trainer, Operation op)
             Ty=&(trainer->posy);
             Px=&(trainer->objetivo.posx);
             Py=&(trainer->objetivo.posy);
-            //log_info (internalLogTeam, "El entrenador %d empezó a ejecutar una recuperación de DEADLOCK con el entrenador %d", 
-            //trainer->index, ( (Trainer *) list_get(deadlock_list, (trainer->objetivo.index_objective)))->index);
+            log_info (internalLogTeam, "El entrenador %d empezó a ejecutar una recuperación de DEADLOCK con el entrenador %d", 
+            trainer->index, ( (Trainer *) list_get(deadlock_list, (trainer->objetivo.index_objective)))->index);
+            int value;
+            sem_getvalue(&using_cpu,&value);
+            printf ("Value: %d\n",value);
             break;
         }    
 
@@ -869,7 +859,7 @@ void consumir_cpu(Trainer *trainer)
         case RR:
         {
             if (trainer->rafagaEjecutada >= config->quantum)
-            {
+            { printf ("rafaga ejecutada: %f\n",trainer->rafagaEjecutada);
                 trainer->actual_status=READY;
                 trainer->ejecucion= PENDING;
                 sem_post(&using_cpu);

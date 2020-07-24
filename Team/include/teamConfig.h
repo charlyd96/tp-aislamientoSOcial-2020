@@ -107,4 +107,5 @@ void imprimir_entrenador(void);
 
 void destruir_log (void);
 
+void imprimir_involucrados (void);
 #endif /* INCLUDE_TEAMCONFIG_H_ */

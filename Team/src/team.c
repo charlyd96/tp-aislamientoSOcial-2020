@@ -101,7 +101,6 @@ void fifo_exec (void)
     {
         sem_wait ( &qr_sem1 );
         sem_wait ( &qr_sem2 );
-        log_info(internalLogTeam,"pase fifo fifo");
         if (win) break;  
         Trainer* trainer= list_remove (ReadyQueue, 0);
         trainer->actual_status= EXEC;
@@ -131,6 +130,7 @@ void RR_exec (void)
             send_trainer_to_ready(trainers, trainer->index,trainer->actual_operation);
             }
             trainer->rafagaEjecutada=0;
+            puts ("cambio de contexto");
        }
        sem_post(&terminar_ejecucion);
 }
@@ -177,8 +177,6 @@ void SJFCD_exec (void)
         trainer->rafagaAux=trainer->rafagaEstimada;
         sem_post ( &(trainer->trainer_sem) );
         sem_wait (&using_cpu);
-         log_info(internalLogTeam,"wait");
-         log_info(internalLogTeam,"Ejecucion: %d\n",trainer->ejecucion);
         if (trainer->ejecucion==FINISHED)
         {
         trainer->rafagaEstimada = trainer->rafagaAux;
@@ -189,7 +187,6 @@ void SJFCD_exec (void)
         {
         newTrainerToReady=true;
         list_add (ReadyQueue, trainer);
-        log_info(internalLogTeam,"\n\n\n\nEN EN EL ELSE\n\n\n\n\n");
         sem_post (&qr_sem2);
         sem_post (&qr_sem1);
         } 
@@ -246,17 +243,11 @@ int Trainer_handler_create ()
 
     while (list_size (deadlock_list)>0)
     {
-    int value;
-
-    sem_getvalue(&resolviendo_deadlock, &value);
-    log_info(internalLogTeam,"Resolviendo deadlock antes del recovery vale %d\n", value);
+   
     log_info(internalLogTeam,"Resultado de la recuperación: %d\n",deadlock_recovery());
     log_info(internalLogTeam,"En lista Deadlock: %d\n", list_size (deadlock_list));
     
-    sem_getvalue(&resolviendo_deadlock, &value);
-    log_info(internalLogTeam,"Resolviendo deadlock vale %d\n", value);
-    sem_wait (&resolviendo_deadlock);
-    //sleep (4);
+
     }
 
     void imprimir_estados (void *trainer)

@@ -118,7 +118,8 @@ void Team_load_trainers_config(void)
         for (int k=0 ; *(objetivos + k) != NULL ; k++)
         list_add (entrenadores->personal_objective, *(objetivos+k));
 
-     
+        entrenadores->involucrados=list_create();
+
         sem_init (&(entrenadores->trainer_sem), 0, 0);
         
         entrenadores->index= index;
@@ -354,4 +355,21 @@ void destruir_log (void)
 {
     log_destroy (internalLogTeam);
     log_destroy (logTeam);
+}
+
+void imprimir_involucrados (void)
+{
+   void iterar (void *entrenador)
+   {
+       printf ("Con entrenador %d: ", ((Trainer*)entrenador)->index);
+        void imprimir (void *elemento)
+        {
+            printf ("%d\t",(int)elemento);
+        }
+    list_iterate( ((Trainer*)entrenador)->involucrados,imprimir);
+    puts (" ");
+    }
+    
+    
+    list_iterate(trainers,iterar);
 }

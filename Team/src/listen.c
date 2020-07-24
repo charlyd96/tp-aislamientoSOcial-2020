@@ -11,11 +11,11 @@
 
 void  listen_routine_gameboy ()
 {
-	
     socketGameboy= crearSocketServidor (config->team_IP, config->team_port);
 	if (socketGameboy == -1)
 	{
 		log_error(internalLogTeam, "No se pudo crear el servidor de escucha del Gameboy");
+		exit(-1);
 	}
 	else
 	{
@@ -25,11 +25,11 @@ void  listen_routine_gameboy ()
 			socketGameboyCliente = aceptarCliente (socketGameboy);
 			if (win)
 			{
-				log_info(internalLogTeam,"fin escucha");
+				log_info(internalLogTeam,"Fin escucha del GameBoy");
 				break;
 			} 
 			log_info(internalLogTeam,"Socket cliente: %d\n", socketGameboyCliente);
-			get_opcode(socketGameboyCliente);
+			//get_opcode(socketGameboyCliente);
 			pthread_create (&thread, NULL, (void *) get_opcode, (int*)socketGameboyCliente);
 			pthread_detach (thread);
 			} 
@@ -148,13 +148,12 @@ void listen_routine_colas (void *colaSuscripcion)
 					pthread_detach (thread);	
 				}
 			}
-			log_info(internalLogTeam,"cerrando appearead"); 
+			log_info(internalLogTeam,"Fin suscripción APPEARED"); 
 			break;
 		}
 
 		case LOCALIZED_POKEMON:
 		{						
-
 			socketLocalized=-1;					
 			while(!win)
 			{
@@ -178,7 +177,7 @@ void listen_routine_colas (void *colaSuscripcion)
 					pthread_create (&thread, NULL, (void *) procesar_localized, mensaje_localized);
 					pthread_detach (thread);
 				}					
-			}log_info(internalLogTeam,"cerrando caught"); break;
+			}log_info(internalLogTeam,"Fin suscripción LOCALIZED"); break;
 		}
 		case CAUGHT_POKEMON:
 		{	
@@ -205,7 +204,7 @@ void listen_routine_colas (void *colaSuscripcion)
 					pthread_create (&thread, NULL, (void *) procesar_caught, mensaje_caught);
 					pthread_detach (thread);
 				}					
-			}log_info(internalLogTeam,"cerrando caught"); break;
+			}log_info(internalLogTeam,"Fin suscripción CAUGHT"); break;
 		}
 
 		case OP_UNKNOWN:
@@ -293,6 +292,7 @@ void procesar_appeared(t_appeared_pokemon *mensaje_appeared)
 		{
 			liberar_appeared(mensaje_appeared);
 			log_error (internalLogTeam, "Operación desconocida al recibir appeared");
+			break;
 		}
 	}
 }
@@ -319,6 +319,8 @@ void procesar_localized(t_localized_pokemon *mensaje_localized)
 
 	if (mensaje_localized->cant_pos == 0 || agregar==false)
 	{
+	log_error (internalLogTeam, "Se descartó el Mensaje LOCALIZED_POKEMON %s %d %s con ID de Mensaje Correlativo [%d]",mensaje_localized->nombre_pokemon,mensaje_localized->cant_pos,mensaje_localized->posiciones,mensaje_localized->id_mensaje_correlativo);
+
 		//liberar_localized(mensaje_localized);
 	}
 	else

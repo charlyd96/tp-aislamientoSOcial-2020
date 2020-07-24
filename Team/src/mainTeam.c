@@ -26,27 +26,27 @@ int main(int argc, char **argv)
    }
     ID_proceso = atoi(argv[1]);
     internalLogTeam= log_create ("internalLogTeam.log", "Team", 1,LOG_LEVEL_TRACE);
-    logTeam= log_create ("logTeam.log", "Team", 0,LOG_LEVEL_TRACE);
+    logTeam= log_create ("logTeam.log", "Team", 1,LOG_LEVEL_TRACE);
 
     log_trace(logTeam, "****************************************** PROCESO TEAM %d ******************************************", ID_proceso);
 	
     Team_Init (); //Obtiene configuraciones y entrenadores, los localiza y define el objetivo global
+    
 
     subscribe (); //Crea tres hilos para suscribirse a las tres colas de mensajes
     
     t_list *GET_list = Team_GET_generate(); //Obtiene lista de objetivos globales para enviar mensajes GET
     
-    
     send_trainer_to_exec();
 
     enviar_mensajes_get(GET_list); //Envía los mensajes GET al Broker y libera la lista
-
     listen_new_pokemons (); //Crea hilo para socket de escucha del GameBoy
-   //imprimir_lista (GET_list); //Imprime objetivos globales
+
 
     Trainer_handler_create(); //Crea hilo de manejo y planificación de entrenadores (trainer_to_catch) y
     						  //crea el hilo de cada entrenador
-
+    puts ("Involucrados");
+    imprimir_involucrados();
     //liberar semaforos
    // usleep (200); //Para que se imprima el último log
     /* Solo para probar la correcta liberación de las listas*/
