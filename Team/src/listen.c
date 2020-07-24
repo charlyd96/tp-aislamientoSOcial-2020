@@ -243,7 +243,7 @@ void procesar_appeared(t_appeared_pokemon *mensaje_appeared)
 	{
 		case GUARDAR:
 		{
-			//agregar_nueva_especie(mensaje_appeared->nombre_pokemon);
+			agregar_nueva_especie(mensaje_appeared->nombre_pokemon);
 			mapPokemons *pokemon_to_add = malloc (sizeof(mapPokemons));
 			pokemon_to_add-> name = string_duplicate (mensaje_appeared->nombre_pokemon);
 			pokemon_to_add-> posx = mensaje_appeared->pos_x;
@@ -258,7 +258,7 @@ void procesar_appeared(t_appeared_pokemon *mensaje_appeared)
 
 		case GUARDAR_AUX:
 		{
-			//agregar_nueva_especie(mensaje_appeared->nombre_pokemon);
+			agregar_nueva_especie(mensaje_appeared->nombre_pokemon);
 			mapPokemons *pokemon_to_add = malloc (sizeof(mapPokemons));
 			pokemon_to_add-> name = string_duplicate (mensaje_appeared->nombre_pokemon);
 			pokemon_to_add-> posx = mensaje_appeared->pos_x;
@@ -298,18 +298,20 @@ void procesar_localized(t_localized_pokemon *mensaje_localized)
 		}
 		else return false;
 	}
-	/*pthread_mutex_lock (&ID_localized_sem); 
+	puts ("\n\n\nme bloqueo 1\n\n\n");
+	pthread_mutex_lock (&ID_localized_sem); 
 	void * elemento = list_remove_by_condition(ID_localized, buscar_id_corr);
-	pthread_mutex_unlock (&ID_localized_sem); */
-	//if (elemento != NULL)
-	//free(elemento);
+	pthread_mutex_unlock (&ID_localized_sem); 
+	puts ("\n\n\npase 1\n\n\n");
+	if (elemento != NULL)
+	free(elemento);
 
 
 	if (mensaje_localized->cant_pos == 0 || agregar==false)
 	{
 		//liberar_localized(mensaje_localized);
 	}
-
+	else
 	{
 		printf ("Cantidad posiciones: %d\n", mensaje_localized->cant_pos);
 		char **coordenadas;
@@ -389,11 +391,13 @@ void agregar_nueva_especie (char *nueva_especie)
 		if (!strcmp(especie_atrapada,nueva_especie))
 		return true; else return false;
 	}
+	puts ("\n\n\nme bloqueo 2\n\n\n");
 	pthread_mutex_lock(&especies_sem);
 	if (!list_any_satisfy(especies,comparar_especie))
 	list_add(especies,nueva_especie);
 
 	pthread_mutex_unlock(&especies_sem);
+	puts ("\n\n\n\npase 2\n\n\n");
 }
 
 bool especie_necesaria (char *nueva_especie)
