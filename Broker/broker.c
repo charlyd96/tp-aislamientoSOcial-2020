@@ -1172,7 +1172,7 @@ void enviarNewASuscriptor(t_new_aux* aux){
 	pthread_mutex_unlock(&sem_cola_new);
 	pthread_mutex_unlock(&sem_nodo_new);
 
-	if(true){
+	if(false){
 		sleep(1);
 		free(new_pokemon->nombre_pokemon);
 		free(new_pokemon);
@@ -1318,7 +1318,7 @@ void enviarAppearedASuscriptor(t_appeared_aux* aux){
 	pthread_mutex_unlock(&sem_nodo_appeared);	
 	pthread_mutex_unlock(&sem_cola_appeared);
 
-	if(true){
+	if(false){
 		sleep(1);
 		free(appeared_pokemon->nombre_pokemon);
 		free(appeared_pokemon);
@@ -1453,7 +1453,7 @@ void enviarCatchASuscriptor(t_catch_aux* aux){
 	pthread_mutex_unlock(&sem_cola_catch);
 	pthread_mutex_unlock(&sem_nodo_catch);
 
-	if(true){
+	if(false){
 		sleep(1);
 		free(catch_pokemon->nombre_pokemon);
 		free(catch_pokemon);
@@ -1585,7 +1585,7 @@ void enviarCaughtASuscriptor(t_caught_aux* aux){
 		pthread_mutex_unlock(&sem_cola_caught);
 		pthread_mutex_unlock(&sem_nodo_caught);	
 	// destruir_estructura_aux(aux);
-	if(true){
+	if(false){
 		sleep(1);
 		// free(caught_pokemon);
 		// list_destroy_and_destroy_elements(aux->nodo->susc_ack);
@@ -1717,7 +1717,7 @@ void enviarGetASuscriptor(t_get_aux* aux){
 	}
 	pthread_mutex_unlock(&sem_cola_get);
 	pthread_mutex_unlock(&sem_nodo_get);
-	if(true){
+	if(false){
 		// sleep(10);
 		free(get_pokemon->nombre_pokemon);
 		free(get_pokemon);
@@ -1847,7 +1847,7 @@ void enviarLocalizedASuscriptor(t_localized_aux* aux){
 	}
 	pthread_mutex_unlock(&sem_cola_localized);
 	pthread_mutex_unlock(&sem_nodo_localized);	
-	if(true){
+	if(false){
 		sleep(1);
 		free(localized_pokemon->nombre_pokemon);
 		free(localized_pokemon);
@@ -2668,7 +2668,7 @@ void enviarGetPokemonCacheados(int socket, t_suscribe* suscriptor){
 			continue;
 		}
 		particion_buscada = list_get(particiones, i);
-
+	
 		if(particion_buscada->libre == 0 && particion_buscada->tipo_mensaje == suscriptor->cola_suscribir){
 			void* stream = malloc(particion_buscada->tamanio);
 			memcpy(stream, cache + particion_buscada->base, particion_buscada->tamanio);
