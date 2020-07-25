@@ -387,7 +387,7 @@ void liberarParticion(int indice_victima){
 			//Fusionar
 			part_liberar->tamanio = part_liberar->tamanio + part_der->tamanio;
 			// list_clean(part_der->susc_enviados);
-			list_remove_and_destroy_element(particiones,indice_victima + 1,destruir_particion);
+			list_remove_and_destroy_element(particiones,indice_victima + 1,clean_particion);
 			log_info(logBrokerInterno,"Se consolida con particion indice %d",indice_victima+1);
 		}
 	}
@@ -399,7 +399,7 @@ void liberarParticion(int indice_victima){
 			part_liberar->base = part_izq->base;
 			part_liberar->tamanio = part_liberar->tamanio + part_izq->tamanio;
 			// list_clean(part_izq->susc_enviados);
-			list_remove_and_destroy_element(particiones,indice_victima -1,destruir_particion);
+			list_remove_and_destroy_element(particiones,indice_victima -1,clean_particion);
 			log_info(logBrokerInterno,"Se consolida con particion indice %d",indice_victima-1);
 		}
 	}
