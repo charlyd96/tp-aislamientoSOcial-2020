@@ -138,10 +138,45 @@ typedef struct {
 
 typedef struct {
 	int socket;
+	t_new_pokemon* mensaje;
+	uint32_t id_mensaje;
+	uint32_t id_suscriptor;
+} t_new_aux;
+
+typedef struct {
+	int socket;
 	t_appeared_pokemon* mensaje;
 	uint32_t id_mensaje;
 	uint32_t id_suscriptor;
 } t_appeared_aux;
+
+typedef struct {
+	int socket;
+	t_catch_pokemon* mensaje;
+	uint32_t id_mensaje;
+	uint32_t id_suscriptor;
+} t_catch_aux;
+
+typedef struct {
+	int socket;
+	t_caught_pokemon* mensaje;
+	uint32_t id_mensaje;
+	uint32_t id_suscriptor;
+} t_caught_aux;
+
+typedef struct {
+	int socket;
+	t_get_pokemon* mensaje;
+	uint32_t id_mensaje;
+	uint32_t id_suscriptor;
+} t_get_aux;
+
+typedef struct {
+	int socket;
+	t_localized_pokemon* mensaje;
+	uint32_t id_mensaje;
+	uint32_t id_suscriptor;
+} t_localized_aux;
 
 /* VARIABLES GLOBALES */
 
@@ -185,6 +220,13 @@ pthread_mutex_t sem_cola_catch;
 pthread_mutex_t sem_cola_caught;
 pthread_mutex_t sem_cola_get;
 pthread_mutex_t sem_cola_localized;
+
+pthread_mutex_t sem_nodo_new;
+pthread_mutex_t sem_nodo_appeared;
+pthread_mutex_t sem_nodo_catch;
+pthread_mutex_t sem_nodo_caught;
+pthread_mutex_t sem_nodo_get;
+pthread_mutex_t sem_nodo_localized;
 
 sem_t mensajes_new;
 sem_t mensajes_appeared;
@@ -274,6 +316,13 @@ void controlador_de_seniales(int signal);
 void tipoYIDProceso(int socket);
 int devolverID(int socket,uint32_t*id);
 
+void enviarNewASuscriptor(t_new_aux* aux);
+void enviarAppearedASuscriptor(t_appeared_aux* aux);
+void enviarCatchASuscriptor(t_catch_aux* aux);
+void enviarCaughtASuscriptor(t_caught_aux* aux);
+void enviarGetASuscriptor(t_get_aux* aux);
+void enviarLocalizedASuscriptor(t_localized_aux* aux);
+
 void enviarNewPokemonCacheados(int socket, t_suscribe* suscriptor);
 void enviarAppearedPokemonCacheados(int socket, t_suscribe* suscriptor);
 void enviarCatchPokemonCacheados(int socket, t_suscribe* suscriptor);
@@ -284,7 +333,5 @@ void enviarLocalizedPokemonCacheados(int socket, t_suscribe* suscriptor);
 void confirmacionDeRecepcionTeam(int socket, t_suscribe* suscribe_team, uint32_t id_mensaje);
 void confirmacionDeRecepcionGameCard(int socket, t_suscribe* suscribe_gamecard, uint32_t id_mensaje);
 void confirmacionDeRecepcionGameBoy(int ack, t_suscribe* suscribe_gameboy, uint32_t id_mensaje);
-
-void enviarAppearedASuscriptor(t_appeared_aux* aux);
 
 #endif /* BROKER_H_ */

@@ -104,6 +104,12 @@ void inicializarSemaforos(){
 	pthread_mutex_init(&sem_cola_get, NULL);
 	pthread_mutex_init(&sem_cola_localized, NULL);
 
+	pthread_mutex_init(&sem_nodo_new, NULL);
+	pthread_mutex_init(&sem_nodo_appeared, NULL);
+	pthread_mutex_init(&sem_nodo_catch, NULL);
+	pthread_mutex_init(&sem_nodo_caught, NULL);
+	pthread_mutex_init(&sem_nodo_localized, NULL);
+
 	sem_init(&mensajes_new, 0, 0);
 	sem_init(&mensajes_appeared, 0, 0);
 	sem_init(&mensajes_catch, 0, 0);
@@ -1074,25 +1080,60 @@ void atenderMensajeNewPokemon(int socket_cliente){
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_new->suscriptores, j);
 		
-		int enviado = enviarNewPokemon(suscriptor->socket_suscriptor, *new_pokemon,P_BROKER,0);	
-		if(enviado > 0){
-			uint32_t ack = recibirACK(suscriptor->socket_suscriptor);
-			if(ack == 1){
-				log_info(logBrokerInterno, "Se reenvió NEW_POKEMON %s %d %d %d [%d] al socket %d", new_pokemon->nombre_pokemon, new_pokemon->pos_x, new_pokemon->pos_y, new_pokemon->cantidad, new_pokemon->id_mensaje,suscriptor->socket_suscriptor);
-				log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
-				agregarSuscriptor(id_mensaje, suscriptor->id_suscriptor);
-			}else{
-				list_add(nodo_new->susc_no_ack, (void*)suscriptor->id_suscriptor);
-			}
-		}else{
-			// 4. Envío de un mensaje a un suscriptor específico.	
-			log_warning(logBroker, "NO se envió el Mensaje con ID de Mensaje %d.", new_pokemon->id_mensaje);
-			log_warning(logBrokerInterno, "NO se envió el Mensaje con ID de Mensaje %d.", new_pokemon->id_mensaje);
-		}
+		t_new_aux* new = malloc(sizeof(t_new_aux));
+		new->socket = suscriptor->socket_suscriptor;
+		new->id_suscriptor = suscriptor->id_suscriptor;
+		new->mensaje = new_pokemon;
+		new->id_mensaje = id_mensaje;
 
-	/*	if(list_is_empty(nodo_new->susc_no_ack)){
-			list_remove_and_destroy_element(cola_new->nodos, j , free);
-		}*/
+		pthread_t hiloNew;
+		pthread_create(&hiloNew, NULL, (void*)enviarNewASuscriptor, new);
+		pthread_detach(hiloNew);
+	}
+}
+
+void enviarNewASuscriptor(t_new_aux* aux){
+	t_new_pokemon* new_pokemon = aux->mensaje;
+	int socket = aux->socket;
+	uint32_t id_suscriptor = aux->id_suscriptor;
+	uint32_t id_mensaje = aux->id_mensaje;
+
+	int enviado = enviarNewPokemon(socket, *new_pokemon,P_BROKER,0);	
+	
+	if(enviado > 0){
+		uint32_t ack = recibirACK(socket);
+		if(ack == 1){
+			log_info(logBrokerInterno, "Se reenvió NEW_POKEMON %s %d %d %d [%d] al socket %d", new_pokemon->nombre_pokemon, new_pokemon->pos_x, new_pokemon->pos_y, new_pokemon->cantidad, new_pokemon->id_mensaje,socket);
+			log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
+			agregarSuscriptor(id_mensaje, id_suscriptor);
+		}else{
+			list_add(nodo_new->susc_no_ack, (void*)id_suscriptor);
+		}
+	}else{
+		// 4. Envío de un mensaje a un suscriptor específico.	
+		log_warning(logBroker, "NO se envió el Mensaje con ID de Mensaje %d.", new_pokemon->id_mensaje);
+		log_warning(logBrokerInterno, "NO se envió el Mensaje con ID de Mensaje %d.", new_pokemon->id_mensaje);
+	}
+		
+	pthread_mutex_lock(&sem_nodo_new);
+	if(list_is_empty(nodo_appeared->susc_no_ack)){
+		pthread_mutex_unlock(&sem_nodo_new);
+		log_debug(logBrokerInterno, "Se elimina el nodo con ID de Mensaje [%d].", nodo_new->mensaje->id_mensaje);
+		pthread_mutex_lock(&sem_cola_new);
+
+		bool comparar_id_mensaje(void *element){
+			t_nodo_cola_new* nodo = element;
+				
+			if(nodo_new->mensaje->id_mensaje == nodo->mensaje->id_mensaje){
+				log_warning(logBrokerInterno, "Los IDs de Mensaje son IGUALES.");
+				return (true);
+			}else return (false);
+		}
+		
+		list_remove_by_condition(cola_new->nodos, comparar_id_mensaje);
+		pthread_mutex_unlock(&sem_cola_new);
+	}else{
+		pthread_mutex_unlock(&sem_nodo_new);	
 	}
 }
 
@@ -1175,12 +1216,8 @@ void atenderMensajeAppearedPokemon(int socket_cliente){
 
 		pthread_t hiloAppeared;
 		pthread_create(&hiloAppeared, NULL, (void*)enviarAppearedASuscriptor, appeared);
-		pthread_detach(hiloAppeared);	
-	}
-	/*	if(list_is_empty(nodo_appeared->susc_no_ack)){
-			log_info(logBrokerInterno, "ENTRE A REMOVER EL NODO");
-			list_remove_and_destroy_element(cola_appeared->nodos, j , free);
-		}*/
+		pthread_detach(hiloAppeared);
+	}	
 }
 
 void enviarAppearedASuscriptor(t_appeared_aux* aux){
@@ -1199,12 +1236,35 @@ void enviarAppearedASuscriptor(t_appeared_aux* aux){
 				agregarSuscriptor(id_mensaje, id_suscriptor);
 			}else{
 				log_info(logBrokerInterno, "NO ACK");
+				pthread_mutex_lock(&sem_nodo_appeared);
 				list_add(nodo_appeared->susc_no_ack, (void*)id_suscriptor);
+				pthread_mutex_unlock(&sem_nodo_appeared);
 			}
 	}else{
 		// 4. Envío de un mensaje a un suscriptor específico.
 		log_warning(logBroker, "NO se envió el Mensaje con ID de Mensaje Correlativo %d.", appeared_pokemon->id_mensaje_correlativo);
 		log_warning(logBrokerInterno, "NO se envió el Mensaje con ID de Mensaje Correlativo %d.", appeared_pokemon->id_mensaje_correlativo);
+	}
+	
+	pthread_mutex_lock(&sem_nodo_appeared);
+	if(list_is_empty(nodo_appeared->susc_no_ack)){
+		pthread_mutex_unlock(&sem_nodo_appeared);
+		log_debug(logBrokerInterno, "Se elimina el nodo con ID de Mensaje Correlativo [%d].", nodo_appeared->mensaje->id_mensaje_correlativo);
+		pthread_mutex_lock(&sem_cola_appeared);
+
+		bool comparar_id_mensaje(void *element){
+			t_nodo_cola_appeared* nodo = element;
+				
+			if(nodo_appeared->mensaje->id_mensaje_correlativo == nodo->mensaje->id_mensaje_correlativo){
+				log_warning(logBrokerInterno, "Los IDs Correlativos son IGUALES.");
+				return (true);
+			}else return (false);
+		}
+		
+		list_remove_by_condition(cola_appeared->nodos, comparar_id_mensaje);
+		pthread_mutex_unlock(&sem_cola_appeared);
+	}else{
+		pthread_mutex_unlock(&sem_nodo_appeared);	
 	}
 }
 
@@ -1265,23 +1325,59 @@ void atenderMensajeCatchPokemon(int socket_cliente){
 	
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_catch->suscriptores, j);
-
 		
+		t_catch_aux* catch = malloc(sizeof(t_catch_aux));
+		catch->socket = suscriptor->socket_suscriptor;
+		catch->id_suscriptor = suscriptor->id_suscriptor;
+		catch->mensaje = catch_pokemon;
+		catch->id_mensaje = id_mensaje;
 
-			int enviado = enviarCatchPokemon(suscriptor->socket_suscriptor, *catch_pokemon,P_BROKER,0);
+		pthread_t hiloCatch;
+		pthread_create(&hiloCatch, NULL, (void*)enviarCatchASuscriptor, catch);
+		pthread_detach(hiloCatch);
+	}
+}
+
+void enviarCatchASuscriptor(t_catch_aux* aux){
+	t_catch_pokemon* catch_pokemon = aux->mensaje;
+	int socket = aux->socket;
+	uint32_t id_suscriptor = aux->id_suscriptor;
+	uint32_t id_mensaje = aux->id_mensaje;
+	
+	int enviado = enviarCatchPokemon(socket, *catch_pokemon,P_BROKER,0);
 			
-			if(enviado > 0){
-				uint32_t ack = recibirACK(suscriptor->socket_suscriptor);
-				if(ack == 1){
-					log_info(logBrokerInterno, "Se reenvió CATCH_POKEMON %s %d %d [%d] al socket %d", catch_pokemon->nombre_pokemon, catch_pokemon->pos_x, catch_pokemon->pos_y, catch_pokemon->id_mensaje,suscriptor->socket_suscriptor);
-					log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
-					agregarSuscriptor(id_mensaje, suscriptor->id_suscriptor);
-				}
-			}else{
-				// 4. Envío de un mensaje a un suscriptor específico.
-				log_warning(logBroker, "NO se envió el Mensaje con ID de Mensaje %d.", catch_pokemon->id_mensaje);
-				log_warning(logBrokerInterno, "NO se envió el Mensaje con ID de Mensaje %d.", catch_pokemon->id_mensaje);
-			}
+	if(enviado > 0){
+		uint32_t ack = recibirACK(socket);
+		if(ack == 1){
+			log_info(logBrokerInterno, "Se reenvió CATCH_POKEMON %s %d %d [%d] al socket %d", catch_pokemon->nombre_pokemon, catch_pokemon->pos_x, catch_pokemon->pos_y, catch_pokemon->id_mensaje,socket);
+			log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
+			agregarSuscriptor(id_mensaje, id_suscriptor);
+		}
+	}else{
+			// 4. Envío de un mensaje a un suscriptor específico.
+			log_warning(logBroker, "NO se envió el Mensaje con ID de Mensaje %d.", catch_pokemon->id_mensaje);
+			log_warning(logBrokerInterno, "NO se envió el Mensaje con ID de Mensaje %d.", catch_pokemon->id_mensaje);
+	}
+
+	pthread_mutex_lock(&sem_nodo_catch);
+	if(list_is_empty(nodo_catch->susc_no_ack)){
+		pthread_mutex_unlock(&sem_nodo_catch);
+		log_debug(logBrokerInterno, "Se elimina el nodo con ID de Mensaje [%d].", nodo_catch->mensaje->id_mensaje);
+		pthread_mutex_lock(&sem_cola_catch);
+
+		bool comparar_id_mensaje(void *element){
+			t_nodo_cola_catch* nodo = element;
+				
+			if(nodo_catch->mensaje->id_mensaje == nodo->mensaje->id_mensaje){
+				log_warning(logBrokerInterno, "Los IDs Correlativos son IGUALES.");
+				return (true);
+			}else return (false);
+		}
+		
+		list_remove_by_condition(cola_catch->nodos, comparar_id_mensaje);
+		pthread_mutex_unlock(&sem_cola_catch);
+	}else{
+		pthread_mutex_unlock(&sem_nodo_catch);	
 	}
 }
 
@@ -1337,24 +1433,59 @@ void atenderMensajeCaughtPokemon(int socket_cliente){
 	
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_caught->suscriptores, j);
-		
-		
+	
+		t_caught_aux* caught = malloc(sizeof(t_caught_aux));
+		caught->socket = suscriptor->socket_suscriptor;
+		caught->id_suscriptor = suscriptor->id_suscriptor;
+		caught->mensaje = caught_pokemon;
+		caught->id_mensaje = id_mensaje;
 
-			int enviado = enviarCaughtPokemon(suscriptor->socket_suscriptor, *caught_pokemon,P_BROKER,0);
+		pthread_t hiloCaught;
+		pthread_create(&hiloCaught, NULL, (void*)enviarCaughtASuscriptor, caught);
+		pthread_detach(hiloCaught);
+	}
+}
+
+void enviarCaughtASuscriptor(t_caught_aux* aux){
+	t_caught_pokemon* caught_pokemon = aux->mensaje;
+	int socket = aux->socket;
+	uint32_t id_suscriptor = aux->id_suscriptor;
+	uint32_t id_mensaje = aux->id_mensaje;
+
+	int enviado = enviarCaughtPokemon(socket, *caught_pokemon,P_BROKER,0);
 		
-			if(enviado > 0){
-				uint32_t ack = recibirACK(suscriptor->socket_suscriptor);
-				if(ack == 1){
-					log_info(logBrokerInterno, "Se reenvió CAUGHT %u [%u] al socket %d", caught_pokemon->atrapo_pokemon,caught_pokemon->id_mensaje_correlativo,suscriptor->socket_suscriptor);
-					log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
-					agregarSuscriptor(id_mensaje, suscriptor->id_suscriptor);
-				}
-			}else{
-				// 4. Envío de un mensaje a un suscriptor específico.
-				log_warning(logBroker, "NO se envió el Mensaje con ID de Mensaje Correlativo %d.", caught_pokemon->id_mensaje_correlativo);
-				log_warning(logBrokerInterno, "NO se envió el Mensaje con ID de Mensaje Correlativo %d.", caught_pokemon->id_mensaje_correlativo);
-			}
+	if(enviado > 0){
+		uint32_t ack = recibirACK(socket);
+		if(ack == 1){
+			log_info(logBrokerInterno, "Se reenvió CAUGHT %u [%u] al socket %d", caught_pokemon->atrapo_pokemon,caught_pokemon->id_mensaje_correlativo,socket);
+			log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
+			agregarSuscriptor(id_mensaje, id_suscriptor);
+		}
+	}else{
+		// 4. Envío de un mensaje a un suscriptor específico.
+		log_warning(logBroker, "NO se envió el Mensaje con ID de Mensaje Correlativo %d.", caught_pokemon->id_mensaje_correlativo);
+		log_warning(logBrokerInterno, "NO se envió el Mensaje con ID de Mensaje Correlativo %d.", caught_pokemon->id_mensaje_correlativo);
+	}
+
+	pthread_mutex_lock(&sem_nodo_caught);
+	if(list_is_empty(nodo_caught->susc_no_ack)){
+		pthread_mutex_unlock(&sem_nodo_caught);
+		log_debug(logBrokerInterno, "Se elimina el nodo con ID de Mensaje Correlativo [%d].", nodo_caught->mensaje->id_mensaje_correlativo);
+		pthread_mutex_lock(&sem_cola_caught);
+
+		bool comparar_id_mensaje(void *element){
+			t_nodo_cola_caught* nodo = element;
+				
+			if(nodo_caught->mensaje->id_mensaje_correlativo == nodo->mensaje->id_mensaje_correlativo){
+				log_warning(logBrokerInterno, "Los IDs Correlativos son IGUALES.");
+				return (true);
+			}else return (false);
+		}
 		
+		list_remove_by_condition(cola_caught->nodos, comparar_id_mensaje);
+		pthread_mutex_unlock(&sem_cola_caught);
+	}else{
+		pthread_mutex_unlock(&sem_nodo_caught);	
 	}
 }
 
@@ -1431,6 +1562,10 @@ void atenderMensajeGetPokemon(int socket_cliente){
 		
 	}
 }
+
+/*void enviarGetASuscriptor(t_get_aux* aux){
+	BASTAAA, ME CANSÉ
+}*/
 
 void atenderMensajeLocalizedPokemon(int socket_cliente){
 	process_code tipo_proceso = recibirTipoProceso(socket_cliente);
