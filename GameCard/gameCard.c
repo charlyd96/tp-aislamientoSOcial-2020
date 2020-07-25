@@ -449,6 +449,7 @@ void atender_newPokemon(t_new_pokemon* new_pokemon){
 
 		crear_metadata(new_pokemon->nombre_pokemon,info_block);
 		sem_post(&mx_creacion_archivo);
+		sleep(config_gamecard->tiempo_retardo_operacion);
 		destroy_t_block(info_block);
 	}
 	//Ya sea que agregué o creé el pokemon, respondo el appeared
@@ -617,6 +618,7 @@ void atender_catchPokemon(t_catch_pokemon* catch_pokemon){
 		free(buffer);
 	}else{
 		//Error -> enviar localized vacio
+		sleep(config_gamecard->tiempo_retardo_operacion);
 		log_error(logGamecard,"ERROR CATCH_POKEMON: El directorio del Pokemon %s NO existe.",catch_pokemon->nombre_pokemon);
 		atrapo_pokemon = 0;
 	}

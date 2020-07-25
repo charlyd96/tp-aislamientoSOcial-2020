@@ -136,6 +136,13 @@ typedef struct {
 	sem_t sem_particion;
 } t_particion;
 
+typedef struct {
+	int socket;
+	t_appeared_pokemon* mensaje;
+	uint32_t id_mensaje;
+	uint32_t id_suscriptor;
+} t_appeared_aux;
+
 /* VARIABLES GLOBALES */
 
 uint32_t ID_MENSAJE = 0;
@@ -217,7 +224,7 @@ void atenderSuscripcionGameBoy(int socket);
 /// PROCESAMIENTO
 int suscribir(t_suscriptor* suscriptor, op_code cola);
 void desuscribir(int index, op_code cola, uint32_t id_proceso);
-void agregarSuscriptor(uint32_t id_mensaje, t_suscriptor* suscriptor);
+void agregarSuscriptor(uint32_t id_mensaje, uint32_t id_suscriptor);
 
 void encolarNewPokemon(t_new_pokemon* msg);
 void encolarAppearedPokemon(t_appeared_pokemon* msg);
@@ -277,5 +284,7 @@ void enviarLocalizedPokemonCacheados(int socket, t_suscribe* suscriptor);
 void confirmacionDeRecepcionTeam(int socket, t_suscribe* suscribe_team, uint32_t id_mensaje);
 void confirmacionDeRecepcionGameCard(int socket, t_suscribe* suscribe_gamecard, uint32_t id_mensaje);
 void confirmacionDeRecepcionGameBoy(int ack, t_suscribe* suscribe_gameboy, uint32_t id_mensaje);
+
+void enviarAppearedASuscriptor(t_appeared_aux* aux);
 
 #endif /* BROKER_H_ */
