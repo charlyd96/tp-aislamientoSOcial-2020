@@ -406,7 +406,7 @@ void atender_newPokemon(t_new_pokemon* new_pokemon){
 		//Si el archivo está abierto, espero y reintento luego del delay
 		while(archivoAbierto == true){
 			sem_post(&mx_file_metadata);
-			log_info(logGamecard,"[NEW_POKEMON] Consulto /%s -> ESTÁ ABIERTO -> Se aguarda reintento de conexión.",new_pokemon->nombre_pokemon);
+			log_info(logGamecard,"[NEW_POKEMON] Consulto /%s -> ESTÁ ABIERTO -> Se aguarda reintento de operación.",new_pokemon->nombre_pokemon);
 			config_destroy(data_config);
 
 			sleep(config_gamecard->tiempo_reintento_operacion);
@@ -486,7 +486,7 @@ void atender_getPokemon(t_get_pokemon* get_pokemon){
 
 		// 2) Si el archivo está abierto, espero y reintento luego del delay
 		while(archivoAbierto == true){
-			log_info(logGamecard,"[GET_POKEMON] Consulto /%s -> ESTÁ ABIERTO -> Se aguarda reintento de conexión.",get_pokemon->nombre_pokemon);
+			log_info(logGamecard,"[GET_POKEMON] Consulto /%s -> ESTÁ ABIERTO -> Se aguarda reintento de operación.",get_pokemon->nombre_pokemon);
 			sem_post(&mx_file_metadata);
 			config_destroy(data_config);
 
@@ -572,7 +572,7 @@ void atender_catchPokemon(t_catch_pokemon* catch_pokemon){
 		t_config *data_config = config_create (pathMetadata);
 		bool archivoAbierto = strcmp(config_get_string_value(data_config,"OPEN"),"Y") == 0;
 		while(archivoAbierto == true){
-			log_info(logGamecard,"[CATCH_POKEMON] Consulto /%s -> ESTÁ ABIERTO -> Se aguarda reintento de conexión.",catch_pokemon->nombre_pokemon);
+			log_info(logGamecard,"[CATCH_POKEMON] Consulto /%s -> ESTÁ ABIERTO -> Se aguarda reintento de operación.",catch_pokemon->nombre_pokemon);
 			sem_post(&mx_file_metadata);
 			config_destroy(data_config);
 
