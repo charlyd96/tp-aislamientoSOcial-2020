@@ -50,46 +50,46 @@ typedef struct {
 } t_cola;
 
 typedef struct {
-	t_list* susc_enviados;
 	t_list* susc_ack;
-	t_list* susc_no_ack;
 	t_new_pokemon* mensaje;
 } t_nodo_cola_new;
+	// t_list* susc_enviados;
+	// t_list* susc_no_ack;
 
 typedef struct {
-	t_list* susc_enviados;
 	t_list* susc_ack;
-	t_list* susc_no_ack;
 	t_appeared_pokemon* mensaje;
 } t_nodo_cola_appeared;
+	// t_list* susc_enviados;
+	// t_list* susc_no_ack;
 
 typedef struct {
-	t_list* susc_enviados;
 	t_list* susc_ack;
-	t_list* susc_no_ack;
 	t_get_pokemon* mensaje;
 } t_nodo_cola_get;
+	// t_list* susc_enviados;
+	// t_list* susc_no_ack;
 
 typedef struct {
-	t_list* susc_enviados;
 	t_list* susc_ack;
-	t_list* susc_no_ack;
 	t_localized_pokemon* mensaje;
 } t_nodo_cola_localized;
+	// t_list* susc_enviados;
+	// t_list* susc_no_ack;
 
 typedef struct {
-	t_list* susc_enviados;
 	t_list* susc_ack;
-	t_list* susc_no_ack;
 	t_catch_pokemon* mensaje;
 } t_nodo_cola_catch;
+	// t_list* susc_enviados;
+	// t_list* susc_no_ack;
 
 typedef struct {
-	t_list* susc_enviados;
 	t_list* susc_ack;
-	t_list* susc_no_ack;
 	t_caught_pokemon* mensaje;
 } t_nodo_cola_caught;
+	// t_list* susc_enviados;
+	// t_list* susc_no_ack;
 
 typedef struct {
 	uint32_t largo_nombre;

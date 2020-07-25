@@ -1126,7 +1126,8 @@ void enviarNewASuscriptor(t_new_aux* aux){
 	t_nodo_cola_new* nodo_nuevo = aux->nodo;
 
 	int enviado = enviarNewPokemon(socket, *new_pokemon,P_BROKER,0);	
-	
+	bool se_elimina = false;
+
 	if(enviado > 0){
 		uint32_t ack = recibirACK(socket);
 		if(ack == 1){
@@ -1148,13 +1149,15 @@ void enviarNewASuscriptor(t_new_aux* aux){
 	pthread_mutex_lock(&sem_cola_new);
 	if(list_size(nodo_nuevo->susc_ack) == list_size(cola_new->suscriptores)){
 		
-		log_debug(logBrokerInterno, "Se elimina el nodo con ID de Mensaje [%d].", nodo_nuevo->mensaje->id_mensaje);
+		log_debug(logBroker, "Se elimina el nodo con ID de Mensaje [%d].", nodo_nuevo->mensaje->id_mensaje);
 
 		bool comparar_id_mensaje(void *element){
 			t_nodo_cola_new* nodo = element;
 				
 			if(nodo_nuevo->mensaje->id_mensaje == nodo->mensaje->id_mensaje){
 				log_warning(logBrokerInterno, "Los IDs de Mensaje son IGUALES.");
+				se_elimina = true;
+				list_destroy_and_destroy_elements(nodo->susc_ack,free);
 				return (true);
 			}else return (false);
 		}
@@ -1162,7 +1165,16 @@ void enviarNewASuscriptor(t_new_aux* aux){
 	}else{
 	}
 	pthread_mutex_unlock(&sem_cola_new);
-	pthread_mutex_unlock(&sem_nodo_new);	
+	pthread_mutex_unlock(&sem_nodo_new);
+
+	if(true){
+		sleep(1);
+		free(new_pokemon->nombre_pokemon);
+		free(new_pokemon);
+		// list_destroy_and_destroy_elements(aux->nodo->susc_ack);
+		free(aux->nodo);
+		free(aux);		
+	}
 }
 
 void atenderMensajeAppearedPokemon(int socket_cliente){
@@ -1255,7 +1267,7 @@ void enviarAppearedASuscriptor(t_appeared_aux* aux){
 	uint32_t id_suscriptor = aux->id_suscriptor;
 	uint32_t id_mensaje = aux->id_mensaje;
 	t_nodo_cola_appeared* nodo_nuevo = aux->nodo;
-
+	bool se_elimina = false;
 	int enviado = enviarAppearedPokemon(socket, *appeared_pokemon, P_BROKER, 0);
 
 	if(enviado > 0){
@@ -1279,13 +1291,15 @@ void enviarAppearedASuscriptor(t_appeared_aux* aux){
 	pthread_mutex_lock(&sem_nodo_appeared);
 	pthread_mutex_lock(&sem_cola_appeared);
 	if(list_size(nodo_nuevo->susc_ack) == list_size(cola_appeared->suscriptores)){
-		log_debug(logBrokerInterno, "Se elimina el nodo con ID de Mensaje Correlativo [%d].", nodo_nuevo->mensaje->id_mensaje_correlativo);
+		log_debug(logBroker, "Se elimina el nodo con ID de Mensaje Correlativo [%d].", nodo_nuevo->mensaje->id_mensaje_correlativo);
 
 		bool comparar_id_mensaje(void *element){
 			t_nodo_cola_appeared* nodo = element;
 				
 			if(nodo_nuevo->mensaje->id_mensaje_correlativo == nodo->mensaje->id_mensaje_correlativo){
 				log_warning(logBrokerInterno, "Los IDs Correlativos son IGUALES.");
+				se_elimina = true;
+				list_destroy_and_destroy_elements(nodo->susc_ack,free);
 				return (true);
 			}else return (false);
 		}
@@ -1294,6 +1308,16 @@ void enviarAppearedASuscriptor(t_appeared_aux* aux){
 	}
 	pthread_mutex_unlock(&sem_nodo_appeared);	
 	pthread_mutex_unlock(&sem_cola_appeared);
+
+	if(true){
+		sleep(1);
+		free(appeared_pokemon->nombre_pokemon);
+		free(appeared_pokemon);
+		// list_destroy_and_destroy_elements(aux->nodo->susc_ack);
+		free(aux->nodo);
+		free(aux);	
+	}
+	
 }
 
 void atenderMensajeCatchPokemon(int socket_cliente){
@@ -1373,7 +1397,7 @@ void enviarCatchASuscriptor(t_catch_aux* aux){
 	uint32_t id_suscriptor = aux->id_suscriptor;
 	uint32_t id_mensaje = aux->id_mensaje;
 	t_nodo_cola_catch* nodo_nuevo = aux->nodo;
-	
+	bool se_elimina = false;
 	int enviado = enviarCatchPokemon(socket, *catch_pokemon,P_BROKER,0);
 
 	if(enviado > 0){
@@ -1396,13 +1420,15 @@ void enviarCatchASuscriptor(t_catch_aux* aux){
 	pthread_mutex_lock(&sem_cola_catch);
 	if(list_size(nodo_nuevo->susc_ack) == list_size(cola_catch->suscriptores)){
 		
-		log_debug(logBrokerInterno, "Se elimina el nodo con ID de Mensaje [%d].", nodo_nuevo->mensaje->id_mensaje);
+		log_debug(logBroker, "Se elimina el nodo con ID de Mensaje [%d].", nodo_nuevo->mensaje->id_mensaje);
 
 		bool comparar_id_mensaje(void *element){
 			t_nodo_cola_catch* nodo = element;
 				
 			if(nodo_nuevo->mensaje->id_mensaje == nodo->mensaje->id_mensaje){
 				log_warning(logBrokerInterno, "Los IDs Correlativos son IGUALES.");
+				se_elimina = true;
+				list_destroy_and_destroy_elements(nodo->susc_ack,free);
 				return (true);
 			}else return (false);
 		}
@@ -1410,7 +1436,17 @@ void enviarCatchASuscriptor(t_catch_aux* aux){
 		list_remove_by_condition(cola_catch->nodos, comparar_id_mensaje);
 	}
 	pthread_mutex_unlock(&sem_cola_catch);
-	pthread_mutex_unlock(&sem_nodo_catch);	
+	pthread_mutex_unlock(&sem_nodo_catch);
+
+	if(true){
+		sleep(1);
+		free(catch_pokemon->nombre_pokemon);
+		free(catch_pokemon);
+		// list_destroy_and_destroy_elements(aux->nodo->susc_ack);
+		free(aux->nodo);
+		free(aux);		
+
+	}
 }
 
 void atenderMensajeCaughtPokemon(int socket_cliente){
@@ -1486,7 +1522,7 @@ void enviarCaughtASuscriptor(t_caught_aux* aux){
 	uint32_t id_suscriptor = aux->id_suscriptor;
 	uint32_t id_mensaje = aux->id_mensaje;
 	t_nodo_cola_caught* nodo_nuevo= aux->nodo;
-
+	bool se_elimina = false;
 	int enviado = enviarCaughtPokemon(socket, *caught_pokemon,P_BROKER,0);
 
 	if(enviado > 0){
@@ -1508,13 +1544,15 @@ void enviarCaughtASuscriptor(t_caught_aux* aux){
 	pthread_mutex_lock(&sem_nodo_caught);
 	pthread_mutex_lock(&sem_cola_caught);
 	if(list_size(nodo_nuevo->susc_ack) == list_size(cola_caught->suscriptores)){
-		log_debug(logBrokerInterno, "Se elimina el nodo con ID de Mensaje Correlativo [%d].", nodo_nuevo->mensaje->id_mensaje_correlativo);
+		log_debug(logBroker, "Se elimina el nodo con ID de Mensaje Correlativo [%d].", nodo_nuevo->mensaje->id_mensaje_correlativo);
 
 		bool comparar_id_mensaje(void *element){
 			t_nodo_cola_caught* nodo = element;
 				
 			if(nodo_nuevo->mensaje->id_mensaje_correlativo == nodo->mensaje->id_mensaje_correlativo){
 				log_warning(logBrokerInterno, "Los IDs Correlativos son IGUALES.");
+				se_elimina = true;
+				list_destroy_and_destroy_elements(nodo->susc_ack,free);
 				return (true);
 			}else return (false);
 		}
@@ -1524,6 +1562,15 @@ void enviarCaughtASuscriptor(t_caught_aux* aux){
 	}
 		pthread_mutex_unlock(&sem_cola_caught);
 		pthread_mutex_unlock(&sem_nodo_caught);	
+	// destruir_estructura_aux(aux);
+	if(true){
+		sleep(1);
+		free(caught_pokemon);
+		// list_destroy_and_destroy_elements(aux->nodo->susc_ack);
+		free(aux->nodo);
+		free(aux);
+	}
+
 }
 
 void atenderMensajeGetPokemon(int socket_cliente){
@@ -1600,7 +1647,7 @@ void enviarGetASuscriptor(t_get_aux* aux){
 	uint32_t id_suscriptor = aux->id_suscriptor;
 	uint32_t id_mensaje = aux->id_mensaje;
 	t_nodo_cola_get* nodo_nuevo = aux->nodo;
-
+	bool se_elimina = false;
 	int enviado = enviarGetPokemon(socket, *get_pokemon,P_BROKER,0);
 			
 	if(enviado > 0){
@@ -1620,9 +1667,9 @@ void enviarGetASuscriptor(t_get_aux* aux){
 	}
 
 	pthread_mutex_lock(&sem_nodo_get);
-	pthread_mutex_unlock(&sem_nodo_get);
+	pthread_mutex_lock(&sem_cola_get);
 	if(list_size(nodo_nuevo->susc_ack) == list_size(cola_get->suscriptores)){
-		log_debug(logBrokerInterno, "Se elimina el nodo con ID de Mensaje [%d].", nodo_nuevo->mensaje->id_mensaje);
+		log_debug(logBroker, "Se elimina el nodo con ID de Mensaje [%d].", nodo_nuevo->mensaje->id_mensaje);
 		
 
 		bool comparar_id_mensaje(void *element){
@@ -1630,6 +1677,8 @@ void enviarGetASuscriptor(t_get_aux* aux){
 				
 			if(nodo_nuevo->mensaje->id_mensaje == nodo->mensaje->id_mensaje){
 				log_warning(logBrokerInterno, "Los IDs de Mensaje son IGUALES.");
+				se_elimina = true;
+				list_destroy_and_destroy_elements(nodo->susc_ack,free);
 				return (true);
 			}else return (false);
 		}
@@ -1638,7 +1687,15 @@ void enviarGetASuscriptor(t_get_aux* aux){
 	}else{
 	}
 	pthread_mutex_unlock(&sem_cola_get);
-	pthread_mutex_unlock(&sem_nodo_get);	
+	pthread_mutex_unlock(&sem_nodo_get);
+	if(true){
+		// sleep(10);
+		free(get_pokemon->nombre_pokemon);
+		free(get_pokemon);
+		// list_destroy_and_destroy_elements(aux->nodo->susc_ack);
+		free(aux->nodo);	
+		free(aux);	
+	}
 }
 
 void atenderMensajeLocalizedPokemon(int socket_cliente){
@@ -1713,7 +1770,7 @@ void enviarLocalizedASuscriptor(t_localized_aux* aux){
 	uint32_t id_mensaje = aux->id_mensaje;
 	t_nodo_cola_localized* nodo_nuevo = aux->nodo;
 	int enviado = enviarLocalizedPokemon(socket, *localized_pokemon,P_BROKER,0);
-		
+	bool se_elimina = false;
 	if(enviado > 0){
 		uint32_t ack = recibirACK(socket);
 		if(ack == 1){
@@ -1733,13 +1790,16 @@ void enviarLocalizedASuscriptor(t_localized_aux* aux){
 	pthread_mutex_lock(&sem_nodo_localized);
 	pthread_mutex_lock(&sem_cola_localized);
 	if(list_size(nodo_nuevo->susc_ack) == list_size(cola_localized->suscriptores)){
-		log_debug(logBrokerInterno, "Se elimina el nodo con ID de Mensaje [%d].", nodo_nuevo->mensaje->id_mensaje_correlativo);
+		log_debug(logBroker, "Se elimina el nodo con ID de Mensaje [%d].", nodo_nuevo->mensaje->id_mensaje_correlativo);
 
 		bool comparar_id_mensaje(void *element){
 			t_nodo_cola_localized* nodo = element;
 				
 			if(nodo_nuevo->mensaje->id_mensaje_correlativo == nodo->mensaje->id_mensaje_correlativo){
 				log_warning(logBrokerInterno, "Los IDs de Mensaje Correlativo son IGUALES.");
+				
+				se_elimina = true;
+				list_destroy_and_destroy_elements(nodo->susc_ack,free);
 				return (true);
 			}else return (false);
 		}
@@ -1749,6 +1809,13 @@ void enviarLocalizedASuscriptor(t_localized_aux* aux){
 	}
 	pthread_mutex_unlock(&sem_cola_localized);
 	pthread_mutex_unlock(&sem_nodo_localized);	
+	if(true){
+		sleep(1);
+		free(localized_pokemon->nombre_pokemon);
+		free(localized_pokemon);
+		free(aux->nodo);
+		free(aux);
+	}
 }
 
 void atenderSuscripcionTeam(int socket_cliente){
@@ -2072,9 +2139,9 @@ void agregarSuscriptor(uint32_t id_mensaje, uint32_t id_suscriptor){
 t_nodo_cola_new* encolarNewPokemon(t_new_pokemon* mensaje){
 	t_nodo_cola_new* nodo_new = malloc(sizeof(t_nodo_cola_new));
 	nodo_new->mensaje = mensaje;
-	nodo_new->susc_enviados = list_create();
+	// nodo_new->susc_enviados = list_create();
 	nodo_new->susc_ack = list_create();
-	nodo_new->susc_no_ack = list_create();
+	// nodo_new->susc_no_ack = list_create();
 
 	list_add(cola_new->nodos,nodo_new);
 	return nodo_new;
@@ -2083,9 +2150,9 @@ t_nodo_cola_new* encolarNewPokemon(t_new_pokemon* mensaje){
 t_nodo_cola_appeared* encolarAppearedPokemon(t_appeared_pokemon* mensaje){
 	t_nodo_cola_appeared * nodo_appeared = malloc(sizeof(t_nodo_cola_appeared));
 	nodo_appeared->mensaje = mensaje;
-	nodo_appeared->susc_enviados = list_create();
+	// nodo_appeared->susc_enviados = list_create();
 	nodo_appeared->susc_ack = list_create();
-	nodo_appeared->susc_no_ack = list_create();
+	// nodo_appeared->susc_no_ack = list_create();
 
 	list_add(cola_appeared->nodos,nodo_appeared);
 	return nodo_appeared;
@@ -2094,9 +2161,9 @@ t_nodo_cola_appeared* encolarAppearedPokemon(t_appeared_pokemon* mensaje){
 t_nodo_cola_catch* encolarCatchPokemon(t_catch_pokemon* mensaje){
 	t_nodo_cola_catch* nodo_catch = malloc(sizeof(t_nodo_cola_catch));
 	nodo_catch->mensaje = mensaje;
-	nodo_catch->susc_enviados = list_create();
+	// nodo_catch->susc_enviados = list_create();
 	nodo_catch->susc_ack = list_create();
-	nodo_catch->susc_no_ack = list_create();
+	// nodo_catch->susc_no_ack = list_create();
 
 	list_add(cola_catch->nodos,nodo_catch);
 	return nodo_catch;
@@ -2105,9 +2172,9 @@ t_nodo_cola_catch* encolarCatchPokemon(t_catch_pokemon* mensaje){
 t_nodo_cola_caught* encolarCaughtPokemon(t_caught_pokemon* mensaje){
 	t_nodo_cola_caught* nodo_caught = malloc(sizeof(t_nodo_cola_caught));
 	nodo_caught->mensaje = mensaje;
-	nodo_caught->susc_enviados = list_create();
+	// nodo_caught->susc_enviados = list_create();
 	nodo_caught->susc_ack = list_create();
-	nodo_caught->susc_no_ack = list_create();
+	// nodo_caught->susc_no_ack = list_create();
 
 	list_add(cola_caught->nodos,nodo_caught);
 	return nodo_caught;
@@ -2116,9 +2183,9 @@ t_nodo_cola_caught* encolarCaughtPokemon(t_caught_pokemon* mensaje){
 t_nodo_cola_get* encolarGetPokemon(t_get_pokemon* mensaje){
 	t_nodo_cola_get* nodo_get = malloc(sizeof(t_nodo_cola_get));
 	nodo_get->mensaje = mensaje;
-	nodo_get->susc_enviados = list_create();
+	// nodo_get->susc_enviados = list_create();
 	nodo_get->susc_ack = list_create();
-	nodo_get->susc_no_ack = list_create();
+	// nodo_get->susc_no_ack = list_create();
 
 	list_add(cola_get->nodos,nodo_get);
 	return nodo_get;
@@ -2127,9 +2194,9 @@ t_nodo_cola_get* encolarGetPokemon(t_get_pokemon* mensaje){
 t_nodo_cola_localized* encolarLocalizedPokemon(t_localized_pokemon* mensaje){
 	t_nodo_cola_localized* nodo_localized = malloc(sizeof(t_nodo_cola_localized));
 	nodo_localized->mensaje = mensaje;
-	nodo_localized->susc_enviados = list_create();
+	// nodo_localized->susc_enviados = list_create();
 	nodo_localized->susc_ack = list_create();
-	nodo_localized->susc_no_ack = list_create();
+	// nodo_localized->susc_no_ack = list_create();
 
 	list_add(cola_localized->nodos,nodo_localized);
 	return nodo_localized;
