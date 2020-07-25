@@ -21,7 +21,7 @@ t_log* getLogger(void)
 //-----------------
 void iniciarLoggerAux(const char* path, const char* program_name, bool is_active_console, t_log_level level)
 {
-	GAMEBOY_LOGGER_AUX = log_create((char*)path, (char*)program_name, is_active_console, level);
+	GAMEBOY_LOGGER_AUX = log_create((char*)path, (char*)program_name, !is_active_console, level);
 }
 void destruirLoggerAux(void)
 {
