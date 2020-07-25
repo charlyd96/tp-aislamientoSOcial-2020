@@ -183,4 +183,7 @@ void eliminar_elemento_lista (char *elemento1, t_list *lista, pthread_mutex_t *s
 
 bool mover_elemento_destino_origen(t_list *destino, t_list *origen, pthread_mutex_t *sem_destino, pthread_mutex_t *sem_origen, char *elemento);
 
+void consumir_cpu_intercambio(Trainer *trainer);
+
+
 #endif /* INCLUDE_TRAINERS_H_ */

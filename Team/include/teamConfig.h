@@ -22,6 +22,9 @@ extern t_list *global_objective;
 extern t_list *ID_caught;
 extern pthread_mutex_t ID_caught_sem;
 
+extern pthread_t thread_appeared;
+extern pthread_t thread_localized;
+extern pthread_t thread_caught;
 
 extern t_list *ID_localized;
 extern pthread_mutex_t ID_localized_sem;

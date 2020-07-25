@@ -122,6 +122,7 @@ void RR_exec (void)
             sem_wait ( &qr_sem2 );
             if (win) break;  
             Trainer* trainer= list_remove (ReadyQueue, 0);
+            log_info (logTeam, "[CAMBIO DE COLA] El entrenador %d sale de Ready para ejecutar en la CPU", trainer->index);
             trainer->actual_status= EXEC; //Verificar si esto puede salir de la zona crítica
             sem_post ( &qr_sem2 );
 
@@ -130,10 +131,10 @@ void RR_exec (void)
 
             if (trainer->ejecucion == PENDING)
             {
+            log_info (logTeam, "[CAMBIO DE COLA] El entrenador %d fue desalojado por quantum debido a RR", trainer->index);
             send_trainer_to_ready(trainers, trainer->index,trainer->actual_operation);
             }
             trainer->rafagaEjecutada=0;
-            puts ("cambio de contexto");
             context_switch++;
        }
        sem_post(&terminar_ejecucion);
@@ -306,17 +307,17 @@ void listen_new_pokemons (void)
 
 void subscribe (void)
 {
-	pthread_t thread1; //OJO. Esta variable se está perdiendo
-	pthread_create (&thread1, NULL, (void *)listen_routine_colas , (int*)APPEARED_POKEMON);
-	pthread_detach (thread1);
 
-	pthread_t thread2; //OJO. Esta variable se está perdiendo
-	pthread_create (&thread2, NULL, (void *)listen_routine_colas , (int*)LOCALIZED_POKEMON);
-	pthread_detach (thread2);
+	pthread_create (&thread_appeared, NULL, (void *)listen_routine_colas , (int*)APPEARED_POKEMON);
+	pthread_detach (thread_appeared);
+
+
+	pthread_create (&thread_localized, NULL, (void *)listen_routine_colas , (int*)LOCALIZED_POKEMON);
+	pthread_detach (thread_localized);
   
-	pthread_t thread3; //OJO. Esta variable se está perdiendo
-	pthread_create (&thread3, NULL, (void *)listen_routine_colas , (int*)CAUGHT_POKEMON);
-	pthread_detach (thread3);
+	
+	pthread_create (&thread_caught, NULL, (void *)listen_routine_colas , (int*)CAUGHT_POKEMON);
+	pthread_detach (thread_caught);
 }
 
 void inicializar_listas (void)
