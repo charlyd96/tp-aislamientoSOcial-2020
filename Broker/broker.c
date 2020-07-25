@@ -1162,7 +1162,7 @@ void enviarNewASuscriptor(t_new_aux* aux){
 			if(nodo_nuevo->mensaje->id_mensaje == nodo->mensaje->id_mensaje){
 				log_warning(logBrokerInterno, "Los IDs de Mensaje son IGUALES.");
 				se_elimina = true;
-				list_destroy_and_destroy_elements(nodo->susc_ack,free);
+				list_destroy(nodo->susc_ack);
 				return (true);
 			}else return (false);
 		}
@@ -1177,7 +1177,7 @@ void enviarNewASuscriptor(t_new_aux* aux){
 		free(new_pokemon->nombre_pokemon);
 		free(new_pokemon);
 		// list_destroy_and_destroy_elements(aux->nodo->susc_ack);
-		free(aux->nodo);
+		//free(aux->nodo);
 		free(aux);		
 	}
 }
@@ -1308,7 +1308,7 @@ void enviarAppearedASuscriptor(t_appeared_aux* aux){
 			if(nodo_nuevo->mensaje->id_mensaje_correlativo == nodo->mensaje->id_mensaje_correlativo){
 				log_warning(logBrokerInterno, "Los IDs Correlativos son IGUALES.");
 				se_elimina = true;
-				list_destroy_and_destroy_elements(nodo->susc_ack,free);
+				list_destroy(nodo->susc_ack);
 				return (true);
 			}else return (false);
 		}
@@ -1323,7 +1323,7 @@ void enviarAppearedASuscriptor(t_appeared_aux* aux){
 		free(appeared_pokemon->nombre_pokemon);
 		free(appeared_pokemon);
 		// list_destroy_and_destroy_elements(aux->nodo->susc_ack);
-		free(aux->nodo);
+		// //free(aux->nodo);
 		free(aux);	
 	}
 	
@@ -1443,7 +1443,7 @@ void enviarCatchASuscriptor(t_catch_aux* aux){
 			if(nodo_nuevo->mensaje->id_mensaje == nodo->mensaje->id_mensaje){
 				log_warning(logBrokerInterno, "Los IDs Correlativos son IGUALES.");
 				se_elimina = true;
-				list_destroy_and_destroy_elements(nodo->susc_ack,free);
+				list_destroy(nodo->susc_ack);
 				return (true);
 			}else return (false);
 		}
@@ -1458,7 +1458,7 @@ void enviarCatchASuscriptor(t_catch_aux* aux){
 		free(catch_pokemon->nombre_pokemon);
 		free(catch_pokemon);
 		// list_destroy_and_destroy_elements(aux->nodo->susc_ack);
-		free(aux->nodo);
+		//free(aux->nodo);
 		free(aux);		
 
 	}
@@ -1574,7 +1574,7 @@ void enviarCaughtASuscriptor(t_caught_aux* aux){
 			if(nodo_nuevo->mensaje->id_mensaje_correlativo == nodo->mensaje->id_mensaje_correlativo){
 				log_warning(logBrokerInterno, "Los IDs Correlativos son IGUALES.");
 				se_elimina = true;
-				list_destroy_and_destroy_elements(nodo->susc_ack,free);
+				list_destroy(nodo->susc_ack);
 				return (true);
 			}else return (false);
 		}
@@ -1587,9 +1587,9 @@ void enviarCaughtASuscriptor(t_caught_aux* aux){
 	// destruir_estructura_aux(aux);
 	if(true){
 		sleep(1);
-		free(caught_pokemon);
+		// free(caught_pokemon);
 		// list_destroy_and_destroy_elements(aux->nodo->susc_ack);
-		free(aux->nodo);
+		//free(aux->nodo);
 		free(aux);
 	}
 
@@ -1707,7 +1707,7 @@ void enviarGetASuscriptor(t_get_aux* aux){
 			if(nodo_nuevo->mensaje->id_mensaje == nodo->mensaje->id_mensaje){
 				log_warning(logBrokerInterno, "Los IDs de Mensaje son IGUALES.");
 				se_elimina = true;
-				list_destroy_and_destroy_elements(nodo->susc_ack,free);
+				list_destroy(nodo->susc_ack);
 				return (true);
 			}else return (false);
 		}
@@ -1722,7 +1722,7 @@ void enviarGetASuscriptor(t_get_aux* aux){
 		free(get_pokemon->nombre_pokemon);
 		free(get_pokemon);
 		// list_destroy_and_destroy_elements(aux->nodo->susc_ack);
-		free(aux->nodo);	
+		//free(aux->nodo);	
 		free(aux);	
 	}
 }
@@ -1837,7 +1837,7 @@ void enviarLocalizedASuscriptor(t_localized_aux* aux){
 				log_warning(logBrokerInterno, "Los IDs de Mensaje Correlativo son IGUALES.");
 				
 				se_elimina = true;
-				list_destroy_and_destroy_elements(nodo->susc_ack,free);
+				list_destroy(nodo->susc_ack);
 				return (true);
 			}else return (false);
 		}
@@ -1851,7 +1851,7 @@ void enviarLocalizedASuscriptor(t_localized_aux* aux){
 		sleep(1);
 		free(localized_pokemon->nombre_pokemon);
 		free(localized_pokemon);
-		free(aux->nodo);
+		//free(aux->nodo);
 		free(aux);
 	}
 }
