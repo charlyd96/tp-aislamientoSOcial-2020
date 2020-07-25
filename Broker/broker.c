@@ -343,9 +343,9 @@ void buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint3
 		char* cola = colaParaLogs(part_nueva->tipo_mensaje);
 
 		// 6. Almacenado de un mensaje dentro de la memoria (indicando posición de inicio de su partición).
-		log_info(logBroker, "Se almacena el Mensaje %s en la Partición con posición de inicio %d.", cola, part_nueva->base, cache + part_nueva->base);
-		//log_info(logBrokerInterno, "Se almacena el Mensaje %s en la Partición con posición de inicio %d.", cola, part_nueva->base, part_nueva->base);
-
+		log_info(logBroker, "Se almacena el Mensaje %s con ID de Mensaje %d en la partición con posición de inicio %d.", cola, id, part_nueva->base, cache + part_nueva->base);
+		log_info(logBrokerInterno, "Se almacena el Mensaje %s con ID de Mensaje %d en la partición con posición de inicio %d.", cola, id, part_nueva->base, cache + part_nueva->base);
+		
 		log_info(logBrokerInterno, "ID_MENSAJE %d, asigno partición base %d y tamanio %d",id, part_nueva->base,part_nueva->tamanio);
 	}
 	if(config_broker->algoritmo_memoria == BS){
@@ -367,8 +367,8 @@ void buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint3
 		char* cola = colaParaLogs(part_libre->tipo_mensaje);
 
 		// 6. Almacenado de un mensaje dentro de la memoria (indicando posición de inicio de su partición).
-		log_info(logBroker, "Se almacena el Mensaje %s en la Partición con posición de inicio %d.", cola, part_libre->base, cache + part_libre->base);
-		//log_info(logBrokerInterno, "Se almacena el Mensaje %s en la Partición con posición de inicio %d.", cola, part_libre->base, part_libre->base);
+		log_info(logBroker, "Se almacena el Mensaje %s con ID de Mensaje %d en la partición con posición de inicio %d.", cola, id, part_libre->base, cache + part_libre->base);
+		log_info(logBrokerInterno, "Se almacena el Mensaje %s con ID de Mensaje %d en la partición con posición de inicio %d.", cola, id, part_libre->base, cache + part_libre->base);
 	}
 	//-> DESMUTEAR LISTA DE PARTICIONES
 	sem_post(&mx_particiones);
@@ -382,8 +382,8 @@ void liberarParticion(int indice_victima){
 	list_replace(particiones, indice_victima, part_liberar);
 
 	// 7. Eliminado de una partición de memoria (indicado la posición de inicio de la misma).
-	log_info(logBroker, "Se elimina la Partición con posición de inicio %d.", part_liberar->base, cache+part_liberar->base);
-	log_info(logBrokerInterno, "Se elimina la Partición con posición de inicio %d.", part_liberar->base, cache+part_liberar->base);
+	log_info(logBroker, "Se elimina la partición con posición de inicio %d.", part_liberar->base, cache+part_liberar->base);
+	log_info(logBrokerInterno, "Se elimina la partición con posición de inicio %d.", part_liberar->base, cache+part_liberar->base);
 	//Consolidar
 
 	//Si no es la última partición
@@ -442,8 +442,8 @@ void eliminarParticionBuddy(){
 	list_replace(particiones, indice_victima, part_liberar);
 
 	// 7. Eliminado de una partición de memoria (indicado la posición de inicio de la misma).
-	log_info(logBroker, "Se elimina la Partición con posición de inicio %d.", part_liberar->base, cache+part_liberar->base);
-	log_info(logBrokerInterno, "Se elimina la Partición con posición de inicio %d.", part_liberar->base, cache+part_liberar->base);
+	log_info(logBroker, "Se elimina la partición con posición de inicio %d.", part_liberar->base, cache+part_liberar->base);
+	log_info(logBrokerInterno, "Se elimina la partición con posición de inicio %d.", part_liberar->base, cache+part_liberar->base);
 
 	//Consolidar buddys
 	bool huboConsolidacion;
@@ -1126,22 +1126,30 @@ void enviarNewASuscriptor(t_new_aux* aux){
 	t_nodo_cola_new* nodo_nuevo = aux->nodo;
 
 	int enviado = enviarNewPokemon(socket, *new_pokemon,P_BROKER,0);	
+<<<<<<< HEAD
 	bool se_elimina = false;
+=======
+>>>>>>> 3db06ada60de208933be812fd350164494f0fce5
 
 	if(enviado > 0){
 		uint32_t ack = recibirACK(socket);
 		if(ack == 1){
-			log_info(logBrokerInterno, "Se reenvió NEW_POKEMON %s %d %d %d [%d] al socket %d", new_pokemon->nombre_pokemon, new_pokemon->pos_x, new_pokemon->pos_y, new_pokemon->cantidad, new_pokemon->id_mensaje,socket);
-			log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
+			// 4. Envío de un mensaje a un suscriptor específico.
+			log_info(logBroker, "Se envió el Mensaje: NEW_POKEMON %s %d %d %d con ID de Mensaje %d al Suscriptor %d.",new_pokemon->nombre_pokemon, new_pokemon->pos_x, new_pokemon->pos_y, new_pokemon->cantidad, new_pokemon->id_mensaje,id_suscriptor);
+			log_info(logBrokerInterno, "Se envió el Mensaje: NEW_POKEMON %s %d %d %d con ID de Mensaje %d al Suscriptor %d.",new_pokemon->nombre_pokemon, new_pokemon->pos_x, new_pokemon->pos_y, new_pokemon->cantidad, new_pokemon->id_mensaje,id_suscriptor);		
+			// 5. Confirmación de recepción de un suscriptor al envío de un mensaje previo.
+			log_info(logBroker, "Confirmación de Recepción del Mensaje con ID %d del Suscriptor %d.", new_pokemon->id_mensaje, id_suscriptor);
 			agregarSuscriptor(id_mensaje, id_suscriptor);
 			pthread_mutex_lock(&sem_nodo_new);
 			list_add(nodo_nuevo->susc_ack, (void*)id_suscriptor);
 			pthread_mutex_unlock(&sem_nodo_new);
 		}else{
+			log_info(logBroker, "El Suscriptor %d NO recibió el Mensaje con ID %d.", id_suscriptor, new_pokemon->id_mensaje);
+			log_info(logBrokerInterno, "El Suscriptor %d NO recibió el Mensaje con ID %d.", id_suscriptor, new_pokemon->id_mensaje);
 		}
 	}else{
 		// 4. Envío de un mensaje a un suscriptor específico.	
-		log_warning(logBroker, "NO se envió el Mensaje con ID de Mensaje %d.", new_pokemon->id_mensaje);
+	//	log_warning(logBroker, "NO se envió el Mensaje con ID de Mensaje %d.", new_pokemon->id_mensaje);
 		log_warning(logBrokerInterno, "NO se envió el Mensaje con ID de Mensaje %d.", new_pokemon->id_mensaje);
 	}
 		
@@ -1200,13 +1208,13 @@ void atenderMensajeAppearedPokemon(int socket_cliente){
 			
 			if(appeared_pokemon->id_mensaje_correlativo > 0){
 				// 3. Llegada de un nuevo mensaje a una cola de mensajes.
-				log_info(logBroker, "Llegó un Mensaje APPEARED_POKEMON %s %d %d %d.",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y, appeared_pokemon->id_mensaje_correlativo);
-				log_info(logBrokerInterno, "Llegó un Mensaje APPEARED_POKEMON %s %d %d %d.",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y, appeared_pokemon->id_mensaje_correlativo);
+				log_info(logBroker, "Llegó un Mensaje APPEARED_POKEMON %s %d %d %d del Game Card %d.",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y, appeared_pokemon->id_mensaje_correlativo, id_proceso);
+				log_info(logBrokerInterno, "Llegó un Mensaje APPEARED_POKEMON %s %d %d %d del Game Card %d.",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y, appeared_pokemon->id_mensaje_correlativo, id_proceso);
 
 			}else{
 				// 3. Llegada de un nuevo mensaje a una cola de mensajes.
-				log_info(logBroker, "Llegó un Mensaje APPEARED_POKEMON %s %d %d.",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y);
-				log_info(logBrokerInterno, "Llegó un Mensaje APPEARED_POKEMON %s %d %d.",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y);
+				log_info(logBroker, "Llegó un Mensaje APPEARED_POKEMON %s %d %d del Game Card %d.",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y, id_proceso);
+				log_info(logBrokerInterno, "Llegó un Mensaje APPEARED_POKEMON %s %d %d del Game Card %d.",appeared_pokemon->nombre_pokemon,appeared_pokemon->pos_x,appeared_pokemon->pos_y, id_proceso);
 			}
 
 			break;
@@ -1273,18 +1281,22 @@ void enviarAppearedASuscriptor(t_appeared_aux* aux){
 	if(enviado > 0){
 			uint32_t ack = recibirACK(socket);
 			if(ack == 1){
-				log_info(logBrokerInterno, "Se reenvió APPEARED_POKEMON %s %d %d [%d] al socket %d", appeared_pokemon->nombre_pokemon, appeared_pokemon->pos_x, appeared_pokemon->pos_y, appeared_pokemon->id_mensaje_correlativo,socket);
-				log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
+				// 4. Envío de un mensaje a un suscriptor específico.
+				log_info(logBroker, "Se envió el Mensaje: APPEARED_POKEMON %s %d %d %d con ID de Mensaje %d al Suscriptor %d.", appeared_pokemon->nombre_pokemon, appeared_pokemon->pos_x, appeared_pokemon->pos_y, appeared_pokemon->id_mensaje_correlativo,id_suscriptor);
+				log_info(logBrokerInterno, "Se envió el Mensaje: APPEARED_POKEMON %s %d %d %d con ID de Mensaje %d al Suscriptor %d.", appeared_pokemon->nombre_pokemon, appeared_pokemon->pos_x, appeared_pokemon->pos_y, appeared_pokemon->id_mensaje_correlativo,id_suscriptor);		
+				// 5. Confirmación de recepción de un suscriptor al envío de un mensaje previo.
+				log_info(logBroker, "Confirmación de Recepción del Mensaje con ID %d del Suscriptor %d.", appeared_pokemon->id_mensaje_correlativo, id_suscriptor);
 				agregarSuscriptor(id_mensaje, id_suscriptor);
 				pthread_mutex_lock(&sem_nodo_appeared);
 				list_add(nodo_nuevo->susc_ack, (void*)id_suscriptor);
 				pthread_mutex_unlock(&sem_nodo_appeared);
 			}else{
-				log_info(logBrokerInterno, "NO ACK");
+				log_info(logBroker, "El Suscriptor %d NO recibió el Mensaje con ID %d.", id_suscriptor, appeared_pokemon->id_mensaje_correlativo);
+				log_info(logBrokerInterno, "El Suscriptor %d NO recibió el Mensaje con ID %d.", id_suscriptor, appeared_pokemon->id_mensaje_correlativo);
 			}
 	}else{
 		// 4. Envío de un mensaje a un suscriptor específico.
-		log_warning(logBroker, "NO se envió el Mensaje con ID de Mensaje Correlativo %d.", appeared_pokemon->id_mensaje_correlativo);
+	//	log_warning(logBroker, "NO se envió el Mensaje con ID de Mensaje Correlativo %d.", appeared_pokemon->id_mensaje_correlativo);
 		log_warning(logBrokerInterno, "NO se envió el Mensaje con ID de Mensaje Correlativo %d.", appeared_pokemon->id_mensaje_correlativo);
 	}
 	
@@ -1403,16 +1415,22 @@ void enviarCatchASuscriptor(t_catch_aux* aux){
 	if(enviado > 0){
 		uint32_t ack = recibirACK(socket);
 		if(ack == 1){
-			log_info(logBrokerInterno, "Se reenvió CATCH_POKEMON %s %d %d [%d] al socket %d", catch_pokemon->nombre_pokemon, catch_pokemon->pos_x, catch_pokemon->pos_y, catch_pokemon->id_mensaje,socket);
-			log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
+			// 4. Envío de un mensaje a un suscriptor específico.
+			log_info(logBrokerInterno, "Se envió el Mensaje: CATCH_POKEMON %s %d %d [%d] al Suscriptor %d.", catch_pokemon->nombre_pokemon, catch_pokemon->pos_x, catch_pokemon->pos_y, catch_pokemon->id_mensaje,id_suscriptor);
+			log_info(logBrokerInterno, "Se envió el Mensaje: CATCH_POKEMON %s %d %d [%d] al Suscriptor %d.", catch_pokemon->nombre_pokemon, catch_pokemon->pos_x, catch_pokemon->pos_y, catch_pokemon->id_mensaje,id_suscriptor);
+			// 5. Confirmación de recepción de un suscriptor al envío de un mensaje previo.
+			log_info(logBroker, "Confirmación de Recepción del Mensaje con ID %d del Suscriptor %d.", catch_pokemon->id_mensaje, id_suscriptor);
 			agregarSuscriptor(id_mensaje, id_suscriptor);
 			pthread_mutex_lock(&sem_nodo_catch);
 			list_add(nodo_nuevo->susc_ack,(void*)id_suscriptor);
 			pthread_mutex_unlock(&sem_nodo_catch);
+		}else{
+			log_info(logBroker, "El Suscriptor %d NO recibió el Mensaje con ID %d.", id_suscriptor, catch_pokemon->id_mensaje);
+			log_info(logBrokerInterno, "El Suscriptor %d NO recibió el Mensaje con ID %d.", id_suscriptor, catch_pokemon->id_mensaje);
 		}
 	}else{
 			// 4. Envío de un mensaje a un suscriptor específico.
-			log_warning(logBroker, "NO se envió el Mensaje con ID de Mensaje %d.", catch_pokemon->id_mensaje);
+		//	log_warning(logBroker, "NO se envió el Mensaje con ID de Mensaje %d.", catch_pokemon->id_mensaje);
 			log_warning(logBrokerInterno, "NO se envió el Mensaje con ID de Mensaje %d.", catch_pokemon->id_mensaje);
 	}
 
@@ -1469,8 +1487,8 @@ void atenderMensajeCaughtPokemon(int socket_cliente){
 			log_info(logBroker, "Se conectó el Game Card %d.", id_proceso);
 			log_info(logBrokerInterno, "Se conectó el Game Card %d.", id_proceso);
 			// 3. Llegada de un nuevo mensaje a una cola de mensajes.
-			log_info(logBroker, "Llegó un Mensaje CAUGHT_POKEMON %d [%d] del Game Card %d.",caught_pokemon->atrapo_pokemon,caught_pokemon->id_mensaje_correlativo, id_proceso);
-			log_info(logBrokerInterno, "Llegó un Mensaje CAUGHT_POKEMON %d [%d] del Game Card %d.",caught_pokemon->atrapo_pokemon,caught_pokemon->id_mensaje_correlativo, id_proceso);
+			log_info(logBroker, "Llegó un Mensaje CAUGHT_POKEMON %d %d del Game Card %d.",caught_pokemon->atrapo_pokemon,caught_pokemon->id_mensaje_correlativo, id_proceso);
+			log_info(logBrokerInterno, "Llegó un Mensaje CAUGHT_POKEMON %d %d del Game Card %d.",caught_pokemon->atrapo_pokemon,caught_pokemon->id_mensaje_correlativo, id_proceso);
 			break;
 		}
 		case P_GAMEBOY:{
@@ -1478,8 +1496,8 @@ void atenderMensajeCaughtPokemon(int socket_cliente){
 			log_info(logBroker, "Se conectó el Game Boy %d.", id_proceso);
 			log_info(logBrokerInterno, "Se conectó el Game Boy %d.", id_proceso);
 			// 3. Llegada de un nuevo mensaje a una cola de mensajes.
-			log_info(logBroker, "Llegó un Mensaje CAUGHT_POKEMON %d [%d] del Game Boy %d.",caught_pokemon->atrapo_pokemon,caught_pokemon->id_mensaje_correlativo, id_proceso);
-			log_info(logBrokerInterno, "Llegó un Mensaje CAUGHT_POKEMON %d [%d] del Game Boy %d.",caught_pokemon->atrapo_pokemon,caught_pokemon->id_mensaje_correlativo, id_proceso);
+			log_info(logBroker, "Llegó un Mensaje CAUGHT_POKEMON %d %d del Game Boy %d.",caught_pokemon->atrapo_pokemon,caught_pokemon->id_mensaje_correlativo, id_proceso);
+			log_info(logBrokerInterno, "Llegó un Mensaje CAUGHT_POKEMON %d %d del Game Boy %d.",caught_pokemon->atrapo_pokemon,caught_pokemon->id_mensaje_correlativo, id_proceso);
 			break;
 		}
 		default:{
@@ -1527,17 +1545,24 @@ void enviarCaughtASuscriptor(t_caught_aux* aux){
 
 	if(enviado > 0){
 		uint32_t ack = recibirACK(socket);
+
 		if(ack == 1){
-			log_info(logBrokerInterno, "Se reenvió CAUGHT %u [%u] al socket %d", caught_pokemon->atrapo_pokemon,caught_pokemon->id_mensaje_correlativo,socket);
-			log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
+			// 4. Envío de un mensaje a un suscriptor específico.
+			log_info(logBroker, "Se envió el Mensaje: CAUGHT %u %u al Suscriptor %d.", caught_pokemon->atrapo_pokemon,caught_pokemon->id_mensaje_correlativo,id_suscriptor);
+			log_info(logBrokerInterno, "Se envió el Mensaje: CAUGHT %u %u al Suscriptor %d.", caught_pokemon->atrapo_pokemon,caught_pokemon->id_mensaje_correlativo,id_suscriptor);
+			// 5. Confirmación de recepción de un suscriptor al envío de un mensaje previo.
+			log_info(logBroker, "Confirmación de Recepción del Mensaje con ID %d del Suscriptor %d.", caught_pokemon->id_mensaje_correlativo, id_suscriptor);
 			agregarSuscriptor(id_mensaje, id_suscriptor);
 			pthread_mutex_lock(&sem_nodo_caught);
 			list_add(nodo_nuevo->susc_ack, (void*)id_suscriptor);
 			pthread_mutex_unlock(&sem_nodo_caught);
+		}else{
+			log_info(logBroker, "El Suscriptor %d NO recibió el Mensaje con ID %d.", id_suscriptor, caught_pokemon->id_mensaje_correlativo);
+			log_info(logBrokerInterno, "El Suscriptor %d NO recibió el Mensaje con ID %d.", id_suscriptor, caught_pokemon->id_mensaje_correlativo);
 		}
 	}else{
 		// 4. Envío de un mensaje a un suscriptor específico.
-		log_warning(logBroker, "NO se envió el Mensaje con ID de Mensaje Correlativo %d.", caught_pokemon->id_mensaje_correlativo);
+	//	log_warning(logBroker, "NO se envió el Mensaje con ID de Mensaje Correlativo %d.", caught_pokemon->id_mensaje_correlativo);
 		log_warning(logBrokerInterno, "NO se envió el Mensaje con ID de Mensaje Correlativo %d.", caught_pokemon->id_mensaje_correlativo);
 	}
 
@@ -1652,17 +1677,24 @@ void enviarGetASuscriptor(t_get_aux* aux){
 			
 	if(enviado > 0){
 		uint32_t ack = recibirACK(socket);
+
 		if(ack == 1){
-			log_info(logBrokerInterno, "Se reenvió GET_POKEMON %s [%d] al socket %d", get_pokemon->nombre_pokemon, get_pokemon->id_mensaje,socket);
-			log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
+			// 4. Envío de un mensaje a un suscriptor específico.
+			log_info(logBroker, "Se envió el Mensaje: GET_POKEMON %s %d al Suscriptor %d.", get_pokemon->nombre_pokemon, get_pokemon->id_mensaje,id_suscriptor);
+			log_info(logBrokerInterno, "Se envió el Mensaje: GET_POKEMON %s %d al Suscriptor %d.", get_pokemon->nombre_pokemon, get_pokemon->id_mensaje,id_suscriptor);
+			// 5. Confirmación de recepción de un suscriptor al envío de un mensaje previo.
+			log_info(logBroker, "Confirmación de Recepción del Mensaje con ID %d del Suscriptor %d.", get_pokemon->id_mensaje, id_suscriptor);
 			agregarSuscriptor(id_mensaje, id_suscriptor);
 			pthread_mutex_lock(&sem_nodo_get);
 			list_add(nodo_nuevo->susc_ack, (void*)id_suscriptor);
 			pthread_mutex_unlock(&sem_nodo_get);
+		}else{
+			log_info(logBroker, "El Suscriptor %d NO recibió el Mensaje con ID %d.", id_suscriptor, get_pokemon->id_mensaje);
+			log_info(logBrokerInterno, "El Suscriptor %d NO recibió el Mensaje con ID %d.", id_suscriptor, get_pokemon->id_mensaje);
 		}
 	}else{
 		// 4. Envío de un mensaje a un suscriptor específico.
-		log_warning(logBroker, "NO se envió el Mensaje con ID de Mensaje %d.", get_pokemon->id_mensaje);
+	//	log_warning(logBroker, "NO se envió el Mensaje con ID de Mensaje %d.", get_pokemon->id_mensaje);
 		log_warning(logBrokerInterno, "NO se envió el Mensaje con ID de Mensaje %d.", get_pokemon->id_mensaje);
 	}
 
@@ -1719,8 +1751,8 @@ void atenderMensajeLocalizedPokemon(int socket_cliente){
 			log_info(logBrokerInterno, "Se conectó el Game Card %d.", id_proceso);
 
 			// 3. Llegada de un nuevo mensaje a una cola de mensajes.
-			log_info(logBroker, "Llegó un Mensaje LOCALIZED_POKEMON %s %d %s [%d]\n",localized_pokemon->nombre_pokemon,localized_pokemon->cant_pos,localized_pokemon->posiciones,localized_pokemon->id_mensaje_correlativo, id_proceso);
-			log_info(logBrokerInterno, "Llegó un Mensaje LOCALIZED_POKEMON %s %d %s [%d]\n",localized_pokemon->nombre_pokemon,localized_pokemon->cant_pos,localized_pokemon->posiciones,localized_pokemon->id_mensaje_correlativo, id_proceso);
+			log_info(logBroker, "Llegó un Mensaje LOCALIZED_POKEMON %s %d %s %d.",localized_pokemon->nombre_pokemon,localized_pokemon->cant_pos,localized_pokemon->posiciones,localized_pokemon->id_mensaje_correlativo, id_proceso);
+			log_info(logBrokerInterno, "Llegó un Mensaje LOCALIZED_POKEMON %s %d %s %d.",localized_pokemon->nombre_pokemon,localized_pokemon->cant_pos,localized_pokemon->posiciones,localized_pokemon->id_mensaje_correlativo, id_proceso);
 
 			break;
 		}
@@ -1769,21 +1801,30 @@ void enviarLocalizedASuscriptor(t_localized_aux* aux){
 	uint32_t id_suscriptor = aux->id_suscriptor;
 	uint32_t id_mensaje = aux->id_mensaje;
 	t_nodo_cola_localized* nodo_nuevo = aux->nodo;
+
 	int enviado = enviarLocalizedPokemon(socket, *localized_pokemon,P_BROKER,0);
 	bool se_elimina = false;
 	if(enviado > 0){
 		uint32_t ack = recibirACK(socket);
+	
 		if(ack == 1){
-			log_info(logBrokerInterno, "Se reenvió LOCALIZED_POKEMON %s %d %s [%d] al socket %d", localized_pokemon->nombre_pokemon,localized_pokemon->cant_pos,localized_pokemon->posiciones,localized_pokemon->id_mensaje_correlativo,socket);
+			// 4. Envío de un mensaje a un suscriptor específico.
+			log_info(logBroker, "Se envió el Mensaje: LOCALIZED_POKEMON %s %d %s %d al Suscriptor %d.", localized_pokemon->nombre_pokemon,localized_pokemon->cant_pos,localized_pokemon->posiciones,localized_pokemon->id_mensaje_correlativo,id_suscriptor);
+			log_info(logBrokerInterno, "Se envió el Mensaje: LOCALIZED_POKEMON %s %d %s %d al Suscriptor %d.", localized_pokemon->nombre_pokemon,localized_pokemon->cant_pos,localized_pokemon->posiciones,localized_pokemon->id_mensaje_correlativo,id_suscriptor);
+			// 5. Confirmación de recepción de un suscriptor al envío de un mensaje previo.
+			log_info(logBroker, "Confirmación de Recepción del Mensaje con ID %d del Suscriptor %d.", localized_pokemon->id_mensaje_correlativo, id_suscriptor);
 			log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
 			agregarSuscriptor(id_mensaje,id_suscriptor);
 			pthread_mutex_lock(&sem_nodo_localized);
 			list_add(nodo_nuevo->susc_ack, (void*)id_suscriptor);
 			pthread_mutex_unlock(&sem_nodo_localized);
+		}else{
+			log_info(logBroker, "El Suscriptor %d NO recibió el Mensaje con ID %d.", id_suscriptor, localized_pokemon->id_mensaje_correlativo);
+			log_info(logBrokerInterno, "El Suscriptor %d NO recibió el Mensaje con ID %d.", id_suscriptor, localized_pokemon->id_mensaje_correlativo);
 		}
 	}else{
 		// 4. Envío de un mensaje a un suscriptor específico.
-		log_warning(logBroker, "NO se envió el Mensaje con ID de Mensaje Correlativo %d.", localized_pokemon->id_mensaje_correlativo);
+	//	log_warning(logBroker, "NO se envió el Mensaje con ID de Mensaje Correlativo %d.", localized_pokemon->id_mensaje_correlativo);
 		log_warning(logBrokerInterno, "NO se envió el Mensaje con ID de Mensaje Correlativo %d.", localized_pokemon->id_mensaje_correlativo);
 	}
 
@@ -2416,7 +2457,7 @@ void enviarAppearedPokemonCacheados(int socket, t_suscribe* suscriptor){
 							case SUSCRIBE_TEAM:{
 								// 4. Envío de un mensaje a un suscriptor específico.
 								log_info(logBroker, "Se envió el Mensaje: %s %s %d %d con ID de Mensaje Correlativo %d al Team %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.id_mensaje_correlativo, suscriptor->id_proceso);
-								log_info(logBrokerInterno, "Se envió el Mensaje: %s %s %d %d con ID de Mensaje Correlativo %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.id_mensaje_correlativo, suscriptor->id_proceso);
+								log_info(logBrokerInterno, "Se envió el Mensaje: %s %s %d %d con ID de Mensaje Correlativo %d al Team %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.id_mensaje_correlativo, suscriptor->id_proceso);
 								confirmacionDeRecepcionTeam(ack, suscriptor, descacheado.id_mensaje_correlativo);
 								break;
 							}
@@ -2678,15 +2719,15 @@ void enviarGetPokemonCacheados(int socket, t_suscribe* suscriptor){
 							}
 							case SUSCRIBE_GAMECARD:{
 								// 4. Envío de un mensaje a un suscriptor específico.
-								log_info(logBroker, "Se envió el Mensaje: %s %s con ID de Mensaje %d.", cola, descacheado->nombre_pokemon, descacheado->id_mensaje);
-								log_info(logBrokerInterno, "Se envió el Mensaje: %s %s con ID de Mensaje %d.", cola, descacheado->nombre_pokemon, descacheado->id_mensaje);
+								log_info(logBroker, "Se envió el Mensaje: %s %s con ID de Mensaje %d al Game Card %d.", cola, descacheado->nombre_pokemon, descacheado->id_mensaje, suscriptor->id_proceso);
+								log_info(logBrokerInterno, "Se envió el Mensaje: %s %s con ID de Mensaje %d al Game Card %d.", cola, descacheado->nombre_pokemon, descacheado->id_mensaje, suscriptor->id_proceso);
 								confirmacionDeRecepcionGameCard(ack, suscriptor, descacheado->id_mensaje);
 								break;
 							}
 							case SUSCRIBE_GAMEBOY:{
 								// 4. Envío de un mensaje a un suscriptor específico.
-								log_info(logBroker, "Se envió el Mensaje: %s %s con ID de Mensaje %d.", cola, descacheado->nombre_pokemon, descacheado->id_mensaje);
-								log_info(logBrokerInterno, "Se envió el Mensaje: %s %s con ID de Mensaje %d.", cola, descacheado->nombre_pokemon, descacheado->id_mensaje);
+								log_info(logBroker, "Se envió el Mensaje: %s %s con ID de Mensaje %d al Game Boy %d.", cola, descacheado->nombre_pokemon, descacheado->id_mensaje, suscriptor->id_proceso);
+								log_info(logBrokerInterno, "Se envió el Mensaje: %s %s con ID de Mensaje %d al Game Boy %d.", cola, descacheado->nombre_pokemon, descacheado->id_mensaje, suscriptor->id_proceso);
 								confirmacionDeRecepcionGameBoy(ack, suscriptor, descacheado->id_mensaje);
 								break;
 							}
@@ -2750,15 +2791,37 @@ void enviarLocalizedPokemonCacheados(int socket, t_suscribe* suscriptor){
 					int ack = recibirACK(socket);
 					log_info(logBrokerInterno, "ACK %d", ack);
 				
-				// 4. Envío de un mensaje a un suscriptor específico.
-				if (enviado>0){			
-					log_info(logBroker, "Se envió el Mensaje: %s %s %d %s con ID de Mensaje Correlativo %d.", cola, descacheado.nombre_pokemon, descacheado.cant_pos, descacheado.posiciones, descacheado.id_mensaje_correlativo);
-					log_info(logBrokerInterno, "Se envió el Mensaje: %s %s %d %s con ID de Mensaje Correlativo %d.", cola, descacheado.nombre_pokemon, descacheado.cant_pos, descacheado.posiciones, descacheado.id_mensaje_correlativo);
-
-					log_info(logBrokerInterno, "Descacheado id correlativo %d", descacheado.id_mensaje_correlativo);
+				if (enviado == -1){		
+					// 4. Envío de un mensaje a un suscriptor específico.	
+					log_warning(logBroker, "NO se envió el Mensaje con ID de Mensaje Correlativo %d.", descacheado.id_mensaje_correlativo);
+					log_warning(logBrokerInterno, "NO se envió el Mensaje con ID de Mensaje Correlativo %d.", descacheado.id_mensaje_correlativo);
 				} else 
-					log_info(logBrokerInterno, "No se pudo enviar el Mensaje: %s %s %d %s con ID de Mensaje Correlativo %d.", cola, descacheado.nombre_pokemon, descacheado.cant_pos, descacheado.posiciones, descacheado.id_mensaje_correlativo);	
-				
+					list_add(particion_buscada->susc_enviados, (void*)suscriptor->id_proceso);
+						switch(suscriptor->tipo_suscripcion){
+							case SUSCRIBE_TEAM:{
+								// 4. Envío de un mensaje a un suscriptor específico.
+								confirmacionDeRecepcionTeam(ack, suscriptor, descacheado.id_mensaje_correlativo);
+								log_info(logBroker, "Se envió el Mensaje: %s %s %d %s con ID de Mensaje Correlativo %d.", cola, descacheado.nombre_pokemon, descacheado.cant_pos, descacheado.posiciones, descacheado.id_mensaje_correlativo);
+								log_info(logBrokerInterno, "Se envió el Mensaje: %s %s %d %s con ID de Mensaje Correlativo %d.", cola, descacheado.nombre_pokemon, descacheado.cant_pos, descacheado.posiciones, descacheado.id_mensaje_correlativo);
+								
+								log_info(logBrokerInterno, "Descacheado id correlativo %d", descacheado.id_mensaje_correlativo);
+								break;
+							}
+							case SUSCRIBE_GAMECARD:{
+								// 4. Envío de un mensaje a un suscriptor específico.
+								log_info(logBroker, "NO se debe enviar este Mensaje al Game Card.");
+								log_info(logBrokerInterno, "NO se debe enviar este Mensaje al Game Card.");
+								break;
+							}
+							case SUSCRIBE_GAMEBOY:{
+								// 4. Envío de un mensaje a un suscriptor específico.
+								log_info(logBroker, "Se envió el Mensaje: %s %s %d %s con ID de Mensaje Correlativo %d al Game Boy %d.", cola, descacheado.nombre_pokemon, descacheado.cant_pos, descacheado.posiciones, descacheado.id_mensaje_correlativo, suscriptor->id_proceso);
+								log_info(logBrokerInterno, "Se envió el Mensaje: %s %s %d %s con ID de Mensaje Correlativo %d al Game Boy %d.", cola, descacheado.nombre_pokemon, descacheado.cant_pos, descacheado.posiciones, descacheado.id_mensaje_correlativo, suscriptor->id_proceso);
+								confirmacionDeRecepcionGameBoy(ack, suscriptor, descacheado.id_mensaje_correlativo);
+								break;
+							}
+							default: break;
+						}
 				free(stream);
 			}
 		}else{
