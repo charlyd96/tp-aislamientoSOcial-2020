@@ -919,38 +919,63 @@ void dump_cache(){
 	FILE* archivo_dump;
 	archivo_dump = fopen("archivo_dump.txt", "w+");
 
-	fprintf(archivo_dump, "---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n");
+	fprintf(archivo_dump, "-----------------------------------------------------------------------------------------------------------------------------------------------------------------\n");
 	fprintf(archivo_dump, "Dump: %s\n", fecha_y_hora);
 
-	for (int i = 0; i < tam_lista ; i++){
+	for(int i = 0; i < tam_lista ; i++){
 		
 		particion_buscada = list_get(particiones, i);
 
 		char* cola = colaParaLogs(particion_buscada->tipo_mensaje);
-
+		
 		switch(config_broker->algoritmo_memoria){
 			case PARTICIONES:{
-				if(particion_buscada->libre == 0){
-					fprintf(archivo_dump, "Partición %d: %p - %p.\t\t\t[X]\t\t\tSize: %db\t\t\tLRU: %ld.%06ld\t\t\tCola: %s\t\tID: %d\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), particion_buscada->tamanio, particion_buscada->time_ultima_ref.tv_sec, particion_buscada->time_ultima_ref.tv_usec, cola, particion_buscada->id);
-				}else{
-					fprintf(archivo_dump, "Partición %d: %p - %p.\t\t\t[L]\t\t\tSize: %db\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), particion_buscada->tamanio);
+				switch(config_broker->algoritmo_reemplazo){
+					case FIFO:{
+						if(particion_buscada->libre == 0){
+							fprintf(archivo_dump, "Partición %d: %p - %p.\t\t[X]\t\tSize: %db\t\tLRU: %ld.%06ld\t\tCola: %s\t\tID: %d\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), particion_buscada->tamanio, particion_buscada->time_creacion.tv_sec, particion_buscada->time_creacion.tv_usec, cola, particion_buscada->id);
+						}else{
+							fprintf(archivo_dump, "Partición %d: %p - %p.\t\t[L]\t\tSize: %db\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), particion_buscada->tamanio);
+						}
+						break;
+					}
+					case LRU:{
+						if(particion_buscada->libre == 0){
+							fprintf(archivo_dump, "Partición %d: %p - %p.\t\t[X]\t\tSize: %db\t\tLRU: %ld.%06ld\t\tCola: %s\t\tID: %d\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), particion_buscada->tamanio, particion_buscada->time_ultima_ref.tv_sec, particion_buscada->time_ultima_ref.tv_usec, cola, particion_buscada->id);
+						}else{
+							fprintf(archivo_dump, "Partición %d: %p - %p.\t\t[L]\t\tSize: %db\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), particion_buscada->tamanio);
+						}
+						break;
+					}
 				}
 				break;
 			}
 			case BS:{
-				if(particion_buscada->libre == 0){
-					fprintf(archivo_dump, "Partición %d: %p - %p.\t\t\t[X]\t\t\tSize: %db\t\t\tLRU: %ld.%06ld\t\t\tCola: %s\t\tID: %d\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), (int)pow(2, particion_buscada->buddy_i), particion_buscada->time_ultima_ref.tv_sec, particion_buscada->time_ultima_ref.tv_usec, cola, particion_buscada->id);
-				}else{
-					fprintf(archivo_dump, "Partición %d: %p - %p.\t\t\t[L]\t\t\tSize: %db\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), (int)pow(2, particion_buscada->buddy_i));
+				switch(config_broker->algoritmo_reemplazo){
+					case FIFO:{
+						if(particion_buscada->libre == 0){
+							fprintf(archivo_dump, "Partición %d: %p - %p.\t\t[X]\t\tSize: %db\t\tLRU: %ld.%06ld\t\tCola: %s\t\tID: %d\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), (int)pow(2, particion_buscada->buddy_i), particion_buscada->time_creacion.tv_sec, particion_buscada->time_creacion.tv_usec, cola, particion_buscada->id);
+						}else{
+							fprintf(archivo_dump, "Partición %d: %p - %p.\t\t[L]\t\tSize: %db\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), (int)pow(2, particion_buscada->buddy_i));
+						}
+						break;
+					}
+					case LRU:{
+						if(particion_buscada->libre == 0){
+							fprintf(archivo_dump, "Partición %d: %p - %p.\t\t[X]\t\tSize: %db\t\tLRU: %ld.%06ld\t\tCola: %s\t\tID: %d\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), (int)pow(2, particion_buscada->buddy_i), particion_buscada->time_ultima_ref.tv_sec, particion_buscada->time_ultima_ref.tv_usec, cola, particion_buscada->id);
+						}else{
+							fprintf(archivo_dump, "Partición %d: %p - %p.\t\t[L]\t\tSize: %db\n", i, (cache + particion_buscada->base), (cache + particion_buscada->base + particion_buscada->tamanio), (int)pow(2, particion_buscada->buddy_i));
+						}
+						break;
+					}
 				}
 				break;
 			}
 		}
-		
 	}
 
-	fprintf(archivo_dump, "---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n");
-
+	fprintf(archivo_dump, "-----------------------------------------------------------------------------------------------------------------------------------------------------------------\n");
+	
 	fclose(archivo_dump);
 }
 
