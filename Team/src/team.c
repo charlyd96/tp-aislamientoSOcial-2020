@@ -368,6 +368,9 @@ void inicializar_semaforos (void)
     sem_init (&terminar_ejecucion, 0, 0);
     sem_init (&terminar_localized, 0, 1);
     pthread_mutex_init (&especies_sem, NULL);
+    pthread_mutex_init (&aux_global_sem, NULL);
+
+
 }
 
 void cerar_semaforos (void)

@@ -49,7 +49,7 @@ extern sem_t deadlock_sem2;
 t_list *global_objective;
 //sem_t global_sem1;
 //sem_t global_sem2;
-pthread_mutex_t global_sem;
+extern pthread_mutex_t global_sem;
 
 t_list *aux_global_objective;
 //sem_t auxglobal_sem1;

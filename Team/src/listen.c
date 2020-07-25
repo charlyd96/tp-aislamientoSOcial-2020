@@ -254,7 +254,7 @@ void procesar_appeared(t_appeared_pokemon *mensaje_appeared)
 	{
 		case GUARDAR:
 		{
-			agregar_nueva_especie(mensaje_appeared->nombre_pokemon);
+			//agregar_nueva_especie(mensaje_appeared->nombre_pokemon);
 			mapPokemons *pokemon_to_add = malloc (sizeof(mapPokemons));
 			pokemon_to_add-> name = string_duplicate (mensaje_appeared->nombre_pokemon);
 			pokemon_to_add-> posx = mensaje_appeared->pos_x;
@@ -269,7 +269,7 @@ void procesar_appeared(t_appeared_pokemon *mensaje_appeared)
 
 		case GUARDAR_AUX:
 		{
-			agregar_nueva_especie(string_duplicate(mensaje_appeared->nombre_pokemon));
+			//agregar_nueva_especie(string_duplicate(mensaje_appeared->nombre_pokemon));
 			mapPokemons *pokemon_to_add = malloc (sizeof(mapPokemons));
 			pokemon_to_add-> name = string_duplicate (mensaje_appeared->nombre_pokemon);
 			pokemon_to_add-> posx = mensaje_appeared->pos_x;
@@ -431,7 +431,7 @@ bool especie_necesaria (char *nueva_especie)
 
 nuevo_pokemon tratar_nuevo_pokemon (char *nombre_pokemon)
 {
-	char *a_lista_auxiliar=NULL;
+	//char *a_lista_auxiliar=NULL;
 	bool buscar (void *nombre)
 	{
 		if (!strcmp( (char*)nombre,nombre_pokemon))
@@ -439,32 +439,53 @@ nuevo_pokemon tratar_nuevo_pokemon (char *nombre_pokemon)
 			return true;
 		} else return false;
 	}
-	pthread_mutex_lock(&new_global_sem);
-	a_lista_auxiliar= list_remove_by_condition(new_global_objective, buscar); //Busco si el pokemon recibido está en la lista de objetivos globales
-	pthread_mutex_unlock(&new_global_sem);
+	//pthread_mutex_lock(&global_sem);
+	//a_lista_auxiliar= list_remove_by_condition(global_objective, buscar); //Busco si el pokemon recibido está en la lista de objetivos globales
+	//pthread_mutex_unlock(&global_sem);
+	bool removido = mover_elemento_destino_origen(aux_global_objective, global_objective, &aux_global_sem, &global_sem, nombre_pokemon);
+	if (removido) //Si está en la lista global, lo muevo a la auxiliar
+	return GUARDAR; //Guardar en el mapa principal
 
-	if (a_lista_auxiliar!=NULL) //Si está en la lista global, lo muevo a la auxiliar
+	pthread_mutex_unlock(&aux_global_sem);
+	pthread_mutex_lock(&aux_global_sem); //Si no está en la lista global, lo busco en la lista global auxiliar
+	if ( list_any_satisfy(aux_global_objective, buscar) )
 	{
-		pthread_mutex_lock(&aux_new_global_sem);
-		list_add(aux_new_global_objective, a_lista_auxiliar);
-		pthread_mutex_unlock(&aux_new_global_sem);
-		return (GUARDAR); //Guardar en el mapa principal
+		pthread_mutex_unlock(&aux_global_sem);
+		return (GUARDAR_AUX);
 	}
-	else //Si no está en la lista global, lo busco en la lista global auxiliar
+	else
 	{
-		pthread_mutex_lock(&aux_new_global_sem);
-		if ( list_any_satisfy(aux_new_global_objective, buscar) )
-		{
-			pthread_mutex_unlock(&aux_new_global_sem);
-			return (GUARDAR_AUX);
-		}
-		else
-		{
-			pthread_mutex_unlock(&aux_new_global_sem);
-			return DESCARTAR;
-		} 
+		pthread_mutex_unlock(&aux_global_sem);
+		return DESCARTAR;
 	} 
 }
+
+
+bool mover_elemento_destino_origen(t_list *destino, t_list *origen, pthread_mutex_t *sem_destino, pthread_mutex_t *sem_origen, char *elemento)
+{
+	bool buscar (void *nombre)
+	{
+		if (!strcmp( (char*)nombre,elemento))
+		{
+		return true;
+		} else return false;
+	}
+
+	pthread_mutex_lock(sem_origen);
+
+	char *mover = list_remove_by_condition(origen,buscar);
+	pthread_mutex_unlock(sem_origen);
+
+	if (mover != NULL)
+	{
+	pthread_mutex_lock(sem_destino);
+	list_add(destino, mover);
+	pthread_mutex_unlock(sem_destino);
+	return true;
+	} else return false;
+}
+
+
 
 void liberar_appeared (t_appeared_pokemon *mensaje)
 

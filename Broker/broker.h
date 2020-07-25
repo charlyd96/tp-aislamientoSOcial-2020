@@ -40,7 +40,7 @@ typedef struct {
 } t_configuracion;
 
 typedef struct {
-	uint32_t socket_suscriptor;
+	int socket_suscriptor;
 	uint32_t id_suscriptor;
 } t_suscriptor;
 
@@ -141,6 +141,7 @@ typedef struct {
 	t_new_pokemon* mensaje;
 	uint32_t id_mensaje;
 	uint32_t id_suscriptor;
+	t_nodo_cola_new* nodo;
 } t_new_aux;
 
 typedef struct {
@@ -148,6 +149,7 @@ typedef struct {
 	t_appeared_pokemon* mensaje;
 	uint32_t id_mensaje;
 	uint32_t id_suscriptor;
+	t_nodo_cola_appeared* nodo;
 } t_appeared_aux;
 
 typedef struct {
@@ -155,6 +157,7 @@ typedef struct {
 	t_catch_pokemon* mensaje;
 	uint32_t id_mensaje;
 	uint32_t id_suscriptor;
+	t_nodo_cola_catch* nodo;
 } t_catch_aux;
 
 typedef struct {
@@ -162,6 +165,7 @@ typedef struct {
 	t_caught_pokemon* mensaje;
 	uint32_t id_mensaje;
 	uint32_t id_suscriptor;
+	t_nodo_cola_caught* nodo;
 } t_caught_aux;
 
 typedef struct {
@@ -169,6 +173,7 @@ typedef struct {
 	t_get_pokemon* mensaje;
 	uint32_t id_mensaje;
 	uint32_t id_suscriptor;
+	t_nodo_cola_get* nodo;
 } t_get_aux;
 
 typedef struct {
@@ -176,6 +181,7 @@ typedef struct {
 	t_localized_pokemon* mensaje;
 	uint32_t id_mensaje;
 	uint32_t id_suscriptor;
+	t_nodo_cola_localized* nodo;
 } t_localized_aux;
 
 /* VARIABLES GLOBALES */
@@ -268,12 +274,12 @@ int suscribir(t_suscriptor* suscriptor, op_code cola);
 void desuscribir(int index, op_code cola, uint32_t id_proceso);
 void agregarSuscriptor(uint32_t id_mensaje, uint32_t id_suscriptor);
 
-void encolarNewPokemon(t_new_pokemon* msg);
-void encolarAppearedPokemon(t_appeared_pokemon* msg);
-void encolarCatchPokemon(t_catch_pokemon* msg);
-void encolarCaughtPokemon(t_caught_pokemon* msg);
-void encolarGetPokemon(t_get_pokemon* msg);
-void encolarLocalizedPokemon(t_localized_pokemon* msg);
+t_nodo_cola_new* encolarNewPokemon(t_new_pokemon* msg);
+t_nodo_cola_appeared* encolarAppearedPokemon(t_appeared_pokemon* msg);
+t_nodo_cola_catch* encolarCatchPokemon(t_catch_pokemon* msg);
+t_nodo_cola_caught* encolarCaughtPokemon(t_caught_pokemon* msg);
+t_nodo_cola_get* encolarGetPokemon(t_get_pokemon* msg);
+t_nodo_cola_localized* encolarLocalizedPokemon(t_localized_pokemon* msg);
 
 /// MEMORIA
 int buscarParticionLibre(uint32_t largo_stream);

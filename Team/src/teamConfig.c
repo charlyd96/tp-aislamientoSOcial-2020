@@ -341,7 +341,7 @@ void liberar_entrenadores(void)
 {   
     void destruir (void *elemento)
     {
-        list_destroy_and_destroy_elements( ((Trainer*) elemento)->bag,free);
+        list_destroy( ((Trainer*) elemento)->bag);
         list_destroy( ((Trainer*) elemento)->personal_objective);
     }   
     list_iterate(trainers,destruir);
