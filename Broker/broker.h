@@ -40,7 +40,7 @@ typedef struct {
 } t_configuracion;
 
 typedef struct {
-	uint32_t socket_suscriptor;
+	int socket_suscriptor;
 	uint32_t id_suscriptor;
 } t_suscriptor;
 
@@ -138,10 +138,51 @@ typedef struct {
 
 typedef struct {
 	int socket;
+	t_new_pokemon* mensaje;
+	uint32_t id_mensaje;
+	uint32_t id_suscriptor;
+	t_nodo_cola_new* nodo;
+} t_new_aux;
+
+typedef struct {
+	int socket;
 	t_appeared_pokemon* mensaje;
 	uint32_t id_mensaje;
 	uint32_t id_suscriptor;
+	t_nodo_cola_appeared* nodo;
 } t_appeared_aux;
+
+typedef struct {
+	int socket;
+	t_catch_pokemon* mensaje;
+	uint32_t id_mensaje;
+	uint32_t id_suscriptor;
+	t_nodo_cola_catch* nodo;
+} t_catch_aux;
+
+typedef struct {
+	int socket;
+	t_caught_pokemon* mensaje;
+	uint32_t id_mensaje;
+	uint32_t id_suscriptor;
+	t_nodo_cola_caught* nodo;
+} t_caught_aux;
+
+typedef struct {
+	int socket;
+	t_get_pokemon* mensaje;
+	uint32_t id_mensaje;
+	uint32_t id_suscriptor;
+	t_nodo_cola_get* nodo;
+} t_get_aux;
+
+typedef struct {
+	int socket;
+	t_localized_pokemon* mensaje;
+	uint32_t id_mensaje;
+	uint32_t id_suscriptor;
+	t_nodo_cola_localized* nodo;
+} t_localized_aux;
 
 /* VARIABLES GLOBALES */
 
@@ -186,6 +227,13 @@ pthread_mutex_t sem_cola_caught;
 pthread_mutex_t sem_cola_get;
 pthread_mutex_t sem_cola_localized;
 
+pthread_mutex_t sem_nodo_new;
+pthread_mutex_t sem_nodo_appeared;
+pthread_mutex_t sem_nodo_catch;
+pthread_mutex_t sem_nodo_caught;
+pthread_mutex_t sem_nodo_get;
+pthread_mutex_t sem_nodo_localized;
+
 sem_t mensajes_new;
 sem_t mensajes_appeared;
 sem_t mensajes_catch;
@@ -226,12 +274,12 @@ int suscribir(t_suscriptor* suscriptor, op_code cola);
 void desuscribir(int index, op_code cola, uint32_t id_proceso);
 void agregarSuscriptor(uint32_t id_mensaje, uint32_t id_suscriptor);
 
-void encolarNewPokemon(t_new_pokemon* msg);
-void encolarAppearedPokemon(t_appeared_pokemon* msg);
-void encolarCatchPokemon(t_catch_pokemon* msg);
-void encolarCaughtPokemon(t_caught_pokemon* msg);
-void encolarGetPokemon(t_get_pokemon* msg);
-void encolarLocalizedPokemon(t_localized_pokemon* msg);
+t_nodo_cola_new* encolarNewPokemon(t_new_pokemon* msg);
+t_nodo_cola_appeared* encolarAppearedPokemon(t_appeared_pokemon* msg);
+t_nodo_cola_catch* encolarCatchPokemon(t_catch_pokemon* msg);
+t_nodo_cola_caught* encolarCaughtPokemon(t_caught_pokemon* msg);
+t_nodo_cola_get* encolarGetPokemon(t_get_pokemon* msg);
+t_nodo_cola_localized* encolarLocalizedPokemon(t_localized_pokemon* msg);
 
 /// MEMORIA
 int buscarParticionLibre(uint32_t largo_stream);
@@ -273,6 +321,13 @@ void controlador_de_seniales(int signal);
 /// COMUNICACIÓN
 void tipoYIDProceso(int socket);
 int devolverID(int socket,uint32_t*id);
+
+void enviarNewASuscriptor(t_new_aux* aux);
+void enviarAppearedASuscriptor(t_appeared_aux* aux);
+void enviarCatchASuscriptor(t_catch_aux* aux);
+void enviarCaughtASuscriptor(t_caught_aux* aux);
+void enviarGetASuscriptor(t_get_aux* aux);
+void enviarLocalizedASuscriptor(t_localized_aux* aux);
 
 void enviarNewPokemonCacheados(int socket, t_suscribe* suscriptor);
 void enviarAppearedPokemonCacheados(int socket, t_suscribe* suscriptor);
