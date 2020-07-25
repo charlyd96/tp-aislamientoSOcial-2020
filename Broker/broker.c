@@ -343,9 +343,9 @@ void buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint3
 		char* cola = colaParaLogs(part_nueva->tipo_mensaje);
 
 		// 6. Almacenado de un mensaje dentro de la memoria (indicando posición de inicio de su partición).
-		log_info(logBroker, "Se almacena el Mensaje %s en la Partición con posición de inicio %d.", cola, part_nueva->base, cache + part_nueva->base);
-		//log_info(logBrokerInterno, "Se almacena el Mensaje %s en la Partición con posición de inicio %d.", cola, part_nueva->base, part_nueva->base);
-
+		log_info(logBroker, "Se almacena el Mensaje %s con ID de Mensaje %d en la partición con posición de inicio %d.", cola, id, part_nueva->base, cache + part_nueva->base);
+		log_info(logBrokerInterno, "Se almacena el Mensaje %s con ID de Mensaje %d en la partición con posición de inicio %d.", cola, id, part_nueva->base, cache + part_nueva->base);
+		
 		log_info(logBrokerInterno, "ID_MENSAJE %d, asigno partición base %d y tamanio %d",id, part_nueva->base,part_nueva->tamanio);
 	}
 	if(config_broker->algoritmo_memoria == BS){
@@ -367,8 +367,8 @@ void buscarParticionYAlocar(int largo_stream,void* stream,op_code tipo_msg,uint3
 		char* cola = colaParaLogs(part_libre->tipo_mensaje);
 
 		// 6. Almacenado de un mensaje dentro de la memoria (indicando posición de inicio de su partición).
-		log_info(logBroker, "Se almacena el Mensaje %s en la Partición con posición de inicio %d.", cola, part_libre->base, cache + part_libre->base);
-		//log_info(logBrokerInterno, "Se almacena el Mensaje %s en la Partición con posición de inicio %d.", cola, part_libre->base, part_libre->base);
+		log_info(logBroker, "Se almacena el Mensaje %s con ID de Mensaje %d en la partición con posición de inicio %d.", cola, id, part_libre->base, cache + part_libre->base);
+		log_info(logBrokerInterno, "Se almacena el Mensaje %s con ID de Mensaje %d en la partición con posición de inicio %d.", cola, id, part_libre->base, cache + part_libre->base);
 	}
 	//-> DESMUTEAR LISTA DE PARTICIONES
 	sem_post(&mx_particiones);
@@ -382,8 +382,8 @@ void liberarParticion(int indice_victima){
 	list_replace(particiones, indice_victima, part_liberar);
 
 	// 7. Eliminado de una partición de memoria (indicado la posición de inicio de la misma).
-	log_info(logBroker, "Se elimina la Partición con posición de inicio %d.", part_liberar->base, cache+part_liberar->base);
-	log_info(logBrokerInterno, "Se elimina la Partición con posición de inicio %d.", part_liberar->base, cache+part_liberar->base);
+	log_info(logBroker, "Se elimina la partición con posición de inicio %d.", part_liberar->base, cache+part_liberar->base);
+	log_info(logBrokerInterno, "Se elimina la partición con posición de inicio %d.", part_liberar->base, cache+part_liberar->base);
 	//Consolidar
 
 	//Si no es la última partición
@@ -442,8 +442,8 @@ void eliminarParticionBuddy(){
 	list_replace(particiones, indice_victima, part_liberar);
 
 	// 7. Eliminado de una partición de memoria (indicado la posición de inicio de la misma).
-	log_info(logBroker, "Se elimina la Partición con posición de inicio %d.", part_liberar->base, cache+part_liberar->base);
-	log_info(logBrokerInterno, "Se elimina la Partición con posición de inicio %d.", part_liberar->base, cache+part_liberar->base);
+	log_info(logBroker, "Se elimina la partición con posición de inicio %d.", part_liberar->base, cache+part_liberar->base);
+	log_info(logBrokerInterno, "Se elimina la partición con posición de inicio %d.", part_liberar->base, cache+part_liberar->base);
 
 	//Consolidar buddys
 	bool huboConsolidacion;
@@ -2349,7 +2349,7 @@ void enviarAppearedPokemonCacheados(int socket, t_suscribe* suscriptor){
 							case SUSCRIBE_TEAM:{
 								// 4. Envío de un mensaje a un suscriptor específico.
 								log_info(logBroker, "Se envió el Mensaje: %s %s %d %d con ID de Mensaje Correlativo %d al Team %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.id_mensaje_correlativo, suscriptor->id_proceso);
-								log_info(logBrokerInterno, "Se envió el Mensaje: %s %s %d %d con ID de Mensaje Correlativo %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.id_mensaje_correlativo, suscriptor->id_proceso);
+								log_info(logBrokerInterno, "Se envió el Mensaje: %s %s %d %d con ID de Mensaje Correlativo %d al Team %d.", cola, descacheado.nombre_pokemon, descacheado.pos_x, descacheado.pos_y, descacheado.id_mensaje_correlativo, suscriptor->id_proceso);
 								confirmacionDeRecepcionTeam(ack, suscriptor, descacheado.id_mensaje_correlativo);
 								break;
 							}
@@ -2611,15 +2611,15 @@ void enviarGetPokemonCacheados(int socket, t_suscribe* suscriptor){
 							}
 							case SUSCRIBE_GAMECARD:{
 								// 4. Envío de un mensaje a un suscriptor específico.
-								log_info(logBroker, "Se envió el Mensaje: %s %s con ID de Mensaje %d.", cola, descacheado->nombre_pokemon, descacheado->id_mensaje);
-								log_info(logBrokerInterno, "Se envió el Mensaje: %s %s con ID de Mensaje %d.", cola, descacheado->nombre_pokemon, descacheado->id_mensaje);
+								log_info(logBroker, "Se envió el Mensaje: %s %s con ID de Mensaje %d al Game Card %d.", cola, descacheado->nombre_pokemon, descacheado->id_mensaje, suscriptor->id_proceso);
+								log_info(logBrokerInterno, "Se envió el Mensaje: %s %s con ID de Mensaje %d al Game Card %d.", cola, descacheado->nombre_pokemon, descacheado->id_mensaje, suscriptor->id_proceso);
 								confirmacionDeRecepcionGameCard(ack, suscriptor, descacheado->id_mensaje);
 								break;
 							}
 							case SUSCRIBE_GAMEBOY:{
 								// 4. Envío de un mensaje a un suscriptor específico.
-								log_info(logBroker, "Se envió el Mensaje: %s %s con ID de Mensaje %d.", cola, descacheado->nombre_pokemon, descacheado->id_mensaje);
-								log_info(logBrokerInterno, "Se envió el Mensaje: %s %s con ID de Mensaje %d.", cola, descacheado->nombre_pokemon, descacheado->id_mensaje);
+								log_info(logBroker, "Se envió el Mensaje: %s %s con ID de Mensaje %d al Game Boy %d.", cola, descacheado->nombre_pokemon, descacheado->id_mensaje, suscriptor->id_proceso);
+								log_info(logBrokerInterno, "Se envió el Mensaje: %s %s con ID de Mensaje %d al Game Boy %d.", cola, descacheado->nombre_pokemon, descacheado->id_mensaje, suscriptor->id_proceso);
 								confirmacionDeRecepcionGameBoy(ack, suscriptor, descacheado->id_mensaje);
 								break;
 							}
