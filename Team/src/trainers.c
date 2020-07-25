@@ -863,7 +863,7 @@ void consumir_cpu(Trainer *trainer)
    {
         case FIFO:
         {
-            usleep (config->retardo_cpu * 1); //Uso usleep para que no sea tan lenta la ejecución
+            sleep (config->retardo_cpu * 1); //Uso usleep para que no sea tan lenta la ejecución
             trainer->ciclos_cpu_totales++;
             ciclos_cpu++;
             break;
@@ -878,11 +878,11 @@ void consumir_cpu(Trainer *trainer)
                 sem_post(&using_cpu);
                 sem_wait(&trainer->trainer_sem);
                 trainer->ejecucion= EXECUTING;
-                usleep (config->retardo_cpu * 1); //Uso usleep para que no sea tan lenta la ejecución
+                sleep (config->retardo_cpu * 1); //Uso usleep para que no sea tan lenta la ejecución
             } 
             else
             {
-                usleep (config->retardo_cpu * 1); //Uso usleep para que no sea tan lenta la ejecución
+                sleep (config->retardo_cpu * 1); //Uso usleep para que no sea tan lenta la ejecución
                 trainer->ejecucion= EXECUTING;
             }
             trainer->rafagaEjecutada++;
@@ -893,7 +893,7 @@ void consumir_cpu(Trainer *trainer)
 
         case SJFSD:
         {
-            usleep (config->retardo_cpu * 1); //Uso usleep para que no sea tan lenta la ejecución
+            sleep (config->retardo_cpu * 1); //Uso usleep para que no sea tan lenta la ejecución
             trainer->rafagaEjecutada++;
             trainer->ciclos_cpu_totales++;
             ciclos_cpu++;
@@ -931,7 +931,7 @@ void consumir_cpu(Trainer *trainer)
             {
                 sem_post(&qr_sem2);
             }        
-        usleep (config->retardo_cpu * 1); //Uso usleep para que no sea tan lenta la ejecución
+        sleep (config->retardo_cpu * 1); //Uso usleep para que no sea tan lenta la ejecución
         break;
         }
 
