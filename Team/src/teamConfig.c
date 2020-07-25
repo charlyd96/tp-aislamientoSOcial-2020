@@ -323,8 +323,11 @@ void cerrar_conexiones(void)
 {
     log_info(internalLogTeam,"Cerrando conexión gameboy: %d\n", shutdown(socketGameboy, SHUT_RDWR));
     sem_wait(&terminar_appeared);
+    pthread_cancel(thread_appeared);
     log_info(internalLogTeam,"Cerrando conexión appeared: %d\n", shutdown(socketAppeared, SHUT_RDWR));
     sem_wait(&terminar_caught);
+    pthread_cancel(thread_caught);
+    pthread_cancel(thread_localized);
     log_info(internalLogTeam,"Cerrando conexión caught: %d\n", shutdown(socketCaught, SHUT_RDWR));
     //Para terminar el hilo de ejecucio que simula a la CPU
     sem_post ( &qr_sem1 );

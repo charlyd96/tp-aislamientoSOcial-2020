@@ -30,6 +30,11 @@ extern t_list *cola_caught;
 extern sem_t qcaught1_sem;
 extern sem_t qcaught2_sem;
 
+pthread_t thread_appeared;
+pthread_t thread_localized;
+pthread_t thread_caught;
+
+
 uint32_t ID_proceso;
 
 extern t_list *ID_localized;

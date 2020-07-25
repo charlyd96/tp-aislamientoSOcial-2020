@@ -88,8 +88,8 @@ void trainer_to_catch(void)
             trainer->actual_operation= OP_EXECUTING_CATCH; 
 
             // 3. Operación de atrapar (indicando la ubicación y el pokemon a atrapar).
-            log_info(internalLogTeam, "El entrenador %d se planificó para atrapar un %s ubicado en (%d,%d)\n", trainer->index,trainer->actual_objective.name,pokPosx,pokPosy);
-            log_info(logTeam, "El entrenador %d se planificó para atrapar un %s ubicado en (%d,%d)\n",         trainer->index,trainer->actual_objective.name,pokPosx,pokPosy);
+            //log_info(internalLogTeam, "El entrenador %d se planificó para atrapar un %s ubicado en (%d,%d)\n", trainer->index,trainer->actual_objective.name,pokPosx,pokPosy);
+            //log_info(logTeam, "El entrenador %d se planificó para atrapar un %s ubicado en (%d,%d)\n",         trainer->index,trainer->actual_objective.name,pokPosx,pokPosy);
             send_trainer_to_ready (trainers, index, OP_EXECUTING_CATCH); 
             index=-1;
             distance_min= 100000  ; //Arreglar esta hardcodeada trucha
@@ -107,23 +107,29 @@ void send_trainer_to_ready (t_list *lista, int index, Operation op) //Eliminar e
     {
         case OP_EXECUTING_CATCH:
         {
+            Trainer *trainer = list_get (lista, index);
             sem_wait (&qr_sem2);
             newTrainerToReady=true;
-            list_add (ReadyQueue , list_get (lista, index) );
+            list_add (ReadyQueue , trainer );
             sem_post (&qr_sem2);
             sem_post (&qr_sem1);
-            log_info (internalLogTeam, "Se planificó a Ready al entrenador %d para atrapar un pokemon", index);
+            log_info (internalLogTeam, "[CAMBIO DE COLA] Se planificó a Ready al entrenador %d para atrapar un %s ubicado en (%d,%d)", index, trainer->actual_objective.name,trainer->actual_objective.posx, trainer->actual_objective.posy);
+            log_info (logTeam, "[CAMBIO DE COLA] Se planificó a Ready al entrenador %d para atrapar un  %s ubicado en (%d,%d)", index,trainer->actual_objective.name,trainer->actual_objective.posx, trainer->actual_objective.posy);
             break;
         }
         case OP_EXECUTING_DEADLOCK:
         {
+            Trainer *trainer = list_get (lista, index);
             sem_wait (&qr_sem2);
             newTrainerToReady=true;
-            list_add (ReadyQueue , list_get (lista, index) );
+            list_add (ReadyQueue , trainer );
             sem_post (&qr_sem2);
             sem_post (&qr_sem1);
-            log_info (internalLogTeam, "Se planificó a Ready al entrenador %d para resolver un DEADLOCK", 
+            log_info (logTeam, "[CAMBIO DE COLA] Se planificó a Ready al entrenador %d para resolver un DEADLOCK", 
             ( (Trainer*) list_get(lista, index) )->index); //Verificar si en esta lista va trainers
+            
+            log_info (internalLogTeam, "[CAMBIO DE COLA] Se planificó a Ready al entrenador %d para resolver un DEADLOCK", 
+            ( (Trainer*) list_get(lista, index) )->index);
             break;
         }
     }
@@ -348,9 +354,7 @@ void trainer_routine (Trainer *trainer)
                     
                     if (detectar_deadlock (trainer))     
                     {
-                        // 6. Resultado de algoritmo de detección de deadlock.
-                        log_warning(internalLogTeam, "[DEADLOCK] En el entrenador %d.", trainer->index);
-                        log_warning(logTeam, "[DEADLOCK] En el entrenador %d.", trainer->index);
+
                         trainer->actual_status = BLOCKED_DEADLOCK;
                         
                         trainer_to_deadlock (trainer);
@@ -368,8 +372,8 @@ void trainer_routine (Trainer *trainer)
                             else if (list_size (trainer->bag) < list_size (trainer->personal_objective)) //sacar este último if
                                 {
                                     // 8. Resultado del Team (especificado anteriormente).
-                                    log_info (internalLogTeam, "El entrenador %d se bloquerá a la espera de un nuevo Pokemon.", trainer->index);
-                                    log_info (logTeam, "El entrenador %d se bloquerá a la espera de un nuevo Pokemon.", trainer->index);
+                                    log_info (internalLogTeam, "[CAMBIO DE COLA] El entrenador %d se bloquerá a la espera de un nuevo Pokemon.", trainer->index);
+                                    log_info (logTeam, "[CAMBIO DE COLA] El entrenador %d se bloquerá a la espera de un nuevo Pokemon.", trainer->index);
                                     trainer->actual_status = BLOCKED_NOTHING_TO_DO;
                                     sem_post (&trainer_count); //Incremento contador de entrenadores disponibles para atrapar
                                     sem_wait(&trainer->trainer_sem);
@@ -393,6 +397,7 @@ void trainer_routine (Trainer *trainer)
             case OP_EXECUTING_DEADLOCK:
             {
                 move_trainer_to_objective (trainer, OP_EXECUTING_DEADLOCK);
+                consumir_cpu_intercambio(trainer);
                 intercambiar(trainer, list_get(deadlock_list, trainer->objetivo.index_objective));
                 sem_post (&resolviendo_deadlock);
                 sem_post (&using_cpu); //Como en este caso no hay mensaje CATCH, necesito disponibilizar la CPU  
@@ -404,10 +409,9 @@ void trainer_routine (Trainer *trainer)
     }
     
     //Liberar recursos y finalizar el hilo del entrenador
-    int index = trainer->index;
-    liberar_listas_entrenador(trainer);
-    log_info (internalLogTeam,"El entrenador %d finalizó su hilo de ejecución con éxito", index);
-    
+    //int index = trainer->index;
+    //liberar_listas_entrenador(trainer);
+    log_info (logTeam,"[CABIO DE COLA] El entrenador %d finalizó su hilo de ejecución con éxito", index);
 }
 
 
@@ -430,7 +434,7 @@ void trainer_to_deadlock(Trainer *trainer)
     list_add_in_index (deadlock_list, 0, trainer); 
     sem_post (&deadlock_sem2);
     sem_post (&deadlock_sem1);
-    log_info (internalLogTeam, "Se agregó al entrenador %d a la cola de bloqueados por Deadlock.", trainer->index);
+    log_info (internalLogTeam, "[CAMBIO DE COLA] Se agregó al entrenador %d a la cola de bloqueados por Deadlock.", trainer->index);
     //sem_post (&trainer_count); //Revisar esto. Se lo disponibiliza para ser planificado, pero sólo para solucionar deadlock
     
     //sem_post(&using_cpu); //Disponibilizar la CPU para otro entrenador. No es necesario, la CPU se disponibilizó al mandar el CATCH en listen.c.
@@ -585,7 +589,7 @@ int deadlock_recovery (void)
         sem_post(&resolviendo_deadlock);
         return 0;
     }*/
-    log_info (logTeam,"Se comenzó a ejecutar el algoritmo de recuperación de DEADLOCK");
+    log_info (logTeam,"[RECUPERACION DEADLOCK] Se comenzó a ejecutar el algoritmo de recuperación de DEADLOCK");
     //Correr algoritmo de detección (menos la primera vez)
 
     static int index=0; //Variable estática que mantiene su valor cada vez que se llama a la función
@@ -685,14 +689,14 @@ int deadlock_recovery (void)
     sem_wait (&resolviendo_deadlock);
     
     list_add(trainer1->involucrados,(void*)trainer2->index);
-    printf ("Involucrado: %d\n", trainer2->index);
+    
     bool deadlockTrainer1= detectar_deadlock(trainer1);
     bool deadlockTrainer2= detectar_deadlock(trainer2);
     if (!deadlockTrainer2) list_remove(deadlock_list,index);
     if (!deadlockTrainer1) list_remove(deadlock_list,0);
 
     index=0;
-
+    
     /*
     //}
     void imprimir3 (void *element)
@@ -718,7 +722,7 @@ int deadlock_recovery (void)
 
 void intercambiar(Trainer *trainer1, Trainer *trainer2)
 {
-
+    log_info(logTeam, "[INTERCAMBIO] El entrenador %d hara un intercambio con el entrenador %d", trainer1->index, trainer2->index);
      void imprimir (void *element)
     {
         log_info(internalLogTeam, "%s",(char*)element);
@@ -759,14 +763,20 @@ void intercambiar(Trainer *trainer1, Trainer *trainer2)
 
 bool detectar_deadlock (Trainer *trainer)
 {
- // 5. Inicio de algoritmo de detección de deadlock.
- log_info(internalLogTeam, "Se inicia el Algoritmo de Detección de Deadlock.");
- log_info(logTeam, "Se inicia el Algoritmo de Detección de Deadlock.");
-    //Agregar: if trainer==NULL--> terminar (no hubo deadlocks)
- if (list_size (trainer->bag) >= list_size (trainer->personal_objective)  && !comparar_listas(trainer->bag,trainer->personal_objective))
- return true; 
- else return false;
-//Verifico deadlock. Sacar ese mayor igual
+    // 5. Inicio de algoritmo de detección de deadlock.
+    log_warning(internalLogTeam, "[DETECCION DEADLOCK] Se inicia el Algoritmo de Detección de Deadlock.");
+    log_warning(logTeam, "[DETECCION DEADLOCK] Se inicia el Algoritmo de Detección de Deadlock.");
+        //Agregar: if trainer==NULL--> terminar (no hubo deadlocks)
+    if (list_size (trainer->bag) >= list_size (trainer->personal_objective)  && !comparar_listas(trainer->bag,trainer->personal_objective))
+    {
+        log_info(logTeam, "[DETECCION DEADLOCK] El entrenador %d quedo en deadlock", trainer->index);
+        return true; 
+    } else
+        {
+            log_info(logTeam, "[DETECCION DEADLOCK] No existe deadlock en el entrenadores %d", trainer->index);
+            return false;
+        } 
+    //Verifico deadlock. Sacar ese mayor igual
 }
 
 
@@ -818,25 +828,25 @@ void move_trainer_to_objective (Trainer *trainer, Operation op)
         if ( calculate_distance (*Tx+1, *Ty, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
         consumir_cpu(trainer);
         *Tx=*Tx+1;
-        log_info (logTeam , "El entrenador %d se movió  hacia la derecha. Posición: (%d,%d)", trainer->index, *Tx, *Ty);
+        log_info (logTeam , "[MOVIMIENTO] El entrenador %d se movió  hacia la derecha. Posición: (%d,%d)", trainer->index, *Tx, *Ty);
         }
 
         if ( calculate_distance (*Tx, *Ty+1, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
         consumir_cpu(trainer);
         *Ty=*Ty+1;
-        log_info (logTeam , "El entrenador %d se movió  hacia arriba. Posición: (%d,%d)", trainer->index, *Tx, *Ty);
+        log_info (logTeam , "[MOVIMIENTO] l entrenador %d se movió  hacia arriba. Posición: (%d,%d)", trainer->index, *Tx, *Ty);
         }
 
         if ( calculate_distance (*Tx-1, *Ty, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
         consumir_cpu(trainer);
         *Tx=*Tx-1;
-        log_info (logTeam , "El entrenador %d se movió  hacia la izquierda. Posición: (%d,%d)", trainer->index, *Tx, *Ty);
+        log_info (logTeam , "[MOVIMIENTO] El entrenador %d se movió  hacia la izquierda. Posición: (%d,%d)", trainer->index, *Tx, *Ty);
         }
 
         if ( calculate_distance (*Tx, *Ty-1, *Px, *Py  ) < calculate_distance (*Tx, *Ty, *Px, *Py ) ){
         consumir_cpu(trainer);
         *Ty=*Ty-1;
-        log_info (logTeam , "El entrenador %d se movió  hacia abajo. Posición: (%d,%d)", trainer->index, *Tx, *Ty);
+        log_info (logTeam , "[MOVIMIENTO] El entrenador %d se movió  hacia abajo. Posición: (%d,%d)", trainer->index, *Tx, *Ty);
         }
     }
 }
@@ -909,7 +919,7 @@ void consumir_cpu(Trainer *trainer)
                 }
                 else 
                 {//Desalojar
-                log_error(internalLogTeam, "El entrenador %d será desalojado por el algoritmo SJF-CD", trainer->index);
+                log_warning(internalLogTeam, "[CAMBIO DE COLA] El entrenador %d será desalojado por el algoritmo SJF-CD", trainer->index);
                 trainer->actual_status=READY;
                 trainer->ejecucion=PENDING;
                 sem_post(&using_cpu);
@@ -934,4 +944,13 @@ void liberar_listas_entrenador(Trainer *trainer)
 {
     list_destroy (trainer->personal_objective);
     list_destroy_and_destroy_elements (trainer->bag,free);
+}
+
+
+void consumir_cpu_intercambio(Trainer *trainer)
+{
+    for (int i=0; i<5; i++)
+    {
+        consumir_cpu(trainer);
+    }
 }
