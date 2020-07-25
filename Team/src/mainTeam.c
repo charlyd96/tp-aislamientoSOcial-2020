@@ -19,7 +19,7 @@ int main(int argc, char **argv)
    pthread_t thread;
    pthread_create(&thread,NULL,routine,NULL);
    pthread_detach(thread);*/
-   internalLogTeam= log_create ("internalLogTeam.log", "Team", 1,LOG_LEVEL_TRACE);
+   internalLogTeam= log_create ("internalLogTeam.log", "TeamInterno", 1,LOG_LEVEL_TRACE);
    logTeam= log_create ("logTeam.log", "Team", 1,LOG_LEVEL_TRACE);
    if (argc!=2)
    {
@@ -46,8 +46,7 @@ int main(int argc, char **argv)
 
     Trainer_handler_create(); //Crea hilo de manejo y planificación de entrenadores (trainer_to_catch) y
     						  //crea el hilo de cada entrenador
-    puts ("Involucrados");
-    imprimir_involucrados();
+
     //liberar semaforos
    // usleep (200); //Para que se imprima el último log
     /* Solo para probar la correcta liberación de las listas*/
@@ -67,6 +66,7 @@ int main(int argc, char **argv)
     destruir_listas();
     liberar_entrenadores();
     liberar_configuraciones();
+    //destruir_log();
     sleep (3);
     return 0;
 }

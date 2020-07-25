@@ -334,12 +334,18 @@ void cerrar_conexiones(void)
 
 void liberar_lista_global(void)
 {
-list_destroy_and_destroy_elements (global_for_free,free);
+list_destroy_and_destroy_elements(global_for_free,free);
 }
 
 void liberar_entrenadores(void)
-{
-list_destroy_and_destroy_elements (trainers,free);
+{   
+    void destruir (void *elemento)
+    {
+        list_destroy_and_destroy_elements( ((Trainer*) elemento)->bag,free);
+        list_destroy( ((Trainer*) elemento)->personal_objective);
+    }   
+    list_iterate(trainers,destruir);
+    list_destroy_and_destroy_elements(trainers,free);
 }
 
 void liberar_configuraciones(void)
@@ -356,21 +362,4 @@ void destruir_log (void)
 {
     log_destroy (internalLogTeam);
     log_destroy (logTeam);
-}
-
-void imprimir_involucrados (void)
-{
-   void iterar (void *entrenador)
-   {
-       printf ("Con entrenador %d: ", ((Trainer*)entrenador)->index);
-        void imprimir (void *elemento)
-        {
-            printf ("%d\t",(int)elemento);
-        }
-    list_iterate( ((Trainer*)entrenador)->involucrados,imprimir);
-    puts (" ");
-    }
-    
-    
-    list_iterate(trainers,iterar);
 }

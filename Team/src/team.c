@@ -409,10 +409,10 @@ void imprimir_metricas (void)
     
     void imprimir_deadlocks (void *entrenador)
     {
-    char *involucrados=formar_string_involucrados( (Trainer*) entrenador);
-    if (involucrados != NULL)
-    log_debug (logTeam, "El entrenador %d estuvo involucrado en un deadlock con: %s", ((Trainer*)entrenador)->index, involucrados );
-    free (involucrados);
+        char *involucrados=formar_string_involucrados( (Trainer*) entrenador);
+        if (involucrados != NULL)
+        log_debug (logTeam, "El entrenador %d estuvo involucrado en un deadlock con: %s", ((Trainer*)entrenador)->index, involucrados );
+        free (involucrados);
     }
     list_iterate(trainers,imprimir_deadlocks);
 }
@@ -420,7 +420,11 @@ void imprimir_metricas (void)
 char * formar_string_involucrados(Trainer *trainer)
 {
     if (list_is_empty(trainer->involucrados))
+    {
+    list_destroy(trainer->involucrados);
     return (NULL);
+    }
+    
     char *numString = string_new();
     void crear_string (void *numeros)
     {
@@ -430,5 +434,6 @@ char * formar_string_involucrados(Trainer *trainer)
     free(num);
     }
     list_iterate(trainer->involucrados, crear_string);
+    list_destroy(trainer->involucrados);
     return(numString);
 }

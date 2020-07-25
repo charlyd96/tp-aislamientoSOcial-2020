@@ -22,6 +22,8 @@ void trainer_to_catch(void)
     u_int32_t distance_min= 100000  ; //Arreglar esta hardcodeada trucha
     mapPokemons *actual_pokemon;
     int i;
+    int pokPosx;
+    int pokPosy;
     planificar=true;
     sem_getvalue(&trainer_count,&i); //Saltea el proceso de planificación por distancia si se inicializa con todos los pokemones atrapados
     if (i==0) planificar=false; 
@@ -35,8 +37,8 @@ void trainer_to_catch(void)
         {   
             u_int32_t Tx= trainer->posx;
             u_int32_t Ty= trainer->posy;
-            u_int32_t Px= actual_pokemon->posx;
-            u_int32_t Py= actual_pokemon->posy;
+            u_int32_t Px= pokPosx;
+            u_int32_t Py= pokPosy;
             u_int32_t distance = abs (Tx - Px) + abs (Ty - Py); //Reemplazar por función "calcular_distancia"
             if (distance < distance_min)
             {
@@ -64,10 +66,13 @@ void trainer_to_catch(void)
             actual_pokemon =  list_remove (mapped_pokemons, 0);
             sem_post(&poklist_sem2);
             char *nombre_pokemon = string_duplicate(actual_pokemon->name);
+            pokPosx= actual_pokemon->posx;
+            pokPosy= actual_pokemon->posy;
             free(actual_pokemon->name);
             free(actual_pokemon);
-            mover_objetivo_a_lista_auxiliar (actual_pokemon->name);
 
+            mover_objetivo_a_lista_auxiliar (nombre_pokemon);
+            
             void imprimir_estados (void *trainer)
             {
             log_info(internalLogTeam, "Estado %d: %d\t",((Trainer*)trainer)->index,((Trainer*)trainer)->actual_status);   
@@ -75,20 +80,20 @@ void trainer_to_catch(void)
             //list_iterate (trainers,imprimir_estados);
 
             list_iterate (trainers,calculate_distance);
-            //printf ("target= %d\n",target);
+            
             //log_info(internalLogTeam, "indice planificado: %d\n", index);
             if (target ==1) //Si se pudo encontrar un entrenador libre y más cercano que vaya a cazar al pokemon, avanzo y lo mando
             {
                 Trainer *trainer=list_get(trainers, index);
-                trainer->actual_objective.posx = actual_pokemon->posx;
-                trainer->actual_objective.posy = actual_pokemon->posy;
+                trainer->actual_objective.posx = pokPosx;
+                trainer->actual_objective.posy = pokPosy;
                 trainer->actual_objective.name = nombre_pokemon;
                 trainer->actual_status= READY;
                 trainer->actual_operation= OP_EXECUTING_CATCH; 
 
                 // 3. Operación de atrapar (indicando la ubicación y el pokemon a atrapar).
-                log_info(internalLogTeam, "El entrenador %d se planificó para atrapar un %s ubicado en (%d,%d)\n", trainer->index,trainer->actual_objective.name,actual_pokemon->posx,actual_pokemon->posy);
-                log_info(logTeam, "El entrenador %d se planificó para atrapar un %s ubicado en (%d,%d)\n", trainer->index,trainer->actual_objective.name,actual_pokemon->posx,actual_pokemon->posy);
+                log_info(internalLogTeam, "El entrenador %d se planificó para atrapar un %s ubicado en (%d,%d)\n", trainer->index,trainer->actual_objective.name,pokPosx,pokPosy);
+                log_info(logTeam, "El entrenador %d se planificó para atrapar un %s ubicado en (%d,%d)\n",         trainer->index,trainer->actual_objective.name,pokPosx,pokPosy);
                 send_trainer_to_ready (trainers, index, OP_EXECUTING_CATCH); 
                 index=-1;
                 distance_min= 100000  ; //Arreglar esta hardcodeada trucha
