@@ -269,7 +269,7 @@ void procesar_appeared(t_appeared_pokemon *mensaje_appeared)
 
 		case GUARDAR_AUX:
 		{
-			agregar_nueva_especie(mensaje_appeared->nombre_pokemon);
+			agregar_nueva_especie(string_duplicate(mensaje_appeared->nombre_pokemon));
 			mapPokemons *pokemon_to_add = malloc (sizeof(mapPokemons));
 			pokemon_to_add-> name = string_duplicate (mensaje_appeared->nombre_pokemon);
 			pokemon_to_add-> posx = mensaje_appeared->pos_x;
@@ -315,14 +315,14 @@ void procesar_localized(t_localized_pokemon *mensaje_localized)
 	pthread_mutex_unlock (&ID_localized_sem); 
 	if (elemento != NULL)
 	free(elemento);
-
+	
 
 	if (mensaje_localized->cant_pos == 0 || agregar==false)
 	{
 	log_error (internalLogTeam, "Se descartó el Mensaje LOCALIZED_POKEMON %s %d %s con ID de Mensaje Correlativo [%d]",mensaje_localized->nombre_pokemon,mensaje_localized->cant_pos,mensaje_localized->posiciones,mensaje_localized->id_mensaje_correlativo);
 
-		//liberar_localized(mensaje_localized);
 		free(mensaje_localized->nombre_pokemon);
+		free(mensaje_localized->posiciones);
 		free(mensaje_localized);
 	}
 	else
@@ -343,10 +343,10 @@ void procesar_localized(t_localized_pokemon *mensaje_localized)
 		}
 		free_split(posiciones);
 		free_split(coordenadas);
+		free(mensaje_localized->nombre_pokemon);
+		free(mensaje_localized->posiciones);
+		free(mensaje_localized);
 	}
-	// liberar_localized(mensaje_localized);
-	free(mensaje_localized->nombre_pokemon);
-	free(mensaje_localized);
 }
 
 void procesar_caught (t_caught_pokemon *mensaje_caught)
@@ -372,6 +372,8 @@ void procesar_caught (t_caught_pokemon *mensaje_caught)
 	pthread_mutex_unlock (&ID_caught_sem);
 	if (nodo !=NULL)
 	free(nodo);
+
+	free(mensaje_caught);
 }
 
 int informarIDcaught(uint32_t id, sem_t *trainer_sem)
