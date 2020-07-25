@@ -1079,7 +1079,7 @@ void atenderMensajeNewPokemon(int socket_cliente){
 	
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_new->suscriptores, j);
-		
+
 		t_new_aux* new = malloc(sizeof(t_new_aux));
 		new->socket = suscriptor->socket_suscriptor;
 		new->id_suscriptor = suscriptor->id_suscriptor;
@@ -1129,11 +1129,18 @@ void enviarNewASuscriptor(t_new_aux* aux){
 				return (true);
 			}else return (false);
 		}
+<<<<<<< Updated upstream
 		
 		list_remove_by_condition(cola_new->nodos, comparar_id_mensaje);
 		pthread_mutex_unlock(&sem_cola_new);
 	}else{
 		pthread_mutex_unlock(&sem_nodo_new);	
+=======
+
+	/*	if(list_is_empty(nodo_new->susc_no_ack)){
+			list_remove_and_destroy_element(cola_new->nodos, j , free);
+		}*/
+>>>>>>> Stashed changes
 	}
 }
 
@@ -1346,6 +1353,7 @@ void enviarCatchASuscriptor(t_catch_aux* aux){
 	
 	int enviado = enviarCatchPokemon(socket, *catch_pokemon,P_BROKER,0);
 			
+<<<<<<< Updated upstream
 	if(enviado > 0){
 		uint32_t ack = recibirACK(socket);
 		if(ack == 1){
@@ -1378,6 +1386,20 @@ void enviarCatchASuscriptor(t_catch_aux* aux){
 		pthread_mutex_unlock(&sem_cola_catch);
 	}else{
 		pthread_mutex_unlock(&sem_nodo_catch);	
+=======
+			if(enviado > 0){
+				uint32_t ack = recibirACK(suscriptor->socket_suscriptor);
+				if(ack == 1){
+					log_info(logBrokerInterno, "Se reenvió CATCH_POKEMON %s %d %d [%d] al socket %d", catch_pokemon->nombre_pokemon, catch_pokemon->pos_x, catch_pokemon->pos_y, catch_pokemon->id_mensaje,suscriptor->socket_suscriptor);
+					log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
+					agregarSuscriptor(id_mensaje, suscriptor->id_suscriptor);
+				}
+			}else{
+				// 4. Envío de un mensaje a un suscriptor específico.
+				log_warning(logBroker, "NO se envió el Mensaje con ID de Mensaje %d.", catch_pokemon->id_mensaje);
+				log_warning(logBrokerInterno, "NO se envió el Mensaje con ID de Mensaje %d.", catch_pokemon->id_mensaje);
+			}
+>>>>>>> Stashed changes
 	}
 }
 
@@ -1454,6 +1476,7 @@ void enviarCaughtASuscriptor(t_caught_aux* aux){
 
 	int enviado = enviarCaughtPokemon(socket, *caught_pokemon,P_BROKER,0);
 		
+<<<<<<< Updated upstream
 	if(enviado > 0){
 		uint32_t ack = recibirACK(socket);
 		if(ack == 1){
@@ -1481,6 +1504,20 @@ void enviarCaughtASuscriptor(t_caught_aux* aux){
 				return (true);
 			}else return (false);
 		}
+=======
+			if(enviado > 0){
+				uint32_t ack = recibirACK(suscriptor->socket_suscriptor);
+				if(ack == 1){
+					log_info(logBrokerInterno, "Se reenvió CAUGHT %u [%u] al socket %d", caught_pokemon->atrapo_pokemon,caught_pokemon->id_mensaje_correlativo,suscriptor->socket_suscriptor);
+					log_info(logBrokerInterno,"Se recibió el ACK %d",ack);
+					agregarSuscriptor(id_mensaje, suscriptor->id_suscriptor);
+				}
+			}else{
+				// 4. Envío de un mensaje a un suscriptor específico.
+				log_warning(logBroker, "NO se envió el Mensaje con ID de Mensaje Correlativo %d.", caught_pokemon->id_mensaje_correlativo);
+				log_warning(logBrokerInterno, "NO se envió el Mensaje con ID de Mensaje Correlativo %d.", caught_pokemon->id_mensaje_correlativo);
+			}
+>>>>>>> Stashed changes
 		
 		list_remove_by_condition(cola_caught->nodos, comparar_id_mensaje);
 		pthread_mutex_unlock(&sem_cola_caught);
