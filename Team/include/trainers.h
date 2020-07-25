@@ -25,6 +25,9 @@ t_list *deadlock_list;
 sem_t deadlock_sem1;
 sem_t deadlock_sem2;
 
+extern pthread_mutex_t aux_global_sem;
+
+
 extern t_log *internalLogTeam;
 extern t_log *logTeam;
 
@@ -175,5 +178,9 @@ void remover_pokemones_en_mapa_auxiliar(char *nombre_pokemon);
 void mover_de_aux_a_global(char *name);
 
 void liberar_listas_entrenador(Trainer *trainer);
+
+void eliminar_elemento_lista (char *elemento1, t_list *lista, pthread_mutex_t *semaforo);
+
+bool mover_elemento_destino_origen(t_list *destino, t_list *origen, pthread_mutex_t *sem_destino, pthread_mutex_t *sem_origen, char *elemento);
 
 #endif /* INCLUDE_TRAINERS_H_ */

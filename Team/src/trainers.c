@@ -51,81 +51,58 @@ void trainer_to_catch(void)
 
     while (planificar)
     {             
-
         sem_wait (&trainer_count); // Este semáforo bloquea el proceso de planificación si no hay entrenadores para mandar a ready
-        
+        if (!planificar) break;
         log_info(internalLogTeam, "Lista global: %d\n", list_size (global_objective));
         log_info(internalLogTeam, "Lista global aux: %d\n", list_size (aux_global_objective));
-        pthread_mutex_lock (&global_sem);
-        if (list_size (global_objective) > 0 )
-        { 
-            pthread_mutex_unlock (&global_sem);            
-            sem_wait(&poklist_sem); //Para evitar espera activa si no hay pokemones en el mapa. Revisar este comentario.
-            sem_wait(&poklist_sem2); //Para evitar espera activa si no hay pokemones en el mapa. En realidad es por productor consumidor
-            if (!planificar) break;
-            actual_pokemon =  list_remove (mapped_pokemons, 0);
-            sem_post(&poklist_sem2);
-            char *nombre_pokemon = string_duplicate(actual_pokemon->name);
-            pokPosx= actual_pokemon->posx;
-            pokPosy= actual_pokemon->posy;
-            free(actual_pokemon->name);
-            free(actual_pokemon);
-
-            mover_objetivo_a_lista_auxiliar (nombre_pokemon);
             
-            void imprimir_estados (void *trainer)
-            {
-            log_info(internalLogTeam, "Estado %d: %d\t",((Trainer*)trainer)->index,((Trainer*)trainer)->actual_status);   
-            }
-            //list_iterate (trainers,imprimir_estados);
+        sem_wait(&poklist_sem); //Para evitar espera activa si no hay pokemones en el mapa. Revisar este comentario.
+        sem_wait(&poklist_sem2); //Para evitar espera activa si no hay pokemones en el mapa. En realidad es por productor consumidor
+        if (!planificar) break;
+        actual_pokemon =  list_remove (mapped_pokemons, 0);
+        sem_post(&poklist_sem2);
+        char *nombre_pokemon = string_duplicate(actual_pokemon->name);
+        pokPosx= actual_pokemon->posx;
+        pokPosy= actual_pokemon->posy;
+        free(actual_pokemon->name);
+        free(actual_pokemon);
 
-            list_iterate (trainers,calculate_distance);
-            
-            //log_info(internalLogTeam, "indice planificado: %d\n", index);
-            if (target ==1) //Si se pudo encontrar un entrenador libre y más cercano que vaya a cazar al pokemon, avanzo y lo mando
-            {
-                Trainer *trainer=list_get(trainers, index);
-                trainer->actual_objective.posx = pokPosx;
-                trainer->actual_objective.posy = pokPosy;
-                trainer->actual_objective.name = nombre_pokemon;
-                trainer->actual_status= READY;
-                trainer->actual_operation= OP_EXECUTING_CATCH; 
+        //mover_objetivo_a_lista_auxiliar (nombre_pokemon);
+        
+        void imprimir_estados (void *trainer)
+        {
+        log_info(internalLogTeam, "Estado %d: %d\t",((Trainer*)trainer)->index,((Trainer*)trainer)->actual_status);   
+        }
+        //list_iterate (trainers,imprimir_estados);
 
-                // 3. Operación de atrapar (indicando la ubicación y el pokemon a atrapar).
-                log_info(internalLogTeam, "El entrenador %d se planificó para atrapar un %s ubicado en (%d,%d)\n", trainer->index,trainer->actual_objective.name,pokPosx,pokPosy);
-                log_info(logTeam, "El entrenador %d se planificó para atrapar un %s ubicado en (%d,%d)\n",         trainer->index,trainer->actual_objective.name,pokPosx,pokPosy);
-                send_trainer_to_ready (trainers, index, OP_EXECUTING_CATCH); 
-                index=-1;
-                distance_min= 100000  ; //Arreglar esta hardcodeada trucha
-                target=-1;
-            }
-        } 
-        else 
-            {   
-                pthread_mutex_unlock (&global_sem);
-                pthread_mutex_lock (&auxglobal_sem);                
-                if (list_size (aux_global_objective) > 0 ) 
-                {
-                    pthread_mutex_unlock (&auxglobal_sem);
-                    sem_wait (&trainer_count);
-                }
-                else 
-                {
-                    pthread_mutex_unlock (&auxglobal_sem);
-                    break;
-                } 
-            }
+        list_iterate (trainers,calculate_distance);
+        
+        //log_info(internalLogTeam, "indice planificado: %d\n", index);
+        if (target == 1) //Si se pudo encontrar un entrenador libre y más cercano que vaya a cazar al pokemon, avanzo y lo mando
+        {
+            Trainer *trainer=list_get(trainers, index);
+            trainer->actual_objective.posx = pokPosx;
+            trainer->actual_objective.posy = pokPosy;
+            trainer->actual_objective.name = nombre_pokemon;
+            trainer->actual_status= READY;
+            trainer->actual_operation= OP_EXECUTING_CATCH; 
+
+            // 3. Operación de atrapar (indicando la ubicación y el pokemon a atrapar).
+            log_info(internalLogTeam, "El entrenador %d se planificó para atrapar un %s ubicado en (%d,%d)\n", trainer->index,trainer->actual_objective.name,pokPosx,pokPosy);
+            log_info(logTeam, "El entrenador %d se planificó para atrapar un %s ubicado en (%d,%d)\n",         trainer->index,trainer->actual_objective.name,pokPosx,pokPosy);
+            send_trainer_to_ready (trainers, index, OP_EXECUTING_CATCH); 
+            index=-1;
+            distance_min= 100000  ; //Arreglar esta hardcodeada trucha
+            target=-1;
+        }
     }
-
     log_info(internalLogTeam, "Terminó la búsqueda de pokemones");
     //***********LIBERAR MEMORIA Y TERMINAR EL HILO **************//
-}
+}  
 
 /* Productor hacia cola Ready */
 void send_trainer_to_ready (t_list *lista, int index, Operation op) //Eliminar el switch, es innecesario.
-
 {
-    
     switch (op)
     {
         case OP_EXECUTING_CATCH:
@@ -206,10 +183,10 @@ void nuevos_pokemones_CAUGHT_SI(char *nombre_pokemon)
         return (true);
         else return (false);
     }
-	pthread_mutex_lock(&aux_new_global_sem);
-    list_remove_by_condition(aux_new_global_objective, buscar);
-    bool hayPokemones=list_any_satisfy(aux_new_global_objective, buscar);
-    pthread_mutex_unlock(&aux_new_global_sem);
+	pthread_mutex_lock(&aux_global_sem);
+    list_remove_by_condition(aux_global_objective, buscar);
+    bool hayPokemones=list_any_satisfy(aux_global_objective, buscar);
+    pthread_mutex_unlock(&aux_global_sem);
 
     if (hayPokemones==false)
     remover_pokemones_en_mapa_auxiliar(nombre_pokemon);
@@ -231,7 +208,7 @@ void nuevos_pokemones_CAUGHT_NO (char *nombre_pokemon)
     mover_pokemon_al_mapa(nuevo_pokemon);
     else //Si no se encontró un pokemon en el mapa auxiliar, mover el nombre pokemon pendiente de la lista auxiliar a la lista global de pendientes
     {
-    mover_de_aux_a_global(nombre_pokemon);
+    mover_elemento_destino_origen(global_objective, aux_global_objective, &global_sem, &aux_global_sem,nombre_pokemon);
     }
 
 }
@@ -267,7 +244,8 @@ void remover_pokemones_en_mapa_auxiliar(char *nombre_pokemon)
 {
     bool buscar (void *pokemon)
     {
-        if (!strcmp(nombre_pokemon, pokemon))
+        mapPokemons *pok=pokemon;
+        if (!strcmp(nombre_pokemon, pok->name))
         return (true);
         else return (false);
     }
@@ -363,8 +341,9 @@ void trainer_routine (Trainer *trainer)
                     log_warning (internalLogTeam, "El entrenador %d cazó a %s en (%d,%d)"  
                              , trainer->index ,trainer->actual_objective.name,trainer->actual_objective.posx, trainer->actual_objective.posy);
 
-                    remover_objetivo_global_auxiliar(trainer->actual_objective.name); //Elimino el objetivo global auxiliar -- verificar si se necesita sincronización
-                    nuevos_pokemones_CAUGHT_SI(trainer->actual_objective.name); //Elimino el objetivo de la lista auxiliar de pokemones nuevos (mapa)
+                    eliminar_elemento_lista(trainer->actual_objective.name,aux_global_objective, &aux_global_sem);//Elimino el objetivo global auxiliar
+
+                    nuevos_pokemones_CAUGHT_SI(trainer->actual_objective.name); //Elimino el objetivo del mapa auxiliar (si otro entrenador no lo necesita)
                     list_add(trainer->bag,trainer->actual_objective.name); //Agrego al inventario del entrenador
                     
                     if (detectar_deadlock (trainer))     
@@ -401,8 +380,9 @@ void trainer_routine (Trainer *trainer)
                         // 8. Resultado del Team (especificado anteriormente).
                         log_error (internalLogTeam, "El entrenador %d no pudo cazar a %s en (%d,%d).",trainer->index, trainer->actual_objective.name,trainer->actual_objective.posx, trainer->actual_objective.posy);
                         log_error (logTeam, "El entrenador %d no pudo cazar a %s en (%d,%d).",trainer->index, trainer->actual_objective.name,trainer->actual_objective.posx, trainer->actual_objective.posy);
-                        mover_objetivo_a_lista_global(trainer->actual_objective.name); //Vuelvo a setear el objetivo global
+                        mover_elemento_destino_origen(global_objective,aux_global_objective, &global_sem, &aux_global_sem, trainer->actual_objective.name);//Vuelvo a setear el objetivo global
                         nuevos_pokemones_CAUGHT_NO (trainer->actual_objective.name); //Intento agregar un pokemon de esa especie al mapa
+                        free(trainer->actual_objective.name);
                         trainer->actual_status= BLOCKED_NOTHING_TO_DO;
                         sem_post (&trainer_count);
                         sem_wait(&trainer->trainer_sem);
@@ -428,6 +408,19 @@ void trainer_routine (Trainer *trainer)
     liberar_listas_entrenador(trainer);
     log_info (internalLogTeam,"El entrenador %d finalizó su hilo de ejecución con éxito", index);
     
+}
+
+
+void eliminar_elemento_lista (char *elemento1, t_list *lista, pthread_mutex_t *semaforo)
+{
+    bool comparar(void *elemento2)
+        {
+            if (!strcmp( (char *)elemento1, elemento2) )
+            return true; else return false;
+        }
+    pthread_mutex_lock(semaforo);
+    list_remove_by_condition(lista,comparar);
+    pthread_mutex_unlock(semaforo);
 }
 
 /*Productor hacia cola de bloqueados por deadlock*/

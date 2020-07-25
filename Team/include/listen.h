@@ -39,6 +39,9 @@ pthread_mutex_t ID_caught_sem;
 t_list *ID_localized;
 pthread_mutex_t ID_localized_sem;
 
+pthread_mutex_t aux_global_sem;
+pthread_mutex_t global_sem;
+
 t_list *especies;
 pthread_mutex_t especies_sem;
 
@@ -95,5 +98,6 @@ void agregar_nueva_especie (char *nueva_especie);
 
 bool especie_necesaria (char *nueva_especie);
 
+bool mover_elemento_destino_origen(t_list *destino, t_list *origen, pthread_mutex_t *sem_destino, pthread_mutex_t *sem_origen, char *elemento);
 
 #endif /* INCLUDE_LISTEN_H_ */
