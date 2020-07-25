@@ -343,7 +343,6 @@ t_get_pokemon* recibirGetPokemon(int socket_cliente){
 	return get_pokemon;
 }
 t_localized_pokemon* recibirLocalizedPokemon(int socket_cliente){
-	printf("recibir localized\n");
 	uint32_t size_buffer, largo_nombre,cant_pos;
 	uint32_t id_mensaje_correlativo = 0;
 	uint32_t pos_x = 0;

@@ -2774,8 +2774,8 @@ void confirmacionDeRecepcionGameBoy(int ack, t_suscribe* suscribe_gameboy, uint3
 }
 
 int main(void){
-	logBroker = log_create("broker.log", "Broker", 0, LOG_LEVEL_TRACE);
-	logBrokerInterno = log_create("brokerInterno.log", "Broker Interno", 1, LOG_LEVEL_TRACE);
+	logBroker = log_create("broker.log", "Broker", 1, LOG_LEVEL_TRACE);
+	logBrokerInterno = log_create("brokerInterno.log", "Broker Interno", 0, LOG_LEVEL_TRACE);
 
 	log_trace(logBroker, "****************************************** PROCESO BROKER ******************************************");
 
