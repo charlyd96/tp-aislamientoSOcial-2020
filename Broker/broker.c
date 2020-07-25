@@ -1126,10 +1126,7 @@ void enviarNewASuscriptor(t_new_aux* aux){
 	t_nodo_cola_new* nodo_nuevo = aux->nodo;
 
 	int enviado = enviarNewPokemon(socket, *new_pokemon,P_BROKER,0);	
-<<<<<<< HEAD
 	bool se_elimina = false;
-=======
->>>>>>> 3db06ada60de208933be812fd350164494f0fce5
 
 	if(enviado > 0){
 		uint32_t ack = recibirACK(socket);
