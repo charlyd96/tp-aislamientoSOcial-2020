@@ -147,8 +147,6 @@ int send_catch (Trainer *trainer);
 
 bool comparar_listas (t_list *lista1, t_list *lista2); //Algoritmo de detección de deadlock
 
-t_list* duplicar_lista (t_list *lista);
-
 void split_objetivos_capturados (Trainer *trainer, t_list *lista_sobrantes, t_list *lista_faltantes);
 
 void trainer_to_deadlock(Trainer *trainer);
@@ -174,8 +172,6 @@ void nuevos_pokemones_CAUGHT_NO (char *nombre_pokemon);
 void mover_pokemon_al_mapa (mapPokemons *nuevo_pokemon);
 
 void remover_pokemones_en_mapa_auxiliar(char *nombre_pokemon);
-
-void mover_de_aux_a_global(char *name);
 
 void liberar_listas_entrenador(Trainer *trainer);
 

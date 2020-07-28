@@ -1101,7 +1101,13 @@ void atenderMensajeNewPokemon(int socket_cliente){
 	cachearNewPokemon(new_pokemon);
 	
 	int tam_lista_suscriptores = list_size(cola_new->suscriptores);
-	
+
+	sem_t semaforo;
+	sem_t mutex;
+	sem_init(&mutex, 0,1);
+	sem_init (&semaforo, 0 , 0);
+	int tamanio_lista = tam_lista_suscriptores;
+
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_new->suscriptores, j);
 
@@ -1111,11 +1117,17 @@ void atenderMensajeNewPokemon(int socket_cliente){
 		new->mensaje = new_pokemon;
 		new->id_mensaje = id_mensaje;
 		new->nodo = nodo_nuevo;
+		new->sem_new = &semaforo;
+		new->mutex = &mutex;
+		new->cant_suscriptores=&tamanio_lista;
 
 		pthread_t hiloNew;
 		pthread_create(&hiloNew, NULL, (void*)enviarNewASuscriptor, new);
 		pthread_detach(hiloNew);
 	}
+	sem_wait(&semaforo);
+
+
 }
 
 void enviarNewASuscriptor(t_new_aux* aux){
@@ -1172,14 +1184,21 @@ void enviarNewASuscriptor(t_new_aux* aux){
 	pthread_mutex_unlock(&sem_cola_new);
 	pthread_mutex_unlock(&sem_nodo_new);
 
-	if(false){
-		sleep(1);
-		free(new_pokemon->nombre_pokemon);
-		free(new_pokemon);
-		// list_destroy_and_destroy_elements(aux->nodo->susc_ack);
-		//free(aux->nodo);
-		free(aux);		
-	}
+	sem_wait(aux->mutex);
+		if (*(aux->cant_suscriptores) != 1){
+			*(aux->cant_suscriptores) =*(aux->cant_suscriptores) -1;
+			sem_post(aux->mutex);
+			free(aux);
+		}
+		else{
+			free(new_pokemon->nombre_pokemon);
+			free(new_pokemon);
+			free(aux->nodo);
+			sem_post(aux->mutex);
+			sem_post(aux->sem_new);
+			free(aux);
+		}
+		
 }
 
 void atenderMensajeAppearedPokemon(int socket_cliente){
@@ -1250,6 +1269,12 @@ void atenderMensajeAppearedPokemon(int socket_cliente){
 
 	int tam_lista_suscriptores = list_size(cola_appeared->suscriptores);
 	
+	sem_t semaforo;
+	sem_t mutex;
+	sem_init(&mutex, 0,1);
+	sem_init (&semaforo, 0 , 0);
+	int tamanio_lista = tam_lista_suscriptores;
+
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_appeared->suscriptores, j);
 		
@@ -1259,11 +1284,15 @@ void atenderMensajeAppearedPokemon(int socket_cliente){
 		appeared->mensaje = appeared_pokemon;
 		appeared->id_mensaje = id_mensaje;
 		appeared->nodo = nuevo_nodo;
+		appeared->mutex = &mutex;
+		appeared->sem_appeared = &semaforo;
+		appeared->cant_suscriptores= &tamanio_lista;
 
 		pthread_t hiloAppeared;
 		pthread_create(&hiloAppeared, NULL, (void*)enviarAppearedASuscriptor, appeared);
 		pthread_detach(hiloAppeared);
 	}	
+	sem_wait(&semaforo);
 }
 
 void enviarAppearedASuscriptor(t_appeared_aux* aux){
@@ -1279,8 +1308,8 @@ void enviarAppearedASuscriptor(t_appeared_aux* aux){
 			uint32_t ack = recibirACK(socket);
 			if(ack == 1){
 				// 4. Envío de un mensaje a un suscriptor específico.
-				log_info(logBroker, "Se envió el Mensaje: APPEARED_POKEMON %s %d %d %d con ID de Mensaje %d al Suscriptor %d.", appeared_pokemon->nombre_pokemon, appeared_pokemon->pos_x, appeared_pokemon->pos_y, appeared_pokemon->id_mensaje_correlativo,id_suscriptor);
-				log_info(logBrokerInterno, "Se envió el Mensaje: APPEARED_POKEMON %s %d %d %d con ID de Mensaje %d al Suscriptor %d.", appeared_pokemon->nombre_pokemon, appeared_pokemon->pos_x, appeared_pokemon->pos_y, appeared_pokemon->id_mensaje_correlativo,id_suscriptor);		
+				log_info(logBroker, "Se envió el Mensaje: APPEARED_POKEMON %s %d %d con ID de Mensaje %d al Suscriptor %d.", appeared_pokemon->nombre_pokemon, appeared_pokemon->pos_x, appeared_pokemon->pos_y, appeared_pokemon->id_mensaje_correlativo,id_suscriptor);
+				log_info(logBrokerInterno, "Se envió el Mensaje: APPEARED_POKEMON %s %d %d con ID de Mensaje %d al Suscriptor %d.", appeared_pokemon->nombre_pokemon, appeared_pokemon->pos_x, appeared_pokemon->pos_y, appeared_pokemon->id_mensaje_correlativo,id_suscriptor);		
 				// 5. Confirmación de recepción de un suscriptor al envío de un mensaje previo.
 				log_info(logBroker, "Confirmación de Recepción del Mensaje con ID %d del Suscriptor %d.", appeared_pokemon->id_mensaje_correlativo, id_suscriptor);
 				agregarSuscriptor(id_mensaje, id_suscriptor);
@@ -1318,14 +1347,21 @@ void enviarAppearedASuscriptor(t_appeared_aux* aux){
 	pthread_mutex_unlock(&sem_nodo_appeared);	
 	pthread_mutex_unlock(&sem_cola_appeared);
 
-	if(false){
-		sleep(1);
-		free(appeared_pokemon->nombre_pokemon);
-		free(appeared_pokemon);
-		// list_destroy_and_destroy_elements(aux->nodo->susc_ack);
-		// //free(aux->nodo);
-		free(aux);	
-	}
+	sem_wait(aux->mutex);
+		if (*(aux->cant_suscriptores) != 1){
+			*(aux->cant_suscriptores) =*(aux->cant_suscriptores) -1;
+			sem_post(aux->mutex);
+			free(aux);
+		}
+		else{
+			free(appeared_pokemon->nombre_pokemon);
+			free(aux->nodo);
+			free(appeared_pokemon);
+			sem_post(aux->mutex);
+			sem_post(aux->sem_appeared);
+			free(aux);
+		}
+		
 	
 }
 
@@ -1384,6 +1420,12 @@ void atenderMensajeCatchPokemon(int socket_cliente){
 
 	int tam_lista_suscriptores = list_size(cola_catch->suscriptores);
 	
+	sem_t semaforo;
+	sem_t mutex;
+	sem_init(&mutex, 0,1);
+	sem_init (&semaforo, 0 , 0);
+	int tamanio_lista = tam_lista_suscriptores;
+
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_catch->suscriptores, j);
 		
@@ -1393,11 +1435,15 @@ void atenderMensajeCatchPokemon(int socket_cliente){
 		catch->mensaje = catch_pokemon;
 		catch->id_mensaje = id_mensaje;
 		catch->nodo = nodo_nuevo;
+		catch->mutex = &mutex;
+		catch->sem_catch = &semaforo;
+		catch->cant_suscriptores = &tamanio_lista;
 
 		pthread_t hiloCatch;
 		pthread_create(&hiloCatch, NULL, (void*)enviarCatchASuscriptor, catch);
 		pthread_detach(hiloCatch);
 	}
+	sem_wait(&semaforo);
 }
 
 void enviarCatchASuscriptor(t_catch_aux* aux){
@@ -1453,15 +1499,22 @@ void enviarCatchASuscriptor(t_catch_aux* aux){
 	pthread_mutex_unlock(&sem_cola_catch);
 	pthread_mutex_unlock(&sem_nodo_catch);
 
-	if(false){
-		sleep(1);
+	sem_wait(aux->mutex);
+	if (*(aux->cant_suscriptores) != 1){
+		*(aux->cant_suscriptores) =*(aux->cant_suscriptores) -1;
+		sem_post(aux->mutex);
+		free(aux);
+	}
+	else{
+
 		free(catch_pokemon->nombre_pokemon);
 		free(catch_pokemon);
-		// list_destroy_and_destroy_elements(aux->nodo->susc_ack);
-		//free(aux->nodo);
-		free(aux);		
-
+		free(aux->nodo);
+		sem_post(aux->mutex);
+		sem_post(aux->sem_catch);
+		free(aux);
 	}
+
 }
 
 void atenderMensajeCaughtPokemon(int socket_cliente){
@@ -1514,6 +1567,12 @@ void atenderMensajeCaughtPokemon(int socket_cliente){
 	pthread_mutex_lock(&sem_cola_caught);
 	int tam_lista_suscriptores = list_size(cola_caught->suscriptores);
 	
+	sem_t semaforo;
+	sem_t mutex;
+	sem_init(&mutex, 0,1);
+	sem_init (&semaforo, 0 , 0);
+	int tamanio_lista = tam_lista_suscriptores;
+
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_caught->suscriptores, j);
 	
@@ -1523,12 +1582,17 @@ void atenderMensajeCaughtPokemon(int socket_cliente){
 		caught->mensaje = caught_pokemon;
 		caught->id_mensaje = id_mensaje;
 		caught->nodo = nodo_nuevo;
+		caught->sem_caught = &semaforo;
+		caught->mutex = &mutex;
+		caught->cant_suscriptores=&tamanio_lista;
 
 		pthread_t hiloCaught;
 		pthread_create(&hiloCaught, NULL, (void*)enviarCaughtASuscriptor, caught);
 		pthread_detach(hiloCaught);
 	}
 	pthread_mutex_unlock(&sem_cola_caught);
+	sem_wait(&semaforo);
+	
 }
 
 void enviarCaughtASuscriptor(t_caught_aux* aux){
@@ -1584,15 +1648,20 @@ void enviarCaughtASuscriptor(t_caught_aux* aux){
 	}
 		pthread_mutex_unlock(&sem_cola_caught);
 		pthread_mutex_unlock(&sem_nodo_caught);	
-	// destruir_estructura_aux(aux);
-	if(false){
-		sleep(1);
-		// free(caught_pokemon);
-		// list_destroy_and_destroy_elements(aux->nodo->susc_ack);
-		//free(aux->nodo);
+
+	sem_wait(aux->mutex);
+	if (*(aux->cant_suscriptores) != 1){
+		*(aux->cant_suscriptores) =*(aux->cant_suscriptores) -1;
+		sem_post(aux->mutex);
 		free(aux);
 	}
-
+	else{
+		free(caught_pokemon);
+		free(aux->nodo);
+		sem_post(aux->mutex);
+		sem_post(aux->sem_caught);
+		free(aux);
+	}
 }
 
 void atenderMensajeGetPokemon(int socket_cliente){
@@ -1648,6 +1717,12 @@ void atenderMensajeGetPokemon(int socket_cliente){
 
 	int tam_lista_suscriptores = list_size(cola_get->suscriptores);
 	
+	sem_t semaforo;
+	sem_t mutex;
+	sem_init(&mutex, 0,1);
+	sem_init (&semaforo, 0 , 0);
+	int tamanio_lista = tam_lista_suscriptores;
+
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_get->suscriptores, j);
 		
@@ -1657,10 +1732,16 @@ void atenderMensajeGetPokemon(int socket_cliente){
 		get->mensaje = get_pokemon;
 		get->id_mensaje = id_mensaje;
 		get->nodo = nodo_nuevo;
+		get->sem_get = &semaforo;
+		get->mutex = &mutex;
+		get->cant_suscriptores=&tamanio_lista;
+
 		pthread_t hiloGet;
 		pthread_create(&hiloGet, NULL, (void*)enviarGetASuscriptor, get);
 		pthread_detach(hiloGet);
+		
 	}
+	sem_wait(&semaforo);
 }
 
 void enviarGetASuscriptor(t_get_aux* aux){
@@ -1717,14 +1798,26 @@ void enviarGetASuscriptor(t_get_aux* aux){
 	}
 	pthread_mutex_unlock(&sem_cola_get);
 	pthread_mutex_unlock(&sem_nodo_get);
-	if(false){
-		// sleep(10);
+
+	sem_wait(aux->mutex);
+	if (*(aux->cant_suscriptores) != 1){
+		*(aux->cant_suscriptores) =*(aux->cant_suscriptores) -1;
+		sem_post(aux->mutex);
+		free(aux);
+	}
+	else{
+		
 		free(get_pokemon->nombre_pokemon);
 		free(get_pokemon);
-		// list_destroy_and_destroy_elements(aux->nodo->susc_ack);
-		//free(aux->nodo);	
-		free(aux);	
+		free(aux->nodo);
+		int value;
+		sem_getvalue(aux->mutex,&value);
+		printf ("\n\n\nValue:%d\n\n\n",value);
+		sem_post(aux->mutex);
+		sem_post(aux->sem_get);	
+		free(aux);
 	}
+
 }
 
 void atenderMensajeLocalizedPokemon(int socket_cliente){
@@ -1776,20 +1869,32 @@ void atenderMensajeLocalizedPokemon(int socket_cliente){
 
 	int tam_lista_suscriptores = list_size(cola_localized->suscriptores);
 	
+	sem_t semaforo;
+	sem_t mutex;
+	sem_init(&mutex, 0,1);
+	sem_init (&semaforo, 0 , 0);
+	int tamanio_lista = tam_lista_suscriptores;
+
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_localized->suscriptores, j);
-		
+		puts ("\n\n\nen el for\n\n\n");
 		t_localized_aux* localized= malloc(sizeof(t_localized_aux));
 		localized->socket = suscriptor->socket_suscriptor;
 		localized->id_suscriptor = suscriptor->id_suscriptor;
 		localized->mensaje = localized_pokemon;
 		localized->id_mensaje = id_mensaje;
 		localized->nodo = nodo_nuevo;
+		localized->sem_localized = &semaforo;
+		localized->mutex = &mutex;
+		localized->cant_suscriptores=&tamanio_lista;
 
 		pthread_t hiloLocalized;
 		pthread_create(&hiloLocalized, NULL, (void*)enviarLocalizedASuscriptor, localized);
 		pthread_detach(hiloLocalized);
 	}
+	puts ("\nme bloqueo\n");
+	sem_wait(&semaforo);
+
 }
 
 void enviarLocalizedASuscriptor(t_localized_aux* aux){
@@ -1847,13 +1952,25 @@ void enviarLocalizedASuscriptor(t_localized_aux* aux){
 	}
 	pthread_mutex_unlock(&sem_cola_localized);
 	pthread_mutex_unlock(&sem_nodo_localized);	
-	if(false){
-		sleep(1);
-		free(localized_pokemon->nombre_pokemon);
-		free(localized_pokemon);
-		//free(aux->nodo);
+
+	sem_wait(aux->mutex);
+	if (*(aux->cant_suscriptores) != 1){
+		*(aux->cant_suscriptores) =*(aux->cant_suscriptores) -1;
+		sem_post(aux->mutex);
 		free(aux);
 	}
+	else{
+		
+		free(localized_pokemon->nombre_pokemon);
+		free(localized_pokemon->posiciones);
+		free(localized_pokemon);
+		free(aux->nodo);
+		printf ("\n\n\n\n\nLista suscriptores: %d\n\n\n\n\n\n",*(aux->cant_suscriptores) );
+		sem_post(aux->mutex);
+		sem_post(aux->sem_localized);
+		free(aux);
+	}
+
 }
 
 void atenderSuscripcionTeam(int socket_cliente){

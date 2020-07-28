@@ -67,8 +67,7 @@ void trainer_to_catch(void)
         free(actual_pokemon->name);
         free(actual_pokemon);
 
-        //mover_objetivo_a_lista_auxiliar (nombre_pokemon);
-        
+       
         void imprimir_estados (void *trainer)
         {
         log_info(internalLogTeam, "Estado %d: %d\t",((Trainer*)trainer)->index,((Trainer*)trainer)->actual_status);   
@@ -97,7 +96,7 @@ void trainer_to_catch(void)
         }
     }
     log_info(internalLogTeam, "Terminó la búsqueda de pokemones");
-    //***********LIBERAR MEMORIA Y TERMINAR EL HILO **************//
+   
 }  
 
 /* Productor hacia cola Ready */
@@ -135,45 +134,8 @@ void send_trainer_to_ready (t_list *lista, int index, Operation op) //Eliminar e
     }
 }
 
-void mover_objetivo_a_lista_auxiliar (char *name)
-{
-    pthread_mutex_lock (&auxglobal_sem);
-    list_add (aux_global_objective , name);
-    pthread_mutex_unlock (&auxglobal_sem);
-
-    bool remover (void *element)
-    {
-        if (!strcmp( (char *)element, name))
-        return true; 
-        else return false;
-    }
-    pthread_mutex_lock (&global_sem);
-    list_remove_by_condition (global_objective,remover); 
-    pthread_mutex_unlock (&global_sem);     
-}
 
 
-void mover_objetivo_a_lista_global(char *nombre_pokemon)
-{
-    pthread_mutex_lock (&global_sem);
-    list_add (global_objective , nombre_pokemon);
-    pthread_mutex_unlock (&global_sem);
-    remover_objetivo_global_auxiliar(nombre_pokemon);
-}
-
-
-void remover_objetivo_global_auxiliar(char *name_pokemon)
-{
-    bool remover (void * element)
-    {
-        if (!strcmp(name_pokemon,(char*)element))
-        return (true);
-        else return (false);
-    }
-    pthread_mutex_lock (&auxglobal_sem);
-    list_remove_by_condition(aux_global_objective, remover);
-    pthread_mutex_unlock (&auxglobal_sem);
-}
 
 
 /*================================================================================================================================
@@ -219,24 +181,6 @@ void nuevos_pokemones_CAUGHT_NO (char *nombre_pokemon)
 
 }
 
-void mover_de_aux_a_global(char *name)
-{
-    bool buscar (void * element)
-    {
-        if (!strcmp(name,(char*)element))
-        return (true);
-        else return (false);
-    }
-    pthread_mutex_lock(&aux_new_global_sem);
-    list_remove_by_condition(aux_new_global_objective,buscar);
-    pthread_mutex_unlock(&aux_new_global_sem);
-
-
-    pthread_mutex_lock(&new_global_sem);
-    list_add(new_global_objective, name);
-	pthread_mutex_unlock(&new_global_sem);
-
-}
 
 void mover_pokemon_al_mapa (mapPokemons *nuevo_pokemon)
 {
@@ -477,19 +421,6 @@ bool comparar_listas (t_list *lista1, t_list *lista2)
 }
 
 
-t_list* duplicar_lista (t_list *lista)
-{
-    t_list *listaDuplicada= list_create();
-    void duplicar (void *elemento)
-    {
-     char *string=malloc (sizeof ((char*) elemento));
-     strcpy(string, (char*) elemento);   
-     list_add(listaDuplicada,string);
-    }
-
-    list_iterate(lista,duplicar);
-    return (listaDuplicada);
-}
 
 /*============================================================================================================
  ************************************Algoritmo de recuperación de deadlock************************************* 
@@ -547,28 +478,9 @@ void split_objetivos_capturados (Trainer *trainer, t_list *lista_pok_sobrantes, 
         }
     }
 
-
-    void imprimir2 (void *elemento)
-    {
-    puts ((char*)elemento);
-    }
-
     list_iterate(lista_capturados, buscar_objetivos_faltantes);
     list_iterate(lista_objetivos, buscar_capturados_sobrantes );
 
-/*
-    puts ("Objetivos:");
-    list_iterate(lista_objetivos,imprimir2);
-    puts ("");
-    puts ("Capturados:");
-    list_iterate(lista_capturados,imprimir2);
-    puts ("");
-    puts ("Los que le faltan:");
-    list_iterate(lista_objetivos_duplicados ,imprimir2);
-    puts ("");
-    puts ("Los que le sobran:");
-    list_iterate(lista_capturados_duplicados,imprimir2);
-    puts ("");*/
     list_add_all (lista_pok_faltantes, lista_objetivos_duplicados);
     list_add_all (lista_pok_sobrantes, lista_capturados_duplicados );
     list_destroy (lista_objetivos_duplicados);
@@ -696,27 +608,12 @@ int deadlock_recovery (void)
     if (!deadlockTrainer1) list_remove(deadlock_list,0);
 
     index=0;
-    
-    /*
-    //}
-    void imprimir3 (void *element)
-    {
-        log_info(internalLogTeam, (element);
-    }
-    printf ("Sobrantes entrenador %d:\n",trainer1->index);
-    list_iterate(trainer1_sobrantes, imprimir3);
-    printf ("Faltantes entrenador %d:\n",trainer1->index);
-    list_iterate(trainer1_faltantes, imprimir3);
-    printf ("Sobrantes entrenador %d:\n",trainer2->index);
-    list_iterate(trainer2_sobrantes, imprimir3);
-    printf ("Faltantes entrenador %d:\n",trainer2->index);
-    list_iterate(trainer2_faltantes, imprimir3);*/
+
     list_destroy(trainer1_sobrantes);
     list_destroy(trainer1_faltantes);
     list_destroy(trainer2_sobrantes);
     list_destroy(trainer2_faltantes);
     return (0);
-
 }
 
 
@@ -863,7 +760,7 @@ void consumir_cpu(Trainer *trainer)
    {
         case FIFO:
         {
-            sleep (config->retardo_cpu * 1); //Uso usleep para que no sea tan lenta la ejecución
+            usleep (config->retardo_cpu * 1); //Uso usleep para que no sea tan lenta la ejecución
             trainer->ciclos_cpu_totales++;
             ciclos_cpu++;
             break;
@@ -878,11 +775,11 @@ void consumir_cpu(Trainer *trainer)
                 sem_post(&using_cpu);
                 sem_wait(&trainer->trainer_sem);
                 trainer->ejecucion= EXECUTING;
-                sleep (config->retardo_cpu * 1); //Uso usleep para que no sea tan lenta la ejecución
+                usleep (config->retardo_cpu * 1); //Uso usleep para que no sea tan lenta la ejecución
             } 
             else
             {
-                sleep (config->retardo_cpu * 1); //Uso usleep para que no sea tan lenta la ejecución
+                usleep (config->retardo_cpu * 1); //Uso usleep para que no sea tan lenta la ejecución
                 trainer->ejecucion= EXECUTING;
             }
             trainer->rafagaEjecutada++;
@@ -913,8 +810,8 @@ void consumir_cpu(Trainer *trainer)
                 ordenar_lista_ready();
                 if ( ((Trainer *)list_get(ReadyQueue, 0))->rafagaEstimada > trainer->rafagaEstimada ) //Comparo la lista ordenada con el entrenador actual en ejecución
                 {//Seguir ejecutando
-                log_info(internalLogTeam, "****************************************************************seguir ejecutando************************************************************************");
-                log_info(internalLogTeam, "Rafaga estimada actual: %f\nRafaga estimada nuevo entrenador:%f\n",trainer->rafagaEstimada, ((Trainer *)list_get(ReadyQueue, 0))->rafagaEstimada );
+                log_error(internalLogTeam, "****************************************************************seguir ejecutando************************************************************************");
+                log_error(internalLogTeam, "Rafaga estimada actual: %f\nRafaga estimada nuevo entrenador:%f\n",trainer->rafagaEstimada, ((Trainer *)list_get(ReadyQueue, 0))->rafagaEstimada );
                 sem_post(&qr_sem2); //Disponibilizar la cola ready
                 }
                 else 
@@ -931,7 +828,7 @@ void consumir_cpu(Trainer *trainer)
             {
                 sem_post(&qr_sem2);
             }        
-        sleep (config->retardo_cpu * 1); //Uso usleep para que no sea tan lenta la ejecución
+        usleep (config->retardo_cpu * 1); //Uso usleep para que no sea tan lenta la ejecución
         break;
         }
 

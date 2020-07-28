@@ -142,6 +142,9 @@ typedef struct {
 	uint32_t id_mensaje;
 	uint32_t id_suscriptor;
 	t_nodo_cola_new* nodo;
+	sem_t *sem_new;
+	sem_t *mutex;
+	int *cant_suscriptores;
 } t_new_aux;
 
 typedef struct {
@@ -150,6 +153,9 @@ typedef struct {
 	uint32_t id_mensaje;
 	uint32_t id_suscriptor;
 	t_nodo_cola_appeared* nodo;
+	sem_t *sem_appeared;
+	sem_t *mutex;
+	int *cant_suscriptores;
 } t_appeared_aux;
 
 typedef struct {
@@ -158,6 +164,9 @@ typedef struct {
 	uint32_t id_mensaje;
 	uint32_t id_suscriptor;
 	t_nodo_cola_catch* nodo;
+	sem_t *sem_catch;
+	sem_t *mutex;
+	int *cant_suscriptores;
 } t_catch_aux;
 
 typedef struct {
@@ -166,6 +175,9 @@ typedef struct {
 	uint32_t id_mensaje;
 	uint32_t id_suscriptor;
 	t_nodo_cola_caught* nodo;
+	sem_t *sem_caught;
+	sem_t *mutex;
+	int *cant_suscriptores;
 } t_caught_aux;
 
 typedef struct {
@@ -174,6 +186,9 @@ typedef struct {
 	uint32_t id_mensaje;
 	uint32_t id_suscriptor;
 	t_nodo_cola_get* nodo;
+	sem_t *sem_get;
+	sem_t *mutex;
+	int *cant_suscriptores;
 } t_get_aux;
 
 typedef struct {
@@ -182,6 +197,9 @@ typedef struct {
 	uint32_t id_mensaje;
 	uint32_t id_suscriptor;
 	t_nodo_cola_localized* nodo;
+	sem_t *sem_localized;
+	sem_t *mutex;
+	int *cant_suscriptores;
 } t_localized_aux;
 
 /* VARIABLES GLOBALES */

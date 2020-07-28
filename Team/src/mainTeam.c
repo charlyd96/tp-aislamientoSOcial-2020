@@ -34,7 +34,7 @@ int main(int argc, char **argv)
 
     enviar_mensajes_get(GET_list); //Envía los mensajes GET al Broker y libera la lista
     
-    listen_new_pokemons (); //Crea hilo para socket de escucha del GameBoy
+    //listen_new_pokemons (); //Crea hilo para socket de escucha del GameBoy
 
     Trainer_handler_create(); //Crea hilo de manejo y planificación de entrenadores (trainer_to_catch) y
     						  //crea el hilo de cada entrenador
