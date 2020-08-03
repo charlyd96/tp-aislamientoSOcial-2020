@@ -1166,7 +1166,7 @@ void enviarNewASuscriptor(t_new_aux* aux){
 	pthread_mutex_lock(&sem_cola_new);
 	if(list_size(nodo_nuevo->susc_ack) == list_size(cola_new->suscriptores)){
 		
-		log_debug(logBroker, "Se elimina el nodo con ID de Mensaje [%d].", nodo_nuevo->mensaje->id_mensaje);
+		log_debug(logBrokerInterno, "Se elimina el nodo con ID de Mensaje [%d].", nodo_nuevo->mensaje->id_mensaje);
 
 		bool comparar_id_mensaje(void *element){
 			t_nodo_cola_new* nodo = element;
@@ -1329,7 +1329,7 @@ void enviarAppearedASuscriptor(t_appeared_aux* aux){
 	pthread_mutex_lock(&sem_nodo_appeared);
 	pthread_mutex_lock(&sem_cola_appeared);
 	if(list_size(nodo_nuevo->susc_ack) == list_size(cola_appeared->suscriptores)){
-		log_debug(logBroker, "Se elimina el nodo con ID de Mensaje Correlativo [%d].", nodo_nuevo->mensaje->id_mensaje_correlativo);
+		log_debug(logBrokerInterno, "Se elimina el nodo con ID de Mensaje Correlativo [%d].", nodo_nuevo->mensaje->id_mensaje_correlativo);
 
 		bool comparar_id_mensaje(void *element){
 			t_nodo_cola_appeared* nodo = element;
@@ -1481,7 +1481,7 @@ void enviarCatchASuscriptor(t_catch_aux* aux){
 	pthread_mutex_lock(&sem_cola_catch);
 	if(list_size(nodo_nuevo->susc_ack) == list_size(cola_catch->suscriptores)){
 		
-		log_debug(logBroker, "Se elimina el nodo con ID de Mensaje [%d].", nodo_nuevo->mensaje->id_mensaje);
+		log_debug(logBrokerInterno, "Se elimina el nodo con ID de Mensaje [%d].", nodo_nuevo->mensaje->id_mensaje);
 
 		bool comparar_id_mensaje(void *element){
 			t_nodo_cola_catch* nodo = element;
@@ -1630,7 +1630,7 @@ void enviarCaughtASuscriptor(t_caught_aux* aux){
 	pthread_mutex_lock(&sem_nodo_caught);
 	pthread_mutex_lock(&sem_cola_caught);
 	if(list_size(nodo_nuevo->susc_ack) == list_size(cola_caught->suscriptores)){
-		log_debug(logBroker, "Se elimina el nodo con ID de Mensaje Correlativo [%d].", nodo_nuevo->mensaje->id_mensaje_correlativo);
+		log_debug(logBrokerInterno, "Se elimina el nodo con ID de Mensaje Correlativo [%d].", nodo_nuevo->mensaje->id_mensaje_correlativo);
 
 		bool comparar_id_mensaje(void *element){
 			t_nodo_cola_caught* nodo = element;
@@ -1779,7 +1779,7 @@ void enviarGetASuscriptor(t_get_aux* aux){
 	pthread_mutex_lock(&sem_nodo_get);
 	pthread_mutex_lock(&sem_cola_get);
 	if(list_size(nodo_nuevo->susc_ack) == list_size(cola_get->suscriptores)){
-		log_debug(logBroker, "Se elimina el nodo con ID de Mensaje [%d].", nodo_nuevo->mensaje->id_mensaje);
+		log_debug(logBrokerInterno, "Se elimina el nodo con ID de Mensaje [%d].", nodo_nuevo->mensaje->id_mensaje);
 		
 
 		bool comparar_id_mensaje(void *element){
@@ -1930,7 +1930,7 @@ void enviarLocalizedASuscriptor(t_localized_aux* aux){
 	pthread_mutex_lock(&sem_nodo_localized);
 	pthread_mutex_lock(&sem_cola_localized);
 	if(list_size(nodo_nuevo->susc_ack) == list_size(cola_localized->suscriptores)){
-		log_debug(logBroker, "Se elimina el nodo con ID de Mensaje [%d].", nodo_nuevo->mensaje->id_mensaje_correlativo);
+		log_debug(logBrokerInterno, "Se elimina el nodo con ID de Mensaje [%d].", nodo_nuevo->mensaje->id_mensaje_correlativo);
 
 		bool comparar_id_mensaje(void *element){
 			t_nodo_cola_localized* nodo = element;
