@@ -423,11 +423,8 @@ void imprimir_metricas (void)
     }
     else
     {
-    log_debug(logTeam, "Feliciades! No ocurriendo deadlockls");
+    log_debug(logTeam, "Felicidades! No ocurriendo deadlockls");
     }
-    
-    
-    
 }
 
 char * formar_string_involucrados(Trainer *trainer)
