@@ -24,7 +24,20 @@
 
 t_config* get_config()
 {
-    t_config* ret =  config_create("../team.config");
+    t_config* ret;
+    if (ID_proceso == 1)
+    {
+    ret =  config_create("../team1.config");
+    }else if (ID_proceso == 2)
+        {
+        ret =  config_create("../team2.config");
+        }
+        else 
+        {
+            log_error(logTeam,"Ingrese como código de proceso los valores 1 o 2 ");
+            exit(-1);
+        }
+
     if (ret == NULL)
     log_error  (internalLogTeam, "No se pudieron leer las configuraciones");
     else log_info (internalLogTeam, "Archivo de configuración leído correctamente");

@@ -352,10 +352,8 @@ void trainer_routine (Trainer *trainer)
 		}
     }
     
-    //Liberar recursos y finalizar el hilo del entrenador
-    //int index = trainer->index;
-    //liberar_listas_entrenador(trainer);
-    log_info (logTeam,"[CABIO DE COLA] El entrenador %d finalizó su hilo de ejecución con éxito", index);
+
+    log_info (logTeam,"[CABIO DE COLA] El entrenador %d finalizó su hilo de ejecución con éxito", trainer->index);
 }
 
 
@@ -604,8 +602,20 @@ int deadlock_recovery (void)
     
     bool deadlockTrainer1= detectar_deadlock(trainer1);
     bool deadlockTrainer2= detectar_deadlock(trainer2);
-    if (!deadlockTrainer2) list_remove(deadlock_list,index);
-    if (!deadlockTrainer1) list_remove(deadlock_list,0);
+
+    if (!deadlockTrainer2)
+    {
+    list_remove(deadlock_list,index);
+    trainer2->actual_status=EXIT;
+    sem_post(&trainer2->trainer_sem);
+    } 
+    if (!deadlockTrainer1)
+    {
+    list_remove(deadlock_list,0);
+    trainer1->actual_status=EXIT;
+    sem_post(&trainer1->trainer_sem);
+    } 
+
 
     index=0;
 
