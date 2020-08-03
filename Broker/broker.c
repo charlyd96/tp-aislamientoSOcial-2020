@@ -1812,7 +1812,6 @@ void enviarGetASuscriptor(t_get_aux* aux){
 		free(aux->nodo);
 		int value;
 		sem_getvalue(aux->mutex,&value);
-		printf ("\n\n\nValue:%d\n\n\n",value);
 		sem_post(aux->mutex);
 		sem_post(aux->sem_get);	
 		free(aux);
@@ -1877,7 +1876,6 @@ void atenderMensajeLocalizedPokemon(int socket_cliente){
 
 	for(int j = 0; j < tam_lista_suscriptores; j++){
 		t_suscriptor* suscriptor = list_get(cola_localized->suscriptores, j);
-		puts ("\n\n\nen el for\n\n\n");
 		t_localized_aux* localized= malloc(sizeof(t_localized_aux));
 		localized->socket = suscriptor->socket_suscriptor;
 		localized->id_suscriptor = suscriptor->id_suscriptor;
@@ -1892,7 +1890,6 @@ void atenderMensajeLocalizedPokemon(int socket_cliente){
 		pthread_create(&hiloLocalized, NULL, (void*)enviarLocalizedASuscriptor, localized);
 		pthread_detach(hiloLocalized);
 	}
-	puts ("\nme bloqueo\n");
 	sem_wait(&semaforo);
 
 }
@@ -1965,7 +1962,6 @@ void enviarLocalizedASuscriptor(t_localized_aux* aux){
 		free(localized_pokemon->posiciones);
 		free(localized_pokemon);
 		free(aux->nodo);
-		printf ("\n\n\n\n\nLista suscriptores: %d\n\n\n\n\n\n",*(aux->cant_suscriptores) );
 		sem_post(aux->mutex);
 		sem_post(aux->sem_localized);
 		free(aux);
