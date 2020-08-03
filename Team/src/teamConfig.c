@@ -54,6 +54,7 @@ void Team_load_trainers_config(void)
     /*  Sólo por estética */
     t_config *config_aux= config->team_config;
 
+    huboDeadlock=false;
     /*  Devuelve un array de strings, donde cada posición del array es del tipo posX|posY */
     char ** pos_trainers_to_array = config_get_array_value (config_aux, "POSICIONES_ENTRENADORES");
 

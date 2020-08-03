@@ -677,6 +677,7 @@ bool detectar_deadlock (Trainer *trainer)
     if (list_size (trainer->bag) >= list_size (trainer->personal_objective)  && !comparar_listas(trainer->bag,trainer->personal_objective))
     {
         log_info(logTeam, "[DETECCION DEADLOCK] El entrenador %d quedo en deadlock", trainer->index);
+        huboDeadlock=true;
         return true; 
     } else
         {

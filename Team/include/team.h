@@ -29,7 +29,7 @@ extern sem_t trainer_deadlock_count;
 extern t_list *cola_caught;
 extern sem_t qcaught1_sem;
 extern sem_t qcaught2_sem;
-
+extern bool huboDeadlock;
 pthread_t thread_appeared;
 pthread_t thread_localized;
 pthread_t thread_caught;

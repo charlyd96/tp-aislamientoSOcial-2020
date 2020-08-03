@@ -27,6 +27,7 @@ sem_t deadlock_sem2;
 
 extern pthread_mutex_t aux_global_sem;
 
+bool huboDeadlock;
 
 extern t_log *internalLogTeam;
 extern t_log *logTeam;

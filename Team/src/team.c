@@ -409,8 +409,9 @@ void imprimir_metricas (void)
     log_debug(logTeam,"Resultados de cada Entrenador: ");
     list_iterate(trainers,metricas_entrenador);
 
+    if (huboDeadlock==true)
+    {
     log_debug(logTeam, "Ocurrieron los siguientes deadlocks entre los entrenadores:");
-    
     void imprimir_deadlocks (void *entrenador)
     {
         char *involucrados=formar_string_involucrados( (Trainer*) entrenador);
@@ -419,6 +420,14 @@ void imprimir_metricas (void)
         free (involucrados);
     }
     list_iterate(trainers,imprimir_deadlocks);
+    }
+    else
+    {
+    log_debug(logTeam, "Feliciades! No ocurriendo deadlockls");
+    }
+    
+    
+    
 }
 
 char * formar_string_involucrados(Trainer *trainer)
