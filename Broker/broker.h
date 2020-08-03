@@ -358,6 +358,4 @@ void confirmacionDeRecepcionTeam(int socket, t_suscribe* suscribe_team, uint32_t
 void confirmacionDeRecepcionGameCard(int socket, t_suscribe* suscribe_gamecard, uint32_t id_mensaje);
 void confirmacionDeRecepcionGameBoy(int ack, t_suscribe* suscribe_gameboy, uint32_t id_mensaje);
 
-void enviarAppearedASuscriptor(t_appeared_aux* aux);
-
 #endif /* BROKER_H_ */
